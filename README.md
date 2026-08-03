@@ -1,17 +1,59 @@
-# collection_catalog
+# Collection Catalog
 
-A new Flutter project.
+Flutter-приложение для управления личными коллекциями.
 
-## Getting Started
+## Цель проекта
 
-This project is a starting point for a Flutter application.
+Создание универсального движка коллекций, который позволяет вести учёт разных типов объектов:
 
-A few resources to get you started if this is your first Flutter project:
+- монеты;
+- банкноты;
+- карточки;
+- фигурки;
+- игровые диски;
+- другие коллекционные предметы.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Основная идея
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Коллекция не знает, что она является коллекцией монет или карточек.
+
+Любая коллекция состоит из:
+
+- структуры данных;
+- полей;
+- элементов;
+- представлений;
+- фильтров;
+- файлового хранилища.
+
+## Архитектура
+
+Проект построен по принципам:
+
+- Feature First Architecture;
+- разделение Domain / Data / Presentation;
+- единый Collection Engine.
+
+Основные разделы:
+lib/
+├── app/
+├── core/
+├── features/
+│ ├── collections
+│ ├── fields
+│ ├── items
+│ ├── templates
+│ ├── storage
+│ └── views
+└── shared/
+
+## Технологии
+
+- Flutter
+- Dart
+- Riverpod
+- Drift Database
+
+## Статус
+
+Проект находится в активной разработке.
