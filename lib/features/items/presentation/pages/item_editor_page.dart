@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../collections/domain/entities/collection.dart';
-
 import '../../domain/entities/item_value.dart';
 import '../../domain/services/item_creator.dart';
-
 import '../providers/item_provider.dart';
 import '../providers/item_service_provider.dart';
 
@@ -23,15 +21,72 @@ class ItemEditorPage extends ConsumerStatefulWidget {
       _ItemEditorPageState();
 }
 
-class _ItemEditorPageState
-    extends ConsumerState<ItemEditorPage> {
+class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
   /// Введённые пользователем значения полей.
   final Map<String, String> values = {};
 
+  bool _saving = false;
+
+  Future<void> _save() async {
+    if (_saving) {
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+    });
+
+    try {
+      final creator = ItemCreator();
+      final item = creator.create(
+        collectionId: widget.collection.id,
+      );
+
+      final service = ref.read(
+        itemServiceProvider,
+      );
+
+      await service.saveItem(item);
+
+      for (final entry in values.entries) {
+        final value = entry.value.trim();
+
+        if (value.isEmpty) {
+          continue;
+        }
+
+        final itemValue = ItemValue(
+          id: '${item.id}_${entry.key}',
+          itemId: item.id,
+          fieldId: entry.key,
+          value: value,
+        );
+
+        await service.saveValue(itemValue);
+      }
+
+      ref.invalidate(
+        itemsProvider(
+          widget.collection.id,
+        ),
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(context).pop();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+        });
+      }
+    }
+  }
+
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -68,55 +123,16 @@ class _ItemEditorPageState
             height: 20,
           ),
           FilledButton(
-            onPressed: () async {
-              final navigator = Navigator.of(
-                context,
-              );
-
-              final creator = ItemCreator();
-
-              final item = creator.create(
-                collectionId: widget.collection.id,
-              );
-
-              final service = ref.read(
-                itemServiceProvider,
-              );
-
-              await service.saveItem(
-                item,
-              );
-
-              for (final entry in values.entries) {
-                final itemValue = ItemValue(
-                  id: DateTime.now()
-                      .microsecondsSinceEpoch
-                      .toString(),
-                  itemId: item.id,
-                  fieldId: entry.key,
-                  value: entry.value,
-                );
-
-                await service.saveValue(
-                  itemValue,
-                );
-              }
-
-              ref.invalidate(
-                itemsProvider(
-                  widget.collection.id,
-                ),
-              );
-
-              if (!mounted) {
-                return;
-              }
-
-              navigator.pop();
-            },
-            child: const Text(
-              'Сохранить',
-            ),
+            onPressed: _saving ? null : _save,
+            child: _saving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(),
+                  )
+                : const Text(
+                    'Сохранить',
+                  ),
           ),
         ],
       ),
