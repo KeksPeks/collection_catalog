@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../fields/presentation/providers/field_provider.dart';
 import '../../domain/entities/item_value.dart';
-
 import '../providers/item_provider.dart';
 
 /// Страница просмотра предмета коллекции.
@@ -47,6 +47,12 @@ class ItemDetailPage extends ConsumerWidget {
             ),
           );
 
+          final fieldsAsync = ref.watch(
+            fieldsProvider(
+              item.collectionId,
+            ),
+          );
+
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -73,6 +79,9 @@ class ItemDetailPage extends ConsumerWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              const SizedBox(
+                height: 8,
+              ),
               valuesAsync.when(
                 data: (values) {
                   if (values.isEmpty) {
@@ -86,21 +95,47 @@ class ItemDetailPage extends ConsumerWidget {
                     );
                   }
 
-                  return Column(
-                    children: values
-                        .map(
-                          (value) =>
-                              _ValueTile(
-                            value: value,
-                          ),
-                        )
-                        .toList(),
+                  return fieldsAsync.when(
+                    data: (fields) {
+                      final fieldLabels = {
+                        for (final field in fields)
+                          field.id: field.label,
+                      };
+
+                      return Column(
+                        children: values
+                            .map(
+                              (value) => _ValueTile(
+                                value: value,
+                                fieldLabel:
+                                    fieldLabels[value.fieldId] ??
+                                        value.fieldId,
+                              ),
+                            )
+                            .toList(),
+                      );
+                    },
+                    loading: () {
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    },
+                    error: (error, stack) {
+                      return Text(
+                        error.toString(),
+                      );
+                    },
                   );
                 },
                 loading: () {
                   return const Padding(
                     padding: EdgeInsets.all(16),
-                    child: CircularProgressIndicator(),
+                    child: Center(
+                      child: CircularProgressIndicator(),
+                    ),
                   );
                 },
                 error: (error, stack) {
@@ -131,9 +166,11 @@ class ItemDetailPage extends ConsumerWidget {
 
 class _ValueTile extends StatelessWidget {
   final ItemValue value;
+  final String fieldLabel;
 
   const _ValueTile({
     required this.value,
+    required this.fieldLabel,
   });
 
   @override
@@ -142,7 +179,7 @@ class _ValueTile extends StatelessWidget {
   ) {
     return ListTile(
       title: Text(
-        value.fieldId,
+        fieldLabel,
       ),
       subtitle: Text(
         value.value,
