@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../fields/domain/entities/field_definition.dart';
 import '../../../fields/presentation/providers/field_provider.dart';
 import '../../domain/entities/item.dart';
 import '../../domain/entities/item_value.dart';
@@ -33,7 +34,10 @@ class _ItemEditPageState extends ConsumerState<ItemEditPage> {
     super.dispose();
   }
 
-  void _initializeControllers(List<dynamic> fields, List<ItemValue> values) {
+  void _initializeControllers(
+    List<FieldDefinition> fields,
+    List<ItemValue> values,
+  ) {
     if (_initialized) {
       return;
     }
@@ -56,7 +60,7 @@ class _ItemEditPageState extends ConsumerState<ItemEditPage> {
     _initialized = true;
   }
 
-  Future<void> _save(List<dynamic> fields) async {
+  Future<void> _save(List<FieldDefinition> fields) async {
     final service = ref.read(itemServiceProvider);
 
     for (final field in fields) {
@@ -73,9 +77,7 @@ class _ItemEditPageState extends ConsumerState<ItemEditPage> {
           ),
         );
       } else if (value.isNotEmpty) {
-        final id = DateTime.now()
-            .microsecondsSinceEpoch
-            .toString();
+        final id = DateTime.now().microsecondsSinceEpoch.toString();
 
         await service.saveValue(
           ItemValue(
