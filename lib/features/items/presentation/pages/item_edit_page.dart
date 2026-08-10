@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../fields/domain/entities/field_definition.dart';
+import '../../../fields/presentation/components/field_component_registry.dart';
 import '../../../fields/presentation/providers/field_provider.dart';
 import '../../domain/entities/item.dart';
 import '../../domain/entities/item_value.dart';
@@ -24,6 +25,8 @@ class ItemEditPage extends ConsumerStatefulWidget {
 class _ItemEditPageState extends ConsumerState<ItemEditPage> {
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, String> _valueIds = {};
+  final FieldComponentRegistry _componentRegistry =
+      const FieldComponentRegistry();
   bool _initialized = false;
 
   @override
@@ -68,6 +71,11 @@ class _ItemEditPageState extends ConsumerState<ItemEditPage> {
       final existingId = _valueIds[field.id];
 
       if (existingId != null) {
+        if (value.isEmpty) {
+          await service.deleteValue(existingId);
+          continue;
+        }
+
         await service.updateValue(
           ItemValue(
             id: existingId,
@@ -142,12 +150,12 @@ class _ItemEditPageState extends ConsumerState<ItemEditPage> {
                     ...fields.map(
                       (field) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: TextField(
-                          controller: _controllers[field.id],
-                          decoration: InputDecoration(
-                            labelText: field.label,
-                            border: const OutlineInputBorder(),
-                          ),
+                        child: _componentRegistry.component(field.type).build(
+                          definition: field,
+                          value: _controllers[field.id]?.text,
+                          onChanged: (value) {
+                            _controllers[field.id]?.text = value;
+                          },
                         ),
                       ),
                     ),
