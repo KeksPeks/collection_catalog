@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../fields/presentation/providers/field_provider.dart';
+import '../../domain/entities/item_attachment.dart';
 import '../../domain/entities/item_value.dart';
+import '../providers/item_attachment_provider.dart';
 import '../providers/item_provider.dart';
 import '../providers/item_service_provider.dart';
 
@@ -111,6 +113,116 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
     }
   }
 
+  Future<void> _addAttachment(String itemId) async {
+    final pathController = TextEditingController();
+    String type = 'file';
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Добавить вложение'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: pathController,
+                    decoration: const InputDecoration(
+                      labelText: 'Путь к файлу',
+                      hintText: 'Например: C:\\Images\\coin.jpg',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: type,
+                    decoration: const InputDecoration(
+                      labelText: 'Тип',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'image', child: Text('Изображение')),
+                      DropdownMenuItem(value: 'pdf', child: Text('PDF')),
+                      DropdownMenuItem(value: 'video', child: Text('Видео')),
+                      DropdownMenuItem(value: 'archive', child: Text('Архив')),
+                      DropdownMenuItem(value: 'file', child: Text('Файл')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() {
+                          type = value;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text('Отмена'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                  child: const Text('Добавить'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    final path = pathController.text.trim();
+    pathController.dispose();
+
+    if (result != true || path.isEmpty || !mounted) {
+      return;
+    }
+
+    final service = ref.read(itemServiceProvider);
+    await service.saveAttachment(
+      ItemAttachment(
+        id: '${itemId}_${DateTime.now().microsecondsSinceEpoch}',
+        itemId: itemId,
+        path: path,
+        type: type,
+      ),
+    );
+
+    ref.invalidate(itemAttachmentsProvider(itemId));
+  }
+
+  Future<void> _deleteAttachment(ItemAttachment attachment) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Удалить вложение?'),
+          content: Text(attachment.path),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Отмена'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Удалить'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    await ref.read(itemServiceProvider).deleteAttachment(attachment.id);
+    ref.invalidate(itemAttachmentsProvider(attachment.itemId));
+  }
+
   Future<void> _deleteItem(String itemId) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -138,14 +250,11 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
       return;
     }
 
-    final service = ref.read(itemServiceProvider);
-    await service.deleteItem(itemId);
+    await ref.read(itemServiceProvider).deleteItem(itemId);
 
-    if (!mounted) {
-      return;
+    if (mounted) {
+      Navigator.of(context).pop(true);
     }
-
-    Navigator.of(context).pop(true);
   }
 
   @override
@@ -164,36 +273,23 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
         ],
       ),
       body: itemAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
-        error: (error, stack) => Center(
-          child: Text(error.toString()),
-        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(child: Text(error.toString())),
         data: (item) {
           if (item == null) {
-            return const Center(
-              child: Text('Предмет не найден'),
-            );
+            return const Center(child: Text('Предмет не найден'));
           }
 
           final valuesAsync = ref.watch(itemValuesProvider(item.id));
           final fieldsAsync = ref.watch(fieldsProvider(item.collectionId));
+          final attachmentsAsync = ref.watch(itemAttachmentsProvider(item.id));
 
           return fieldsAsync.when(
-            loading: () => const Center(
-              child: CircularProgressIndicator(),
-            ),
-            error: (error, stack) => Center(
-              child: Text(error.toString()),
-            ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) => Center(child: Text(error.toString())),
             data: (fields) => valuesAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(),
-              ),
-              error: (error, stack) => Center(
-                child: Text(error.toString()),
-              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(child: Text(error.toString())),
               data: (values) {
                 _loadValues(fields, values);
 
@@ -219,11 +315,8 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
                           ),
                         ),
                       ),
-                    const SizedBox(height: 8),
                     FilledButton(
-                      onPressed: _saving
-                          ? null
-                          : () => _save(item.id, fields),
+                      onPressed: _saving ? null : () => _save(item.id, fields),
                       child: _saving
                           ? const SizedBox(
                               width: 20,
@@ -231,6 +324,55 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
                               child: CircularProgressIndicator(),
                             )
                           : const Text('Сохранить'),
+                    ),
+                    const Divider(height: 32),
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Вложения',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Добавить вложение',
+                          onPressed: () => _addAttachment(item.id),
+                          icon: const Icon(Icons.attach_file),
+                        ),
+                      ],
+                    ),
+                    attachmentsAsync.when(
+                      loading: () => const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                      error: (error, stack) => Text(error.toString()),
+                      data: (attachments) {
+                        if (attachments.isEmpty) {
+                          return const Text('Вложений нет');
+                        }
+
+                        return Column(
+                          children: attachments
+                              .map(
+                                (attachment) => ListTile(
+                                  leading: const Icon(Icons.insert_drive_file),
+                                  title: Text(attachment.path),
+                                  subtitle: Text(attachment.type),
+                                  trailing: IconButton(
+                                    tooltip: 'Удалить',
+                                    onPressed: () =>
+                                        _deleteAttachment(attachment),
+                                    icon: const Icon(Icons.delete_outline),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        );
+                      },
                     ),
                   ],
                 );
