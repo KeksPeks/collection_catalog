@@ -12,38 +12,37 @@ class CollectionsPage extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<CollectionsPage> createState() =>
-      _CollectionsPageState();
+  ConsumerState<CollectionsPage> createState() => _CollectionsPageState();
 }
 
 class _CollectionsPageState extends ConsumerState<CollectionsPage> {
+  void _refreshCollections() {
+    if (!mounted) {
+      return;
+    }
+
+    ref.invalidate(collectionsProvider);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final collections = ref.watch(
-      collectionsProvider,
-    );
+    final collections = ref.watch(collectionsProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Коллекции',
-        ),
+        title: const Text('Коллекции'),
       ),
       body: collections.when(
         loading: () => const Center(
           child: CircularProgressIndicator(),
         ),
         error: (error, stack) => Center(
-          child: Text(
-            error.toString(),
-          ),
+          child: Text(error.toString()),
         ),
         data: (items) {
           if (items.isEmpty) {
             return const Center(
-              child: Text(
-                'Коллекций пока нет',
-              ),
+              child: Text('Коллекций пока нет'),
             );
           }
 
@@ -53,21 +52,13 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
               final collection = items[index];
 
               return ListTile(
-                title: Text(
-                  collection.name,
-                ),
+                title: Text(collection.name),
                 trailing: PopupMenuButton<String>(
                   onSelected: (value) async {
-                    final service = ref.read(
-                      collectionServiceProvider,
-                    );
+                    final service = ref.read(collectionServiceProvider);
 
                     if (value == 'edit') {
-                      final navigator = Navigator.of(
-                        context,
-                      );
-
-                      await navigator.push(
+                      await Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => EditCollectionPage(
                             collection: collection,
@@ -79,50 +70,36 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
                         return;
                       }
 
-                      ref.invalidate(
-                        collectionsProvider,
-                      );
-
+                      _refreshCollections();
                       return;
                     }
 
                     if (value == 'delete') {
-                      final dialogResult =
-                          await _showDeleteDialog(
+                      final dialogResult = await _showDeleteDialog(
                         collection.name,
                       );
+
+                      if (!mounted || !dialogResult) {
+                        return;
+                      }
+
+                      await service.deleteCollection(collection.id);
 
                       if (!mounted) {
                         return;
                       }
 
-                      if (dialogResult) {
-                        await service.deleteCollection(
-                          collection.id,
-                        );
-
-                        if (!mounted) {
-                          return;
-                        }
-
-                        ref.invalidate(
-                          collectionsProvider,
-                        );
-                      }
+                      _refreshCollections();
                     }
                   },
                   itemBuilder: (_) => const [
                     PopupMenuItem(
                       value: 'edit',
-                      child: Text(
-                        'Изменить',
-                      ),
+                      child: Text('Изменить'),
                     ),
                     PopupMenuItem(
                       value: 'delete',
-                      child: Text(
-                        'Удалить',
-                      ),
+                      child: Text('Удалить'),
                     ),
                   ],
                 ),
@@ -132,117 +109,49 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        child: const Icon(
-          Icons.add,
-        ),
+        child: const Icon(Icons.add),
         onPressed: () async {
-          final controller = TextEditingController();
+          final result = await _showCreateDialog();
 
-          final result = await showDialog<String>(
-            context: context,
-            builder: (dialogContext) {
-              return AlertDialog(
-                title: const Text(
-                  'Новая коллекция',
-                ),
-                content: TextField(
-                  controller: controller,
-                  decoration: const InputDecoration(
-                    hintText: 'Название',
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(
-                        dialogContext,
-                      );
-                    },
-                    child: const Text(
-                      'Отмена',
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(
-                        dialogContext,
-                        controller.text.trim(),
-                      );
-                    },
-                    child: const Text(
-                      'Создать',
-                    ),
-                  ),
-                ],
-              );
-            },
-          );
+          if (!mounted || result == null || result.isEmpty) {
+            return;
+          }
 
-          controller.dispose();
+          final service = ref.read(collectionServiceProvider);
+          await service.createNewCollection(result);
 
           if (!mounted) {
             return;
           }
 
-          if (result == null || result.isEmpty) {
-            return;
-          }
-
-          final service = ref.read(
-            collectionServiceProvider,
-          );
-
-          await service.createNewCollection(
-            result,
-          );
-
-          if (!mounted) {
-            return;
-          }
-
-          ref.invalidate(
-            collectionsProvider,
-          );
+          _refreshCollections();
         },
       ),
     );
   }
 
-  Future<bool> _showDeleteDialog(
-    String name,
-  ) async {
+  Future<String?> _showCreateDialog() {
+    return showDialog<String>(
+      context: context,
+      builder: (dialogContext) => const _CreateCollectionDialog(),
+    );
+  }
+
+  Future<bool> _showDeleteDialog(String name) async {
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text(
-            'Удалить коллекцию?',
-          ),
-          content: Text(
-            name,
-          ),
+          title: const Text('Удалить коллекцию?'),
+          content: Text(name),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                  false,
-                );
-              },
-              child: const Text(
-                'Отмена',
-              ),
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Отмена'),
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                  true,
-                );
-              },
-              child: const Text(
-                'Удалить',
-              ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Удалить'),
             ),
           ],
         );
@@ -250,5 +159,60 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     );
 
     return result ?? false;
+  }
+}
+
+/// Диалог создания коллекции.
+class _CreateCollectionDialog extends StatefulWidget {
+  const _CreateCollectionDialog();
+
+  @override
+  State<_CreateCollectionDialog> createState() =>
+      _CreateCollectionDialogState();
+}
+
+class _CreateCollectionDialogState extends State<_CreateCollectionDialog> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _controller.text.trim();
+
+    if (name.isEmpty) {
+      return;
+    }
+
+    Navigator.pop(context, name);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Новая коллекция'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textInputAction: TextInputAction.done,
+        decoration: const InputDecoration(
+          hintText: 'Название',
+        ),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Отмена'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: const Text('Создать'),
+        ),
+      ],
+    );
   }
 }
