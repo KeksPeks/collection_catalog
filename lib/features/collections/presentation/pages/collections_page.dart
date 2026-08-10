@@ -21,13 +21,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
       return;
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
-
-      ref.invalidate(collectionsProvider);
-    });
+    ref.invalidate(collectionsProvider);
   }
 
   @override
