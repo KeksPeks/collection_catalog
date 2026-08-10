@@ -130,49 +130,10 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     );
   }
 
-  Future<String?> _showCreateDialog() async {
-    String name = '';
-
+  Future<String?> _showCreateDialog() {
     return showDialog<String>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Новая коллекция'),
-          content: TextField(
-            autofocus: true,
-            textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(
-              hintText: 'Название',
-            ),
-            onChanged: (value) {
-              name = value;
-            },
-            onSubmitted: (value) {
-              final valueName = value.trim();
-              if (valueName.isNotEmpty) {
-                Navigator.pop(dialogContext, valueName);
-              }
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Отмена'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final valueName = name.trim();
-                if (valueName.isEmpty) {
-                  return;
-                }
-
-                Navigator.pop(dialogContext, valueName);
-              },
-              child: const Text('Создать'),
-            ),
-          ],
-        );
-      },
+      builder: (dialogContext) => const _CreateCollectionDialog(),
     );
   }
 
@@ -198,5 +159,60 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     );
 
     return result ?? false;
+  }
+}
+
+/// Диалог создания коллекции.
+class _CreateCollectionDialog extends StatefulWidget {
+  const _CreateCollectionDialog();
+
+  @override
+  State<_CreateCollectionDialog> createState() =>
+      _CreateCollectionDialogState();
+}
+
+class _CreateCollectionDialogState extends State<_CreateCollectionDialog> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _controller.text.trim();
+
+    if (name.isEmpty) {
+      return;
+    }
+
+    Navigator.pop(context, name);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Новая коллекция'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textInputAction: TextInputAction.done,
+        decoration: const InputDecoration(
+          hintText: 'Название',
+        ),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Отмена'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: const Text('Создать'),
+        ),
+      ],
+    );
   }
 }
