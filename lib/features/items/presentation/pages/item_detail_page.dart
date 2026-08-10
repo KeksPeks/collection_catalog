@@ -111,6 +111,43 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
     }
   }
 
+  Future<void> _deleteItem(String itemId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Удалить предмет?'),
+          content: const Text(
+            'Предмет, его значения полей и вложения будут удалены.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Отмена'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Удалить'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final service = ref.read(itemServiceProvider);
+    await service.deleteItem(itemId);
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(context).pop(true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final itemAsync = ref.watch(itemProvider(widget.itemId));
@@ -118,6 +155,13 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Предмет'),
+        actions: [
+          IconButton(
+            tooltip: 'Удалить предмет',
+            onPressed: () => _deleteItem(widget.itemId),
+            icon: const Icon(Icons.delete_outline),
+          ),
+        ],
       ),
       body: itemAsync.when(
         loading: () => const Center(
