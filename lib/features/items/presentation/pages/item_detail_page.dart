@@ -4,9 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../fields/presentation/providers/field_provider.dart';
 import '../../domain/entities/item_value.dart';
 import '../providers/item_provider.dart';
+import '../providers/item_service_provider.dart';
 
-/// Страница просмотра предмета коллекции.
-class ItemDetailPage extends ConsumerWidget {
+/// Страница просмотра и редактирования предмета коллекции.
+class ItemDetailPage extends ConsumerStatefulWidget {
   final String itemId;
 
   const ItemDetailPage({
@@ -15,174 +16,184 @@ class ItemDetailPage extends ConsumerWidget {
   });
 
   @override
-  Widget build(
-    BuildContext context,
-    WidgetRef ref,
-  ) {
-    final itemAsync = ref.watch(
-      itemProvider(
-        itemId,
-      ),
-    );
+  ConsumerState<ItemDetailPage> createState() => _ItemDetailPageState();
+}
+
+class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
+  final Map<String, TextEditingController> _controllers = {};
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _loadValues(List<dynamic> fields, List<ItemValue> values) {
+    final valueMap = {
+      for (final value in values) value.fieldId: value.value,
+    };
+
+    for (final field in fields) {
+      final controller = _controllers.putIfAbsent(
+        field.id,
+        () => TextEditingController(),
+      );
+
+      if (controller.text.isEmpty && valueMap.containsKey(field.id)) {
+        controller.text = valueMap[field.id]!;
+      }
+    }
+  }
+
+  Future<void> _save(String itemId, List<dynamic> fields) async {
+    if (_saving) {
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+    });
+
+    try {
+      final service = ref.read(itemServiceProvider);
+      final existingValues = await service.getValues(itemId);
+      final existingByField = {
+        for (final value in existingValues) value.fieldId: value,
+      };
+
+      for (final field in fields) {
+        final text = _controllers[field.id]?.text.trim() ?? '';
+        final existing = existingByField[field.id];
+
+        if (text.isEmpty) {
+          if (existing != null) {
+            await service.deleteValue(existing.id);
+          }
+          continue;
+        }
+
+        if (existing == null) {
+          await service.saveValue(
+            ItemValue(
+              id: '${itemId}_${field.id}',
+              itemId: itemId,
+              fieldId: field.id,
+              value: text,
+            ),
+          );
+        } else {
+          await service.updateValue(
+            existing.copyWith(value: text),
+          );
+        }
+      }
+
+      ref.invalidate(itemValuesProvider(itemId));
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Изменения сохранены'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final itemAsync = ref.watch(itemProvider(widget.itemId));
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Предмет',
-        ),
+        title: const Text('Предмет'),
       ),
       body: itemAsync.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(),
+        ),
+        error: (error, stack) => Center(
+          child: Text(error.toString()),
+        ),
         data: (item) {
           if (item == null) {
             return const Center(
-              child: Text(
-                'Предмет не найден',
-              ),
+              child: Text('Предмет не найден'),
             );
           }
 
-          final valuesAsync = ref.watch(
-            itemValuesProvider(
-              item.id,
+          final valuesAsync = ref.watch(itemValuesProvider(item.id));
+          final fieldsAsync = ref.watch(fieldsProvider(item.collectionId));
+
+          return fieldsAsync.when(
+            loading: () => const Center(
+              child: CircularProgressIndicator(),
             ),
-          );
-
-          final fieldsAsync = ref.watch(
-            fieldsProvider(
-              item.collectionId,
+            error: (error, stack) => Center(
+              child: Text(error.toString()),
             ),
-          );
+            data: (fields) => valuesAsync.when(
+              loading: () => const Center(
+                child: CircularProgressIndicator(),
+              ),
+              error: (error, stack) => Center(
+                child: Text(error.toString()),
+              ),
+              data: (values) {
+                _loadValues(fields, values);
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Text(
-                'ID: ${item.id}',
-              ),
-              const SizedBox(
-                height: 8,
-              ),
-              Text(
-                'Коллекция: ${item.collectionId}',
-              ),
-              const SizedBox(
-                height: 8,
-              ),
-              Text(
-                'Раздел: ${item.sectionId ?? "Нет"}',
-              ),
-              const Divider(),
-              const Text(
-                'Поля',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(
-                height: 8,
-              ),
-              valuesAsync.when(
-                data: (values) {
-                  if (values.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.only(
-                        top: 12,
-                      ),
-                      child: Text(
-                        'Нет заполненных полей',
-                      ),
-                    );
-                  }
-
-                  return fieldsAsync.when(
-                    data: (fields) {
-                      final fieldLabels = {
-                        for (final field in fields)
-                          field.id: field.label,
-                      };
-
-                      return Column(
-                        children: values
-                            .map(
-                              (value) => _ValueTile(
-                                value: value,
-                                fieldLabel:
-                                    fieldLabels[value.fieldId] ??
-                                        value.fieldId,
-                              ),
-                            )
-                            .toList(),
-                      );
-                    },
-                    loading: () {
-                      return const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(
-                          child: CircularProgressIndicator(),
+                return ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Text('ID: ${item.id}'),
+                    const SizedBox(height: 8),
+                    Text('Коллекция: ${item.collectionId}'),
+                    const Divider(height: 32),
+                    if (fields.isEmpty)
+                      const Text('У коллекции нет полей')
+                    else
+                      ...fields.map(
+                        (field) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: TextField(
+                            controller: _controllers[field.id],
+                            decoration: InputDecoration(
+                              labelText: field.label,
+                              border: const OutlineInputBorder(),
+                            ),
+                          ),
                         ),
-                      );
-                    },
-                    error: (error, stack) {
-                      return Text(
-                        error.toString(),
-                      );
-                    },
-                  );
-                },
-                loading: () {
-                  return const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(
-                      child: CircularProgressIndicator(),
+                      ),
+                    const SizedBox(height: 8),
+                    FilledButton(
+                      onPressed: _saving
+                          ? null
+                          : () => _save(item.id, fields),
+                      child: _saving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(),
+                            )
+                          : const Text('Сохранить'),
                     ),
-                  );
-                },
-                error: (error, stack) {
-                  return Text(
-                    error.toString(),
-                  );
-                },
-              ),
-            ],
-          );
-        },
-        loading: () {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        },
-        error: (error, stack) {
-          return Center(
-            child: Text(
-              error.toString(),
+                  ],
+                );
+              },
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-class _ValueTile extends StatelessWidget {
-  final ItemValue value;
-  final String fieldLabel;
-
-  const _ValueTile({
-    required this.value,
-    required this.fieldLabel,
-  });
-
-  @override
-  Widget build(
-    BuildContext context,
-  ) {
-    return ListTile(
-      title: Text(
-        fieldLabel,
-      ),
-      subtitle: Text(
-        value.value,
       ),
     );
   }
