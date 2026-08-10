@@ -154,7 +154,9 @@ class _ItemEditPageState extends ConsumerState<ItemEditPage> {
                           definition: field,
                           value: _controllers[field.id]?.text,
                           onChanged: (value) {
-                            _controllers[field.id]?.text = value;
+                            setState(() {
+                              _controllers[field.id]?.text = value;
+                            });
                           },
                         ),
                       ),
