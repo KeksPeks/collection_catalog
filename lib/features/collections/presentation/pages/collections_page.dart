@@ -16,6 +16,15 @@ class CollectionsPage extends ConsumerStatefulWidget {
 }
 
 class _CollectionsPageState extends ConsumerState<CollectionsPage> {
+  final TextEditingController _createCollectionController =
+      TextEditingController();
+
+  @override
+  void dispose() {
+    _createCollectionController.dispose();
+    super.dispose();
+  }
+
   void _refreshCollections() {
     if (!mounted) {
       return;
@@ -137,51 +146,47 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
   }
 
   Future<String?> _showCreateDialog() async {
-    final controller = TextEditingController();
+    _createCollectionController.clear();
 
-    try {
-      return await showDialog<String>(
-        context: context,
-        builder: (dialogContext) {
-          return AlertDialog(
-            title: const Text('Новая коллекция'),
-            content: TextField(
-              controller: controller,
-              autofocus: true,
-              textInputAction: TextInputAction.done,
-              decoration: const InputDecoration(
-                hintText: 'Название',
-              ),
-              onSubmitted: (value) {
-                final name = value.trim();
-                if (name.isNotEmpty) {
-                  Navigator.pop(dialogContext, name);
-                }
-              },
+    return showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Новая коллекция'),
+          content: TextField(
+            controller: _createCollectionController,
+            autofocus: true,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(
+              hintText: 'Название',
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Отмена'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  final name = controller.text.trim();
-                  if (name.isEmpty) {
-                    return;
-                  }
+            onSubmitted: (value) {
+              final name = value.trim();
+              if (name.isNotEmpty) {
+                Navigator.pop(dialogContext, name);
+              }
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Отмена'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final name = _createCollectionController.text.trim();
+                if (name.isEmpty) {
+                  return;
+                }
 
-                  Navigator.pop(dialogContext, name);
-                },
-                child: const Text('Создать'),
-              ),
-            ],
-          );
-        },
-      );
-    } finally {
-      controller.dispose();
-    }
+                Navigator.pop(dialogContext, name);
+              },
+              child: const Text('Создать'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<bool> _showDeleteDialog(String name) async {
