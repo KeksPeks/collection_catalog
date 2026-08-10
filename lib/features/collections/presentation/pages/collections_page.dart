@@ -16,15 +16,6 @@ class CollectionsPage extends ConsumerStatefulWidget {
 }
 
 class _CollectionsPageState extends ConsumerState<CollectionsPage> {
-  final TextEditingController _createCollectionController =
-      TextEditingController();
-
-  @override
-  void dispose() {
-    _createCollectionController.dispose();
-    super.dispose();
-  }
-
   void _refreshCollections() {
     if (!mounted) {
       return;
@@ -146,7 +137,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
   }
 
   Future<String?> _showCreateDialog() async {
-    _createCollectionController.clear();
+    String name = '';
 
     return showDialog<String>(
       context: context,
@@ -154,16 +145,18 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
         return AlertDialog(
           title: const Text('Новая коллекция'),
           content: TextField(
-            controller: _createCollectionController,
             autofocus: true,
             textInputAction: TextInputAction.done,
             decoration: const InputDecoration(
               hintText: 'Название',
             ),
+            onChanged: (value) {
+              name = value;
+            },
             onSubmitted: (value) {
-              final name = value.trim();
-              if (name.isNotEmpty) {
-                Navigator.pop(dialogContext, name);
+              final valueName = value.trim();
+              if (valueName.isNotEmpty) {
+                Navigator.pop(dialogContext, valueName);
               }
             },
           ),
@@ -174,12 +167,12 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
             ),
             FilledButton(
               onPressed: () {
-                final name = _createCollectionController.text.trim();
-                if (name.isEmpty) {
+                final valueName = name.trim();
+                if (valueName.isEmpty) {
                   return;
                 }
 
-                Navigator.pop(dialogContext, name);
+                Navigator.pop(dialogContext, valueName);
               },
               child: const Text('Создать'),
             ),
