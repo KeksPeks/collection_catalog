@@ -37,15 +37,11 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
           content: Text(name),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(context, false);
-              },
+              onPressed: () => Navigator.pop(context, false),
               child: const Text('Отмена'),
             ),
             ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context, true);
-              },
+              onPressed: () => Navigator.pop(context, true),
               child: const Text('Удалить'),
             ),
           ],
@@ -56,20 +52,11 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
     return result ?? false;
   }
 
-  Future<void> _openNewItem(
-    List<dynamic> fields,
-  ) async {
-    final collectionAsync = ref.read(
-      collectionProvider(widget.collectionId).future,
-    );
+  Future<void> _openNewItem(List<dynamic> fields) async {
+    final storedCollection = await ref
+        .read(collectionProvider(widget.collectionId).future);
 
-    final storedCollection = await collectionAsync;
-
-    if (!mounted) {
-      return;
-    }
-
-    if (storedCollection == null) {
+    if (!mounted || storedCollection == null) {
       return;
     }
 
@@ -80,9 +67,7 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ItemEditorPage(
-          collection: collection,
-        ),
+        builder: (_) => ItemEditorPage(collection: collection),
       ),
     );
 
@@ -90,41 +75,24 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
       return;
     }
 
-    ref.invalidate(
-      itemsProvider(widget.collectionId),
-    );
+    ref.invalidate(itemsProvider(widget.collectionId));
   }
 
   @override
   Widget build(BuildContext context) {
-    final fieldsAsync = ref.watch(
-      fieldsProvider(widget.collectionId),
-    );
-
-    final itemsAsync = ref.watch(
-      itemsProvider(widget.collectionId),
-    );
+    final fieldsAsync = ref.watch(fieldsProvider(widget.collectionId));
+    final itemsAsync = ref.watch(itemsProvider(widget.collectionId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.collectionName),
-      ),
+      appBar: AppBar(title: Text(widget.collectionName)),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(
-            fieldsProvider(widget.collectionId),
-          );
-          ref.invalidate(
-            itemsProvider(widget.collectionId),
-          );
+          ref.invalidate(fieldsProvider(widget.collectionId));
+          ref.invalidate(itemsProvider(widget.collectionId));
         },
         child: fieldsAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(),
-          ),
-          error: (error, stack) => Center(
-            child: Text(error.toString()),
-          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Center(child: Text(error.toString())),
           data: (fields) {
             return ListView(
               padding: const EdgeInsets.all(16),
@@ -137,9 +105,7 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
                       children: [
                         Text(
                           widget.collectionName,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge,
+                          style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 12),
                         Text('Количество полей: ${fields.length}'),
@@ -152,87 +118,64 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
                 const SizedBox(height: 16),
                 const Text(
                   'Поля',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 if (fields.isEmpty)
                   const Padding(
                     padding: EdgeInsets.all(20),
-                    child: Center(
-                      child: Text('Поля отсутствуют'),
-                    ),
+                    child: Center(child: Text('Поля отсутствуют')),
                   )
                 else
                   ...fields.map(
-                    (field) {
-                      return Card(
-                        child: ListTile(
-                          title: Text(field.label),
-                          subtitle: Text(field.type.name),
-                          trailing: PopupMenuButton<String>(
-                            onSelected: (value) async {
-                              if (value == 'edit') {
-                                await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => EditFieldPage(
-                                      field: field,
-                                    ),
-                                  ),
+                    (field) => Card(
+                      child: ListTile(
+                        title: Text(field.label),
+                        subtitle: Text(field.type.name),
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (value) async {
+                            if (value == 'edit') {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => EditFieldPage(field: field),
+                                ),
+                              );
+
+                              if (!mounted) return;
+                              ref.invalidate(fieldsProvider(widget.collectionId));
+                            }
+
+                            if (value == 'delete') {
+                              final confirm = await _confirmDelete(field.label);
+                              if (!mounted) return;
+
+                              if (confirm) {
+                                final service = await ref.read(
+                                  fieldServiceProvider.future,
                                 );
+                                await service.deleteField(field.id);
 
-                                if (!mounted) {
-                                  return;
-                                }
-
+                                if (!mounted) return;
                                 ref.invalidate(
                                   fieldsProvider(widget.collectionId),
                                 );
                               }
-
-                              if (value == 'delete') {
-                                final confirm = await _confirmDelete(
-                                  field.label,
-                                );
-
-                                if (!mounted) {
-                                  return;
-                                }
-
-                                if (confirm) {
-                                  final service = await ref.read(
-                                    fieldServiceProvider.future,
-                                  );
-
-                                  await service.deleteField(field.id);
-
-                                  if (!mounted) {
-                                    return;
-                                  }
-
-                                  ref.invalidate(
-                                    fieldsProvider(widget.collectionId),
-                                  );
-                                }
-                              }
-                            },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(
-                                value: 'edit',
-                                child: Text('Изменить'),
-                              ),
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Text('Удалить'),
-                              ),
-                            ],
-                          ),
+                            }
+                          },
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(
+                              value: 'edit',
+                              child: Text('Изменить'),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Удалить'),
+                            ),
+                          ],
                         ),
-                      );
-                    },
+                      ),
+                    ),
                   ),
                 const SizedBox(height: 16),
                 Row(
@@ -257,40 +200,31 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
                 itemsAsync.when(
                   loading: () => const Padding(
                     padding: EdgeInsets.all(20),
-                    child: Center(
-                      child: CircularProgressIndicator(),
-                    ),
+                    child: Center(child: CircularProgressIndicator()),
                   ),
-                  error: (error, stack) => Text(
-                    error.toString(),
-                  ),
+                  error: (error, stack) => Text(error.toString()),
                   data: (items) {
                     if (items.isEmpty) {
                       return const Padding(
                         padding: EdgeInsets.all(20),
-                        child: Center(
-                          child: Text('Предметов пока нет'),
-                        ),
+                        child: Center(child: Text('Предметов пока нет')),
                       );
                     }
 
                     return Column(
-                      children: items.asMap().entries.map(
-                        (entry) {
-                          final index = entry.key;
-                          final item = entry.value;
+                      children: items.map((item) {
+                        final valuesAsync = ref.watch(
+                          itemValuesProvider(item.id),
+                        );
 
-                          return Card(
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                child: Text('${index + 1}'),
+                        return Card(
+                          child: valuesAsync.when(
+                            loading: () => ListTile(
+                              leading: const CircleAvatar(
+                                child: Icon(Icons.inventory_2_outlined),
                               ),
-                              title: Text(
-                                'Предмет ${index + 1}',
-                              ),
-                              subtitle: Text(
-                                'ID: ${item.id}',
-                              ),
+                              title: const Text('Загрузка...'),
+                              subtitle: Text('ID: ${item.id}'),
                               onTap: () async {
                                 await Navigator.push(
                                   context,
@@ -301,18 +235,80 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
                                   ),
                                 );
 
-                                if (!mounted) {
-                                  return;
-                                }
-
+                                if (!mounted) return;
+                                ref.invalidate(itemValuesProvider(item.id));
                                 ref.invalidate(
                                   itemsProvider(widget.collectionId),
                                 );
                               },
                             ),
-                          );
-                        },
-                      ).toList(),
+                            error: (error, stack) => ListTile(
+                              leading: const CircleAvatar(
+                                child: Icon(Icons.inventory_2_outlined),
+                              ),
+                              title: const Text('Предмет'),
+                              subtitle: Text('ID: ${item.id}'),
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ItemDetailPage(
+                                      itemId: item.id,
+                                    ),
+                                  ),
+                                );
+
+                                if (!mounted) return;
+                                ref.invalidate(itemValuesProvider(item.id));
+                                ref.invalidate(
+                                  itemsProvider(widget.collectionId),
+                                );
+                              },
+                            ),
+                            data: (values) {
+                              final summary = values
+                                  .map((value) => value.value.trim())
+                                  .where((value) => value.isNotEmpty)
+                                  .take(2)
+                                  .join(' • ');
+
+                              return ListTile(
+                                leading: const CircleAvatar(
+                                  child: Icon(Icons.inventory_2_outlined),
+                                ),
+                                title: Text(
+                                  summary.isEmpty ? 'Предмет' : summary,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: Text(
+                                  summary.isEmpty
+                                      ? 'Нет заполненных значений • ID: ${item.id}'
+                                      : 'ID: ${item.id}',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                onTap: () async {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ItemDetailPage(
+                                        itemId: item.id,
+                                      ),
+                                    ),
+                                  );
+
+                                  if (!mounted) return;
+                                  ref.invalidate(itemValuesProvider(item.id));
+                                  ref.invalidate(
+                                    itemsProvider(widget.collectionId),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        );
+                      }).toList(),
                     );
                   },
                 ),
@@ -333,13 +329,8 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
             ),
           );
 
-          if (!mounted) {
-            return;
-          }
-
-          ref.invalidate(
-            fieldsProvider(widget.collectionId),
-          );
+          if (!mounted) return;
+          ref.invalidate(fieldsProvider(widget.collectionId));
         },
       ),
     );
