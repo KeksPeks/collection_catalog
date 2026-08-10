@@ -45,7 +45,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                   definition: field,
                   value: values[field.id],
                   onChanged: (value) {
-                    values[field.id] = value;
+                    setState(() {
+                      values[field.id] = value;
+                    });
                   },
                 ),
               ),
@@ -70,7 +72,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     await service.saveItem(item);
 
     for (final entry in values.entries) {
-      if (entry.value.trim().isEmpty) {
+      final value = entry.value.trim();
+
+      if (value.isEmpty) {
         continue;
       }
 
@@ -79,7 +83,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
           id: DateTime.now().microsecondsSinceEpoch.toString(),
           itemId: item.id,
           fieldId: entry.key,
-          value: entry.value.trim(),
+          value: value,
         ),
       );
     }
