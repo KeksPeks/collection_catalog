@@ -121,8 +121,8 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
                           title: Text(collection.name),
                           subtitle: Text(
                             collection.templateId == null
-                                ? '${collection.fields.length} полей • пользовательский каталог'
-                                : '${collection.fields.length} полей • шаблон ${collection.templateId}',
+                                ? 'Пользовательский каталог • ${collection.id}'
+                                : 'Шаблон: ${collection.templateId}',
                           ),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () async {
