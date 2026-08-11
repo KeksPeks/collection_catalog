@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../fields/presentation/providers/field_service_provider.dart';
+import '../../../templates/data/catalog_template_registry.dart';
+import '../../../templates/domain/entities/template.dart';
+import '../../../templates/presentation/pages/catalog_templates_page.dart';
+import '../../domain/entities/collection.dart';
 import '../providers/collection_provider.dart';
 import '../providers/collection_service_provider.dart';
 import 'collection_detail_page.dart';
 import 'edit_collection_page.dart';
-import '../../../templates/presentation/pages/catalog_templates_page.dart';
 
 /// Главный экран управления коллекциями.
 class CollectionsPage extends ConsumerStatefulWidget {
@@ -29,13 +33,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
           IconButton(
             tooltip: 'Шаблоны каталогов',
             icon: const Icon(Icons.auto_awesome),
-            onPressed: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const CatalogTemplatesPage()),
-              );
-              if (!mounted) return;
-              ref.invalidate(collectionsProvider);
-            },
+            onPressed: _openTemplates,
           ),
         ],
       ),
@@ -72,122 +70,13 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
                 ),
                 const SizedBox(height: 16),
                 if (filtered.isEmpty)
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        children: [
-                          const Icon(Icons.collections_bookmark_outlined, size: 52),
-                          const SizedBox(height: 12),
-                          Text(
-                            items.isEmpty ? 'Коллекций пока нет' : 'Ничего не найдено',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Создайте собственную коллекцию или используйте готовый шаблон.',
-                            textAlign: TextAlign.center,
-                          ),
-                          if (items.isEmpty) ...[
-                            const SizedBox(height: 16),
-                            FilledButton.icon(
-                              onPressed: () async {
-                                await Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => const CatalogTemplatesPage(),
-                                  ),
-                                );
-                                if (!mounted) return;
-                                ref.invalidate(collectionsProvider);
-                              },
-                              icon: const Icon(Icons.auto_awesome),
-                              label: const Text('Выбрать шаблон'),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+                  _EmptyCollectionsCard(
+                    hasCollections: items.isNotEmpty,
+                    onTemplate: _openTemplates,
+                    onCreate: _createCollection,
                   )
                 else
-                  ...filtered.map(
-                    (collection) => Card(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(12),
-                        leading: const CircleAvatar(
-                          child: Icon(Icons.collections_bookmark),
-                        ),
-                        title: Text(collection.name),
-                        subtitle: Text(
-                          collection.templateId == null
-                              ? 'Пользовательская коллекция'
-                              : 'Шаблон: ${collection.templateId}',
-                        ),
-                        trailing: PopupMenuButton<String>(
-                          onSelected: (value) async {
-                            if (value == 'open') {
-                              await Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => CollectionDetailPage(
-                                    collectionId: collection.id,
-                                    collectionName: collection.name,
-                                  ),
-                                ),
-                              );
-                            } else if (value == 'edit') {
-                              await Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => EditCollectionPage(collection: collection),
-                                ),
-                              );
-                            } else if (value == 'delete') {
-                              final confirmed = await showDialog<bool>(
-                                context: context,
-                                builder: (dialogContext) => AlertDialog(
-                                  title: const Text('Удалить коллекцию?'),
-                                  content: Text(collection.name),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(dialogContext, false),
-                                      child: const Text('Отмена'),
-                                    ),
-                                    FilledButton(
-                                      onPressed: () => Navigator.pop(dialogContext, true),
-                                      child: const Text('Удалить'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                              if (confirmed == true) {
-                                await ref
-                                    .read(collectionServiceProvider)
-                                    .deleteCollection(collection.id);
-                              }
-                            }
-                            if (!mounted) return;
-                            ref.invalidate(collectionsProvider);
-                          },
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(value: 'open', child: Text('Открыть')),
-                            PopupMenuItem(value: 'edit', child: Text('Изменить')),
-                            PopupMenuItem(value: 'delete', child: Text('Удалить')),
-                          ],
-                        ),
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => CollectionDetailPage(
-                                collectionId: collection.id,
-                                collectionName: collection.name,
-                              ),
-                            ),
-                          );
-                          if (!mounted) return;
-                          ref.invalidate(collectionsProvider);
-                        },
-                      ),
-                    ),
-                  ),
+                  ...filtered.map(_buildCollectionTile),
               ],
             ),
           );
@@ -201,18 +90,131 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     );
   }
 
+  Widget _buildCollectionTile(Collection collection) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(12),
+        leading: const CircleAvatar(child: Icon(Icons.collections_bookmark)),
+        title: Text(collection.name),
+        subtitle: Text(
+          collection.templateId == null
+              ? 'Пустая коллекция'
+              : 'Шаблон: ${collection.templateId}',
+        ),
+        trailing: PopupMenuButton<String>(
+          onSelected: (value) => _collectionAction(collection, value),
+          itemBuilder: (_) => const [
+            PopupMenuItem(value: 'open', child: Text('Открыть')),
+            PopupMenuItem(value: 'edit', child: Text('Изменить')),
+            PopupMenuItem(value: 'delete', child: Text('Удалить')),
+          ],
+        ),
+        onTap: () => _openCollection(collection),
+      ),
+    );
+  }
+
+  Future<void> _collectionAction(Collection collection, String value) async {
+    if (value == 'open') {
+      await _openCollection(collection);
+    } else if (value == 'edit') {
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => EditCollectionPage(collection: collection)),
+      );
+    } else if (value == 'delete') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Удалить коллекцию?'),
+          content: Text(collection.name),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Отмена'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Удалить'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true) {
+        await ref.read(collectionServiceProvider).deleteCollection(collection.id);
+      }
+    }
+
+    if (!mounted) return;
+    ref.invalidate(collectionsProvider);
+  }
+
+  Future<void> _openCollection(Collection collection) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CollectionDetailPage(
+          collectionId: collection.id,
+          collectionName: collection.name,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    ref.invalidate(collectionsProvider);
+  }
+
+  Future<void> _openTemplates() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CatalogTemplatesPage()),
+    );
+    if (!mounted) return;
+    ref.invalidate(collectionsProvider);
+  }
+
   Future<void> _createCollection() async {
-    final name = await showDialog<String>(
+    final result = await showDialog<_CreateCollectionResult>(
       context: context,
       builder: (_) => const _CreateCollectionDialog(),
     );
 
-    if (!mounted || name == null || name.isEmpty) return;
+    if (!mounted || result == null || result.name.isEmpty) return;
 
-    await ref.read(collectionServiceProvider).createNewCollection(name);
+    final collectionId = DateTime.now().microsecondsSinceEpoch.toString();
+    final now = DateTime.now();
+    final fields = result.template == null
+        ? <dynamic>[]
+        : result.template!.fields
+            .map((field) => field.copyWith(collectionId: collectionId))
+            .toList();
+
+    final collection = Collection(
+      id: collectionId,
+      name: result.name,
+      templateId: result.template?.id,
+      fields: fields,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    await ref.read(collectionServiceProvider).createCollection(collection);
+
+    if (result.template != null) {
+      final fieldService = await ref.read(fieldServiceProvider.future);
+      for (final field in fields) {
+        await fieldService.addField(field);
+      }
+    }
+
     if (!mounted) return;
     ref.invalidate(collectionsProvider);
+    await _openCollection(collection);
   }
+}
+
+class _CreateCollectionResult {
+  final String name;
+  final Template? template;
+
+  const _CreateCollectionResult({required this.name, required this.template});
 }
 
 class _CreateCollectionDialog extends StatefulWidget {
@@ -224,6 +226,7 @@ class _CreateCollectionDialog extends StatefulWidget {
 
 class _CreateCollectionDialogState extends State<_CreateCollectionDialog> {
   final TextEditingController _controller = TextEditingController();
+  Template? _template;
 
   @override
   void dispose() {
@@ -234,34 +237,128 @@ class _CreateCollectionDialogState extends State<_CreateCollectionDialog> {
   void _submit() {
     final value = _controller.text.trim();
     if (value.isEmpty) return;
-    Navigator.pop(context, value);
+    Navigator.pop(
+      context,
+      _CreateCollectionResult(name: value, template: _template),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final templates = CatalogTemplateRegistry.all;
+
     return AlertDialog(
       title: const Text('Новая коллекция'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        textInputAction: TextInputAction.done,
-        decoration: const InputDecoration(
-          labelText: 'Название',
-          hintText: 'Например: Мои монеты',
-          border: OutlineInputBorder(),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              textInputAction: TextInputAction.done,
+              decoration: const InputDecoration(
+                labelText: 'Название',
+                hintText: 'Например: Мои монеты',
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (_) => _submit(),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<Template?>(
+              initialValue: _template,
+              decoration: const InputDecoration(
+                labelText: 'Тип каталога',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                const DropdownMenuItem<Template?>(
+                  value: null,
+                  child: Text('Пустая коллекция'),
+                ),
+                ...templates.map(
+                  (template) => DropdownMenuItem<Template?>(
+                    value: template,
+                    child: Text(template.name),
+                  ),
+                ),
+              ],
+              onChanged: (value) => setState(() => _template = value),
+            ),
+            if (_template != null) ...[
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${_template!.description}\nБудет создано полей: ${_template!.fields.length}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            ],
+          ],
         ),
-        onSubmitted: (_) => _submit(),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Отмена'),
         ),
-        FilledButton(
+        FilledButton.icon(
           onPressed: _submit,
-          child: const Text('Создать'),
+          icon: const Icon(Icons.add),
+          label: const Text('Создать'),
         ),
       ],
+    );
+  }
+}
+
+class _EmptyCollectionsCard extends StatelessWidget {
+  final bool hasCollections;
+  final VoidCallback onTemplate;
+  final VoidCallback onCreate;
+
+  const _EmptyCollectionsCard({
+    required this.hasCollections,
+    required this.onTemplate,
+    required this.onCreate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            const Icon(Icons.collections_bookmark_outlined, size: 52),
+            const SizedBox(height: 12),
+            Text(
+              hasCollections ? 'Ничего не найдено' : 'Коллекций пока нет',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Создайте коллекцию и сразу выберите подходящий тип каталога.',
+              textAlign: TextAlign.center,
+            ),
+            if (!hasCollections) ...[
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: onTemplate,
+                icon: const Icon(Icons.auto_awesome),
+                label: const Text('Готовые шаблоны'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: onCreate,
+                icon: const Icon(Icons.add),
+                label: const Text('Создать каталог'),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
