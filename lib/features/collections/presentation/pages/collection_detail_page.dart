@@ -7,6 +7,7 @@ import '../../../fields/presentation/providers/field_provider.dart';
 import '../../../fields/presentation/providers/field_service_provider.dart';
 import '../../../items/presentation/pages/item_detail_page.dart';
 import '../../../items/presentation/pages/item_editor_page.dart';
+import '../../../items/presentation/pages/items_page.dart';
 import '../../../items/presentation/providers/item_provider.dart';
 import '../../domain/entities/collection.dart';
 import '../providers/collection_provider.dart';
@@ -70,6 +71,20 @@ class CollectionDetailPage extends ConsumerWidget {
                     ),
                   ),
                 ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ItemsPage(collection: collection),
+                      ),
+                    );
+                    if (!context.mounted) return;
+                    ref.invalidate(itemsProvider(collectionId));
+                  },
+                  icon: const Icon(Icons.view_list),
+                  label: const Text('Открыть каталог предметов'),
+                ),
                 const SizedBox(height: 16),
                 _SectionCard(
                   title: 'Предметы',
@@ -79,7 +94,7 @@ class CollectionDetailPage extends ConsumerWidget {
                     data: (items) {
                       if (items.isEmpty) return const Text('Предметов пока нет');
                       return Column(
-                        children: items.map((item) => ListTile(
+                        children: items.take(5).map((item) => ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: const Icon(Icons.inventory_2_outlined),
                           title: Text('Предмет ${item.id}'),
@@ -172,13 +187,13 @@ class CollectionDetailPage extends ConsumerWidget {
             icon: const Icon(Icons.add_box_outlined),
             label: const Text('Предмет'),
             onPressed: () async {
-              final fields = ref.read(fieldsProvider(collectionId)).valueOrNull ?? [];
+              final currentFields = ref.read(fieldsProvider(collectionId)).valueOrNull ?? [];
               final stored = ref.read(collectionProvider(collectionId)).valueOrNull;
-              final collection = stored?.copyWith(fields: fields) ??
+              final collection = stored?.copyWith(fields: currentFields) ??
                   Collection(
                     id: collectionId,
                     name: collectionName,
-                    fields: fields,
+                    fields: currentFields,
                     createdAt: DateTime.now(),
                     updatedAt: DateTime.now(),
                   );
