@@ -6,6 +6,7 @@ import '../../../collections/domain/entities/collection.dart';
 import '../../../collections/presentation/providers/collection_provider.dart';
 import '../../../collections/presentation/providers/collection_service_provider.dart';
 import '../../../fields/domain/entities/field_definition.dart';
+import '../../../fields/presentation/providers/field_service_provider.dart';
 
 /// Экран готовых шаблонов каталогов.
 class CatalogTemplatesPage extends ConsumerWidget {
@@ -14,6 +15,7 @@ class CatalogTemplatesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final templates = CatalogTemplateRegistry.all;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Шаблоны каталогов')),
       body: ListView.separated(
@@ -43,27 +45,52 @@ class CatalogTemplatesPage extends ConsumerWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Новая коллекция'),
-        content: TextField(controller: controller, autofocus: true),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Название'),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Отмена')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, controller.text.trim()), child: const Text('Создать')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            child: const Text('Создать'),
+          ),
         ],
       ),
     );
     controller.dispose();
+
     if (name == null || name.isEmpty || !context.mounted) return;
 
     final id = DateTime.now().microsecondsSinceEpoch.toString();
+    final fields = (template.fields as List<FieldDefinition>)
+        .map((field) => field.copyWith(collectionId: id))
+        .toList();
+    final now = DateTime.now();
     final collection = Collection(
       id: id,
       name: name,
       templateId: template.id,
-      fields: (template.fields as List<FieldDefinition>).map((f) => f.copyWith(collectionId: id)).toList(),
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
+      fields: fields,
+      createdAt: now,
+      updatedAt: now,
     );
-    await ref.read(collectionServiceProvider).createCollection(collection);
+
+    final collectionService = ref.read(collectionServiceProvider);
+    final fieldService = await ref.read(fieldServiceProvider.future);
+
+    await collectionService.createCollection(collection);
+    for (final field in fields) {
+      await fieldService.addField(field);
+    }
+
     ref.invalidate(collectionsProvider);
-    if (context.mounted) Navigator.pop(context, collection);
+
+    if (!context.mounted) return;
+    Navigator.pop(context, collection);
   }
 }
