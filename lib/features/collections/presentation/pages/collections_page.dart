@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../fields/presentation/providers/field_service_provider.dart';
+import '../../../fields/domain/entities/field_definition.dart';
 import '../../../templates/data/catalog_template_registry.dart';
 import '../../../templates/domain/entities/template.dart';
 import '../../../templates/presentation/pages/catalog_templates_page.dart';
@@ -120,7 +120,9 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
       await _openCollection(collection);
     } else if (value == 'edit') {
       await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => EditCollectionPage(collection: collection)),
+        MaterialPageRoute(
+          builder: (_) => EditCollectionPage(collection: collection),
+        ),
       );
     } else if (value == 'delete') {
       final confirmed = await showDialog<bool>(
@@ -180,8 +182,8 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
 
     final collectionId = DateTime.now().microsecondsSinceEpoch.toString();
     final now = DateTime.now();
-    final fields = result.template == null
-        ? <dynamic>[]
+    final List<FieldDefinition> fields = result.template == null
+        ? <FieldDefinition>[]
         : result.template!.fields
             .map(
               (field) => field.copyWith(
@@ -201,14 +203,8 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     );
 
     try {
+      // CollectionService сохраняет коллекцию и её поля атомарно по логике сервиса.
       await ref.read(collectionServiceProvider).createCollection(collection);
-
-      if (result.template != null) {
-        final fieldService = await ref.read(fieldServiceProvider.future);
-        for (final field in fields) {
-          await fieldService.addField(field);
-        }
-      }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -227,7 +223,10 @@ class _CreateCollectionResult {
   final String name;
   final Template? template;
 
-  const _CreateCollectionResult({required this.name, required this.template});
+  const _CreateCollectionResult({
+    required this.name,
+    required this.template,
+  });
 }
 
 class _CreateCollectionDialog extends StatefulWidget {
