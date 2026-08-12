@@ -6,8 +6,9 @@ import '../repositories/collection_repository.dart';
 
 /// Сервис управления коллекциями.
 ///
-/// Создание коллекции и сохранение её структуры выполняются как одна
-/// логическая операция, чтобы каталог не появлялся пустым после создания.
+/// Коллекция хранит метаданные отдельно от таблицы полей, поэтому сервис
+/// объединяет их перед передачей в интерфейс. Благодаря этому после
+/// перезапуска приложения каталог не становится пустым.
 class CollectionService {
   final CollectionRepository repository;
   final CollectionFactory factory;
@@ -19,12 +20,16 @@ class CollectionService {
     required this.fieldRepository,
   });
 
-  Future<List<Collection>> getCollections() {
-    return repository.getCollections();
+  Future<List<Collection>> getCollections() async {
+    final collections = await repository.getCollections();
+    return _attachFields(collections);
   }
 
-  Future<Collection?> getCollection(String id) {
-    return repository.getById(id);
+  Future<Collection?> getCollection(String id) async {
+    final collection = await repository.getById(id);
+    if (collection == null) return null;
+    final fields = await fieldRepository.getFields(id);
+    return collection.copyWith(fields: fields);
   }
 
   Future<void> createCollection(Collection collection) async {
@@ -52,5 +57,18 @@ class CollectionService {
 
   Future<void> deleteCollection(String id) async {
     await repository.deleteCollection(id);
+  }
+
+  Future<List<Collection>> _attachFields(
+    List<Collection> collections,
+  ) async {
+    final result = <Collection>[];
+
+    for (final collection in collections) {
+      final fields = await fieldRepository.getFields(collection.id);
+      result.add(collection.copyWith(fields: fields));
+    }
+
+    return result;
   }
 }
