@@ -80,22 +80,31 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int currentIndex = 0;
 
+  // Эти страницы не пересоздаются при каждом изменении темы или цвета.
+  // Это сохраняет их State и не ломает открытые поля, диалоги и навигацию.
+  late final Widget _catalogPage = const CatalogPage();
+  late final Widget _downloadsPage = const Center(
+    child: Text('Загрузки пока не используются'),
+  );
+  late final Widget _collectionsPage = const CollectionsPage();
+
   @override
   Widget build(BuildContext context) {
-    final pages = <Widget>[
-      const CatalogPage(),
-      const Center(child: Text('Загрузки пока не используются')),
-      const CollectionsPage(),
-      _SettingsPage(
-        themeMode: widget.themeMode,
-        colorIndex: widget.colorIndex,
-        onThemeChanged: widget.onThemeChanged,
-        onColorChanged: widget.onColorChanged,
-      ),
-    ];
-
     return Scaffold(
-      body: IndexedStack(index: currentIndex, children: pages),
+      body: IndexedStack(
+        index: currentIndex,
+        children: [
+          _catalogPage,
+          _downloadsPage,
+          _collectionsPage,
+          _SettingsPage(
+            themeMode: widget.themeMode,
+            colorIndex: widget.colorIndex,
+            onThemeChanged: widget.onThemeChanged,
+            onColorChanged: widget.onColorChanged,
+          ),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIndex,
         onDestinationSelected: (index) => setState(() => currentIndex = index),
@@ -212,37 +221,38 @@ class _SettingsPage extends StatelessWidget {
     }
   }
 
-  void _showThemes(BuildContext context) {
-    showModalBottomSheet<void>(
+  Future<void> _showThemes(BuildContext context) async {
+    final selected = await showModalBottomSheet<ThemeMode>(
       context: context,
-      builder: (context) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: ThemeMode.values.map((mode) {
-            final selected = mode == themeMode;
+            final isSelected = mode == themeMode;
             return ListTile(
               leading: Icon(
-                selected
+                isSelected
                     ? Icons.radio_button_checked
                     : Icons.radio_button_unchecked,
               ),
               title: Text(_themeName(mode)),
-              selected: selected,
-              onTap: () {
-                onThemeChanged(mode);
-                Navigator.pop(context);
-              },
+              selected: isSelected,
+              onTap: () => Navigator.pop(sheetContext, mode),
             );
           }).toList(),
         ),
       ),
     );
+
+    if (selected != null) {
+      onThemeChanged(selected);
+    }
   }
 
-  void _showColors(BuildContext context) {
-    showModalBottomSheet<void>(
+  Future<void> _showColors(BuildContext context) async {
+    final selected = await showModalBottomSheet<int>(
       context: context,
-      builder: (context) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Wrap(
           children: List.generate(
             _MyAppState.colors.length,
@@ -252,14 +262,15 @@ class _SettingsPage extends StatelessWidget {
               ),
               title: Text(_MyAppState.colorNames[index]),
               trailing: index == colorIndex ? const Icon(Icons.check) : null,
-              onTap: () {
-                onColorChanged(index);
-                Navigator.pop(context);
-              },
+              onTap: () => Navigator.pop(sheetContext, index),
             ),
           ),
         ),
       ),
     );
+
+    if (selected != null) {
+      onColorChanged(selected);
+    }
   }
 }
