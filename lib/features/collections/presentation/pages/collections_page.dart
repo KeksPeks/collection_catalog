@@ -235,17 +235,11 @@ class _CreateCollectionDialog extends StatefulWidget {
 }
 
 class _CreateCollectionDialogState extends State<_CreateCollectionDialog> {
-  final TextEditingController _controller = TextEditingController();
+  String _name = '';
   Template? _template;
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
   void _submit() {
-    final value = _controller.text.trim();
+    final value = _name.trim();
     if (value.isEmpty) return;
     Navigator.pop(
       context,
@@ -265,7 +259,6 @@ class _CreateCollectionDialogState extends State<_CreateCollectionDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-              controller: _controller,
               autofocus: true,
               textInputAction: TextInputAction.done,
               decoration: const InputDecoration(
@@ -273,6 +266,7 @@ class _CreateCollectionDialogState extends State<_CreateCollectionDialog> {
                 hintText: 'Например: Мои монеты',
                 border: OutlineInputBorder(),
               ),
+              onChanged: (value) => _name = value,
               onSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: 16),
