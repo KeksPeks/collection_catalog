@@ -21,7 +21,7 @@ class CatalogTemplatesPage extends ConsumerWidget {
       body: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: templates.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
           final template = templates[index];
           return Card(
@@ -51,14 +51,8 @@ class CatalogTemplatesPage extends ConsumerWidget {
           decoration: const InputDecoration(labelText: 'Название'),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Отмена'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
-            child: const Text('Создать'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Отмена')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, controller.text.trim()), child: const Text('Создать')),
         ],
       ),
     );
@@ -68,12 +62,7 @@ class CatalogTemplatesPage extends ConsumerWidget {
 
     final id = DateTime.now().microsecondsSinceEpoch.toString();
     final fields = (template.fields as List<FieldDefinition>)
-        .map(
-          (field) => field.copyWith(
-            id: '${id}_${field.id}',
-            collectionId: id,
-          ),
-        )
+        .map((field) => field.copyWith(id: '${id}_${field.id}', collectionId: id))
         .toList();
     final now = DateTime.now();
     final collection = Collection(
@@ -88,21 +77,16 @@ class CatalogTemplatesPage extends ConsumerWidget {
     try {
       final collectionService = ref.read(collectionServiceProvider);
       final fieldService = await ref.read(fieldServiceProvider.future);
-
       await collectionService.createCollection(collection);
       for (final field in fields) {
         await fieldService.addField(field);
       }
-
       ref.invalidate(collectionsProvider);
-
       if (!context.mounted) return;
       Navigator.pop(context, collection);
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Не удалось создать каталог: $error')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Не удалось создать каталог: $error')));
     }
   }
 }
