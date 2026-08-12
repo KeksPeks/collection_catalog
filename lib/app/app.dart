@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../features/catalogs/presentation/catalog_online_page.dart';
 import '../features/collections/presentation/pages/catalog_page.dart';
 import '../features/collections/presentation/pages/collections_page.dart';
 import '../features/downloads/presentation/downloads_page.dart';
