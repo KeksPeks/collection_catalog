@@ -7,6 +7,7 @@ class CatalogTemplateRegistry {
   static List<Template> get all => [
         _template('coins', 'Монеты', 'Нумизматический каталог', [
           _field('country', 'Страна', FieldType.text),
+          _field('category', 'Категория чеканки', FieldType.text),
           _field('period', 'Период', FieldType.text),
           _field('denomination', 'Номинал', FieldType.text),
           _field('year', 'Год', FieldType.integer),
