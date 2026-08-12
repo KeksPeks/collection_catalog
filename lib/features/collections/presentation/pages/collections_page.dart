@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../fields/domain/entities/field_definition.dart';
-import '../../../templates/data/catalog_template_registry.dart';
-import '../../../templates/domain/entities/template.dart';
-import '../../../templates/presentation/pages/catalog_templates_page.dart';
 import '../../domain/entities/collection.dart';
 import '../providers/collection_provider.dart';
 import '../providers/collection_service_provider.dart';
 import 'collection_detail_page.dart';
 import 'edit_collection_page.dart';
 
-/// Главный экран управления коллекциями.
+/// Экран загруженных пользователем каталогов.
+///
+/// Готовые каталоги находятся во вкладке «Каталог». После скачивания
+/// локальная копия появляется здесь и используется для ведения коллекции.
 class CollectionsPage extends ConsumerStatefulWidget {
   const CollectionsPage({super.key});
 
@@ -27,21 +26,15 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     final collections = ref.watch(collectionsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Мои коллекции'),
-        actions: [
-          IconButton(
-            tooltip: 'Шаблоны каталогов',
-            icon: const Icon(Icons.auto_awesome),
-            onPressed: _openTemplates,
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Мои коллекции')),
       body: collections.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('Ошибка: $error')),
         data: (items) {
-          final filtered = items.where((item) {
+          final downloaded = items
+              .where((item) => item.templateId != null)
+              .toList(growable: false);
+          final filtered = downloaded.where((item) {
             return item.name.toLowerCase().contains(_search.toLowerCase());
           }).toList();
 
@@ -57,7 +50,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
                 TextField(
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.search),
-                    hintText: 'Поиск коллекции',
+                    hintText: 'Поиск загруженной коллекции',
                     border: const OutlineInputBorder(),
                     suffixIcon: _search.isEmpty
                         ? null
@@ -71,9 +64,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
                 const SizedBox(height: 16),
                 if (filtered.isEmpty)
                   _EmptyCollectionsCard(
-                    hasCollections: items.isNotEmpty,
-                    onTemplate: _openTemplates,
-                    onCreate: _createCollection,
+                    hasCollections: downloaded.isNotEmpty,
                   )
                 else
                   ...filtered.map(_buildCollectionTile),
@@ -81,11 +72,6 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
             ),
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _createCollection,
-        icon: const Icon(Icons.add),
-        label: const Text('Новая коллекция'),
       ),
     );
   }
@@ -95,19 +81,17 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
         contentPadding: const EdgeInsets.all(12),
-        leading: const CircleAvatar(child: Icon(Icons.collections_bookmark)),
-        title: Text(collection.name),
-        subtitle: Text(
-          collection.templateId == null
-              ? 'Пустая коллекция'
-              : 'Шаблон: ${collection.templateId}',
+        leading: const CircleAvatar(
+          child: Icon(Icons.collections_bookmark),
         ),
+        title: Text(collection.name),
+        subtitle: Text('Каталог сохранён на устройстве'),
         trailing: PopupMenuButton<String>(
           onSelected: (value) => _collectionAction(collection, value),
           itemBuilder: (_) => const [
             PopupMenuItem(value: 'open', child: Text('Открыть')),
-            PopupMenuItem(value: 'edit', child: Text('Изменить')),
-            PopupMenuItem(value: 'delete', child: Text('Удалить')),
+            PopupMenuItem(value: 'edit', child: Text('Изменить данные')),
+            PopupMenuItem(value: 'delete', child: Text('Удалить локальную копию')),
           ],
         ),
         onTap: () => _openCollection(collection),
@@ -128,7 +112,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('Удалить коллекцию?'),
+          title: const Text('Удалить локальную копию?'),
           content: Text(collection.name),
           actions: [
             TextButton(
@@ -163,173 +147,12 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     if (!mounted) return;
     ref.invalidate(collectionsProvider);
   }
-
-  Future<void> _openTemplates() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const CatalogTemplatesPage()),
-    );
-    if (!mounted) return;
-    ref.invalidate(collectionsProvider);
-  }
-
-  Future<void> _createCollection() async {
-    final result = await showDialog<_CreateCollectionResult>(
-      context: context,
-      builder: (_) => const _CreateCollectionDialog(),
-    );
-
-    if (!mounted || result == null || result.name.isEmpty) return;
-
-    final collectionId = DateTime.now().microsecondsSinceEpoch.toString();
-    final now = DateTime.now();
-    final template = result.template;
-    final List<FieldDefinition> fields = <FieldDefinition>[
-      if (template != null)
-        for (final field in template.fields)
-          field.copyWith(
-            id: '${collectionId}_${field.id}',
-            collectionId: collectionId,
-          ),
-    ];
-
-    final collection = Collection(
-      id: collectionId,
-      name: result.name,
-      templateId: template?.id,
-      fields: fields,
-      createdAt: now,
-      updatedAt: now,
-    );
-
-    try {
-      await ref.read(collectionServiceProvider).createCollection(collection);
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Не удалось создать каталог: $error')),
-      );
-      return;
-    }
-
-    if (!mounted) return;
-    ref.invalidate(collectionsProvider);
-    await _openCollection(collection);
-  }
-}
-
-class _CreateCollectionResult {
-  final String name;
-  final Template? template;
-
-  const _CreateCollectionResult({
-    required this.name,
-    required this.template,
-  });
-}
-
-class _CreateCollectionDialog extends StatefulWidget {
-  const _CreateCollectionDialog();
-
-  @override
-  State<_CreateCollectionDialog> createState() => _CreateCollectionDialogState();
-}
-
-class _CreateCollectionDialogState extends State<_CreateCollectionDialog> {
-  String _name = '';
-  Template? _template;
-
-  void _submit() {
-    final value = _name.trim();
-    if (value.isEmpty) return;
-    Navigator.pop(
-      context,
-      _CreateCollectionResult(name: value, template: _template),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final templates = CatalogTemplateRegistry.all;
-    final selectedTemplate = _template;
-
-    return AlertDialog(
-      title: const Text('Новая коллекция'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              autofocus: true,
-              textInputAction: TextInputAction.done,
-              decoration: const InputDecoration(
-                labelText: 'Название',
-                hintText: 'Например: Мои монеты',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (value) => _name = value,
-              onSubmitted: (_) => _submit(),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<Template?>(
-              initialValue: _template,
-              decoration: const InputDecoration(
-                labelText: 'Тип каталога',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                const DropdownMenuItem<Template?>(
-                  value: null,
-                  child: Text('Пустая коллекция'),
-                ),
-                ...templates.map(
-                  (template) => DropdownMenuItem<Template?>(
-                    value: template,
-                    child: Text(template.name),
-                  ),
-                ),
-              ],
-              onChanged: (Template? value) {
-                setState(() => _template = value);
-              },
-            ),
-            if (selectedTemplate != null) ...[
-              const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '${selectedTemplate.description}\nБудет создано полей: ${selectedTemplate.fields.length}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Отмена'),
-        ),
-        FilledButton.icon(
-          onPressed: _submit,
-          icon: const Icon(Icons.add),
-          label: const Text('Создать'),
-        ),
-      ],
-    );
-  }
 }
 
 class _EmptyCollectionsCard extends StatelessWidget {
   final bool hasCollections;
-  final VoidCallback onTemplate;
-  final VoidCallback onCreate;
 
-  const _EmptyCollectionsCard({
-    required this.hasCollections,
-    required this.onTemplate,
-    required this.onCreate,
-  });
+  const _EmptyCollectionsCard({required this.hasCollections});
 
   @override
   Widget build(BuildContext context) {
@@ -338,31 +161,20 @@ class _EmptyCollectionsCard extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            const Icon(Icons.collections_bookmark_outlined, size: 52),
+            const Icon(Icons.download_outlined, size: 52),
             const SizedBox(height: 12),
             Text(
-              hasCollections ? 'Ничего не найдено' : 'Коллекций пока нет',
+              hasCollections
+                  ? 'Ничего не найдено'
+                  : 'Загруженных коллекций пока нет',
               style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             const Text(
-              'Создайте коллекцию и сразу выберите подходящий тип каталога.',
+              'Откройте вкладку «Каталог», выберите нужный сборник и нажмите кнопку загрузки.',
               textAlign: TextAlign.center,
             ),
-            if (!hasCollections) ...[
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: onTemplate,
-                icon: const Icon(Icons.auto_awesome),
-                label: const Text('Готовые шаблоны'),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: onCreate,
-                icon: const Icon(Icons.add),
-                label: const Text('Создать каталог'),
-              ),
-            ],
           ],
         ),
       ),
