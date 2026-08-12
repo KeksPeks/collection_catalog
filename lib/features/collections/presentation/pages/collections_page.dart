@@ -182,28 +182,26 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
 
     final collectionId = DateTime.now().microsecondsSinceEpoch.toString();
     final now = DateTime.now();
-    final List<FieldDefinition> fields = result.template == null
-        ? <FieldDefinition>[]
-        : result.template!.fields
-            .map(
-              (field) => field.copyWith(
-                id: '${collectionId}_${field.id}',
-                collectionId: collectionId,
-              ),
-            )
-            .toList();
+    final template = result.template;
+    final List<FieldDefinition> fields = <FieldDefinition>[
+      if (template != null)
+        for (final field in template.fields)
+          field.copyWith(
+            id: '${collectionId}_${field.id}',
+            collectionId: collectionId,
+          ),
+    ];
 
     final collection = Collection(
       id: collectionId,
       name: result.name,
-      templateId: result.template?.id,
+      templateId: template?.id,
       fields: fields,
       createdAt: now,
       updatedAt: now,
     );
 
     try {
-      // CollectionService сохраняет коллекцию и её поля атомарно по логике сервиса.
       await ref.read(collectionServiceProvider).createCollection(collection);
     } catch (error) {
       if (!mounted) return;
@@ -258,6 +256,7 @@ class _CreateCollectionDialogState extends State<_CreateCollectionDialog> {
   @override
   Widget build(BuildContext context) {
     final templates = CatalogTemplateRegistry.all;
+    final selectedTemplate = _template;
 
     return AlertDialog(
       title: const Text('Новая коллекция'),
@@ -295,14 +294,16 @@ class _CreateCollectionDialogState extends State<_CreateCollectionDialog> {
                   ),
                 ),
               ],
-              onChanged: (value) => setState(() => _template = value),
+              onChanged: (Template? value) {
+                setState(() => _template = value);
+              },
             ),
-            if (_template != null) ...[
+            if (selectedTemplate != null) ...[
               const SizedBox(height: 10),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '${_template!.description}\nБудет создано полей: ${_template!.fields.length}',
+                  '${selectedTemplate.description}\nБудет создано полей: ${selectedTemplate.fields.length}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
