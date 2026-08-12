@@ -8,6 +8,7 @@ import '../../../../features/downloads/presentation/download_queue_provider.dart
 import '../../../items/presentation/providers/item_service_provider.dart';
 import '../../domain/entities/collection.dart';
 import '../../domain/entities/collection_section.dart';
+import '../../domain/services/collection_section_service.dart';
 import '../providers/collection_provider.dart';
 import '../providers/collection_section_service_provider.dart';
 import '../providers/collection_service_provider.dart';
@@ -15,8 +16,8 @@ import 'collection_detail_page.dart';
 
 /// Главный экран готовых каталогов.
 ///
-/// Каталог и «Мои коллекции» разделены: здесь показываются готовые
-/// каталоги, а локальные экземпляры открываются после скачивания.
+/// Готовый каталог существует независимо от локальной базы пользователя.
+/// Его можно просматривать онлайн, а затем сохранить на устройство.
 class CatalogPage extends ConsumerStatefulWidget {
   const CatalogPage({super.key});
 
@@ -31,7 +32,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
 
   @override
   Widget build(BuildContext context) {
-    final collectionsAsync = ref.watch(collectionsProvider);
+    final collections = ref.watch(collectionsProvider).valueOrNull ?? const <Collection>[];
     final catalogs = _filteredCatalogs();
 
     return Scaffold(
@@ -40,6 +41,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.sort),
+            tooltip: 'Сортировка',
             onSelected: (value) {
               setState(() {
                 if (value == 'reverse') {
@@ -62,46 +64,46 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
           ),
         ],
       ),
-      body: collectionsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('Ошибка: $error')),
-        data: (collections) => RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(collectionsProvider);
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(collectionsProvider);
+          try {
             await ref.read(collectionsProvider.future);
-          },
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
-            children: [
-              TextField(
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search),
-                  hintText: 'Поиск готового каталога',
-                  border: const OutlineInputBorder(),
-                  suffixIcon: _search.isEmpty
-                      ? null
-                      : IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () => setState(() => _search = ''),
-                        ),
-                ),
-                onChanged: (value) => setState(() => _search = value),
+          } catch (_) {
+            // Каталоги доступны и без локальной базы.
+          }
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          children: [
+            TextField(
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                hintText: 'Поиск готового каталога',
+                border: const OutlineInputBorder(),
+                suffixIcon: _search.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () => setState(() => _search = ''),
+                      ),
               ),
-              const SizedBox(height: 16),
-              if (catalogs.isEmpty)
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: Text('Каталог не найден')),
-                  ),
-                )
-              else
-                ...catalogs.map(
-                  (catalog) => _buildCatalogCard(catalog, collections),
+              onChanged: (value) => setState(() => _search = value),
+            ),
+            const SizedBox(height: 16),
+            if (catalogs.isEmpty)
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: Text('Каталог не найден')),
                 ),
-            ],
-          ),
+              )
+            else
+              ...catalogs.map(
+                (catalog) => _buildCatalogCard(catalog, collections),
+              ),
+          ],
         ),
       ),
     );
@@ -135,6 +137,8 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
         : ref.read(itemServiceProvider).getItems(localCollection.id).then(
               (items) => items.length,
             );
+
+    final totalText = catalog.totalItems?.toString() ?? '—';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -189,7 +193,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
                     child: _CountTile(
                       icon: Icons.inventory_2_outlined,
                       label: 'Всего',
-                      value: localCollection == null ? '0' : '—',
+                      value: totalText,
                     ),
                   ),
                   Expanded(
@@ -319,7 +323,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
   }
 
   Future<void> _createSections(
-    dynamic service,
+    CollectionSectionService service,
     List<CatalogSectionDefinition> definitions,
     String collectionId,
     String? parentId,
