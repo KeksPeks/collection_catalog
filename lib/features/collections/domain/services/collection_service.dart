@@ -1,7 +1,8 @@
+import '../../../fields/domain/entities/field_definition.dart';
+import '../../../fields/domain/repositories/field_repository.dart';
 import '../entities/collection.dart';
 import '../factories/collection_factory.dart';
 import '../repositories/collection_repository.dart';
-import '../../../fields/domain/services/field_service.dart';
 
 /// Сервис управления коллекциями.
 ///
@@ -10,12 +11,12 @@ import '../../../fields/domain/services/field_service.dart';
 class CollectionService {
   final CollectionRepository repository;
   final CollectionFactory factory;
-  final FieldService fieldService;
+  final FieldRepository fieldRepository;
 
   CollectionService({
     required this.repository,
     required this.factory,
-    required this.fieldService,
+    required this.fieldRepository,
   });
 
   Future<List<Collection>> getCollections() {
@@ -35,8 +36,8 @@ class CollectionService {
     final normalized = collection.copyWith(name: name);
     await repository.saveCollection(normalized);
 
-    for (final field in normalized.fields) {
-      await fieldService.addField(field);
+    for (final FieldDefinition field in normalized.fields) {
+      await fieldRepository.saveField(field);
     }
   }
 
