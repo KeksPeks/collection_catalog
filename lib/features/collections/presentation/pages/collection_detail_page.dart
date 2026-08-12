@@ -9,6 +9,8 @@ import '../../../items/presentation/pages/item_detail_page.dart';
 import '../../../items/presentation/pages/item_editor_page.dart';
 import '../../../items/presentation/pages/items_page.dart';
 import '../../../items/presentation/providers/item_provider.dart';
+import '../../../templates/data/catalog_template_registry.dart';
+import '../../../fields/domain/entities/field_definition.dart';
 import '../../domain/entities/collection.dart';
 import '../providers/collection_provider.dart';
 
@@ -58,6 +60,9 @@ class CollectionDetailPage extends ConsumerWidget {
                   updatedAt: DateTime.now(),
                 );
 
+            final hasTemplate = stored?.templateId != null &&
+                CatalogTemplateRegistry.byId(stored!.templateId!) != null;
+
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -71,6 +76,32 @@ class CollectionDetailPage extends ConsumerWidget {
                     ),
                   ),
                 ),
+                if (hasTemplate && fields.isEmpty) ...[
+                  const SizedBox(height: 12),
+                  Card(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'У каталога есть шаблон, но поля не сохранены.',
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          const SizedBox(height: 8),
+                          const Text('Восстановить структуру каталога из выбранного шаблона.'),
+                          const SizedBox(height: 12),
+                          FilledButton.icon(
+                            onPressed: () => _restoreTemplateFields(context, ref, stored!),
+                            icon: const Icon(Icons.build_circle_outlined),
+                            label: const Text('Восстановить поля'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 FilledButton.icon(
                   onPressed: () async {
@@ -94,21 +125,26 @@ class CollectionDetailPage extends ConsumerWidget {
                     data: (items) {
                       if (items.isEmpty) return const Text('Предметов пока нет');
                       return Column(
-                        children: items.take(5).map((item) => ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.inventory_2_outlined),
-                          title: Text('Предмет ${item.id}'),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () async {
-                            await Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => ItemDetailPage(itemId: item.id),
+                        children: items
+                            .take(5)
+                            .map(
+                              (item) => ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: const Icon(Icons.inventory_2_outlined),
+                                title: Text('Предмет ${item.id}'),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: () async {
+                                  await Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => ItemDetailPage(itemId: item.id),
+                                    ),
+                                  );
+                                  if (!context.mounted) return;
+                                  ref.invalidate(itemsProvider(collectionId));
+                                },
                               ),
-                            );
-                            if (!context.mounted) return;
-                            ref.invalidate(itemsProvider(collectionId));
-                          },
-                        )).toList(),
+                            )
+                            .toList(),
                       );
                     },
                   ),
@@ -124,52 +160,54 @@ class CollectionDetailPage extends ConsumerWidget {
                           child: Text('Поля отсутствуют'),
                         )
                       else
-                        ...fields.map((field) => ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(field.label),
-                          subtitle: Text(field.type.name),
-                          trailing: PopupMenuButton<String>(
-                            onSelected: (value) async {
-                              if (value == 'edit') {
-                                await Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => EditFieldPage(field: field),
-                                  ),
-                                );
-                                if (!context.mounted) return;
-                                ref.invalidate(fieldsProvider(collectionId));
-                              } else if (value == 'delete') {
-                                final confirmed = await showDialog<bool>(
-                                  context: context,
-                                  builder: (dialogContext) => AlertDialog(
-                                    title: const Text('Удалить поле?'),
-                                    content: Text(field.label),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(dialogContext, false),
-                                        child: const Text('Отмена'),
-                                      ),
-                                      FilledButton(
-                                        onPressed: () => Navigator.pop(dialogContext, true),
-                                        child: const Text('Удалить'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                                if (!context.mounted || confirmed != true) return;
-                                final service = await ref.read(fieldServiceProvider.future);
-                                await service.deleteField(field.id);
-                                if (!context.mounted) return;
-                                ref.invalidate(fieldsProvider(collectionId));
-                                ref.invalidate(itemsProvider(collectionId));
-                              }
-                            },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(value: 'edit', child: Text('Изменить')),
-                              PopupMenuItem(value: 'delete', child: Text('Удалить')),
-                            ],
+                        ...fields.map(
+                          (field) => ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(field.label),
+                            subtitle: Text(field.type.name),
+                            trailing: PopupMenuButton<String>(
+                              onSelected: (value) async {
+                                if (value == 'edit') {
+                                  await Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => EditFieldPage(field: field),
+                                    ),
+                                  );
+                                  if (!context.mounted) return;
+                                  ref.invalidate(fieldsProvider(collectionId));
+                                } else if (value == 'delete') {
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (dialogContext) => AlertDialog(
+                                      title: const Text('Удалить поле?'),
+                                      content: Text(field.label),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(dialogContext, false),
+                                          child: const Text('Отмена'),
+                                        ),
+                                        FilledButton(
+                                          onPressed: () => Navigator.pop(dialogContext, true),
+                                          child: const Text('Удалить'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (!context.mounted || confirmed != true) return;
+                                  final service = await ref.read(fieldServiceProvider.future);
+                                  await service.deleteField(field.id);
+                                  if (!context.mounted) return;
+                                  ref.invalidate(fieldsProvider(collectionId));
+                                  ref.invalidate(itemsProvider(collectionId));
+                                }
+                              },
+                              itemBuilder: (_) => const [
+                                PopupMenuItem(value: 'edit', child: Text('Изменить')),
+                                PopupMenuItem(value: 'delete', child: Text('Удалить')),
+                              ],
+                            ),
                           ),
-                        )),
+                        ),
                     ],
                   ),
                 ),
@@ -224,6 +262,50 @@ class CollectionDetailPage extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _restoreTemplateFields(
+    BuildContext context,
+    WidgetRef ref,
+    Collection collection,
+  ) async {
+    final templateId = collection.templateId;
+    if (templateId == null) return;
+
+    final template = CatalogTemplateRegistry.byId(templateId);
+    if (template == null) return;
+
+    try {
+      final fieldService = await ref.read(fieldServiceProvider.future);
+      final existing = await ref.read(fieldsProvider(collection.id).future);
+      final existingLabels = existing.map((field) => field.label).toSet();
+
+      final missing = template.fields.where(
+        (field) => !existingLabels.contains(field.label),
+      );
+
+      for (final field in missing) {
+        final restored = FieldDefinition(
+          id: '${collection.id}_${field.id}',
+          collectionId: collection.id,
+          label: field.label,
+          type: field.type,
+        );
+        await fieldService.addField(restored);
+      }
+
+      ref.invalidate(fieldsProvider(collection.id));
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Восстановлено полей: ${missing.length}')),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Не удалось восстановить поля: $error')),
+      );
+    }
   }
 }
 
