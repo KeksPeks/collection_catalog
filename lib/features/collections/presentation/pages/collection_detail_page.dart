@@ -19,11 +19,7 @@ class CollectionDetailPage extends ConsumerWidget {
   final String collectionId;
   final String collectionName;
 
-  const CollectionDetailPage({
-    super.key,
-    required this.collectionId,
-    required this.collectionName,
-  });
+  const CollectionDetailPage({super.key, required this.collectionId, required this.collectionName});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -41,13 +37,8 @@ class CollectionDetailPage extends ConsumerWidget {
         },
         child: fieldsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) => ListView(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(error.toString()),
-              ),
-            ],
+          error: (error, _) => ListView(
+            children: [Padding(padding: const EdgeInsets.all(24), child: Text(error.toString()))],
           ),
           data: (fields) {
             final stored = collectionAsync.valueOrNull;
@@ -59,9 +50,9 @@ class CollectionDetailPage extends ConsumerWidget {
                   createdAt: DateTime.now(),
                   updatedAt: DateTime.now(),
                 );
-
-            final hasTemplate = stored?.templateId != null &&
-                CatalogTemplateRegistry.byId(stored!.templateId!) != null;
+            final storedTemplateId = stored?.templateId;
+            final template = storedTemplateId == null ? null : CatalogTemplateRegistry.byId(storedTemplateId);
+            final hasTemplate = template != null;
 
             return ListView(
               padding: const EdgeInsets.all(16),
@@ -71,7 +62,7 @@ class CollectionDetailPage extends ConsumerWidget {
                     title: Text(collectionName),
                     subtitle: itemsAsync.when(
                       loading: () => Text('Полей: ${fields.length} · Предметов: ...'),
-                      error: (_, __) => Text('Полей: ${fields.length} · Ошибка предметов'),
+                      error: (_, _) => Text('Полей: ${fields.length} · Ошибка предметов'),
                       data: (items) => Text('Полей: ${fields.length} · Предметов: ${items.length}'),
                     ),
                   ),
@@ -85,15 +76,12 @@ class CollectionDetailPage extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'У каталога есть шаблон, но поля не сохранены.',
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
+                          Text('У каталога есть шаблон, но поля не сохранены.', style: Theme.of(context).textTheme.titleSmall),
                           const SizedBox(height: 8),
                           const Text('Восстановить структуру каталога из выбранного шаблона.'),
                           const SizedBox(height: 12),
                           FilledButton.icon(
-                            onPressed: () => _restoreTemplateFields(context, ref, stored!),
+                            onPressed: () => _restoreTemplateFields(context, ref, collection),
                             icon: const Icon(Icons.build_circle_outlined),
                             label: const Text('Восстановить поля'),
                           ),
@@ -105,11 +93,7 @@ class CollectionDetailPage extends ConsumerWidget {
                 const SizedBox(height: 12),
                 FilledButton.icon(
                   onPressed: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => ItemsPage(collection: collection),
-                      ),
-                    );
+                    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ItemsPage(collection: collection)));
                     if (!context.mounted) return;
                     ref.invalidate(itemsProvider(collectionId));
                   },
@@ -121,30 +105,21 @@ class CollectionDetailPage extends ConsumerWidget {
                   title: 'Предметы',
                   child: itemsAsync.when(
                     loading: () => const CircularProgressIndicator(),
-                    error: (error, stack) => Text(error.toString()),
+                    error: (error, _) => Text(error.toString()),
                     data: (items) {
                       if (items.isEmpty) return const Text('Предметов пока нет');
                       return Column(
-                        children: items
-                            .take(5)
-                            .map(
-                              (item) => ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                leading: const Icon(Icons.inventory_2_outlined),
-                                title: Text('Предмет ${item.id}'),
-                                trailing: const Icon(Icons.chevron_right),
-                                onTap: () async {
-                                  await Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => ItemDetailPage(itemId: item.id),
-                                    ),
-                                  );
-                                  if (!context.mounted) return;
-                                  ref.invalidate(itemsProvider(collectionId));
-                                },
-                              ),
-                            )
-                            .toList(),
+                        children: items.take(5).map((item) => ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.inventory_2_outlined),
+                          title: Text('Предмет ${item.id}'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () async {
+                            await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ItemDetailPage(itemId: item.id)));
+                            if (!context.mounted) return;
+                            ref.invalidate(itemsProvider(collectionId));
+                          },
+                        )).toList(),
                       );
                     },
                   ),
@@ -155,59 +130,44 @@ class CollectionDetailPage extends ConsumerWidget {
                   child: Column(
                     children: [
                       if (fields.isEmpty)
-                        const Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text('Поля отсутствуют'),
-                        )
+                        const Align(alignment: Alignment.centerLeft, child: Text('Поля отсутствуют'))
                       else
-                        ...fields.map(
-                          (field) => ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(field.label),
-                            subtitle: Text(field.type.name),
-                            trailing: PopupMenuButton<String>(
-                              onSelected: (value) async {
-                                if (value == 'edit') {
-                                  await Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => EditFieldPage(field: field),
-                                    ),
-                                  );
-                                  if (!context.mounted) return;
-                                  ref.invalidate(fieldsProvider(collectionId));
-                                } else if (value == 'delete') {
-                                  final confirmed = await showDialog<bool>(
-                                    context: context,
-                                    builder: (dialogContext) => AlertDialog(
-                                      title: const Text('Удалить поле?'),
-                                      content: Text(field.label),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(dialogContext, false),
-                                          child: const Text('Отмена'),
-                                        ),
-                                        FilledButton(
-                                          onPressed: () => Navigator.pop(dialogContext, true),
-                                          child: const Text('Удалить'),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                  if (!context.mounted || confirmed != true) return;
-                                  final service = await ref.read(fieldServiceProvider.future);
-                                  await service.deleteField(field.id);
-                                  if (!context.mounted) return;
-                                  ref.invalidate(fieldsProvider(collectionId));
-                                  ref.invalidate(itemsProvider(collectionId));
-                                }
-                              },
-                              itemBuilder: (_) => const [
-                                PopupMenuItem(value: 'edit', child: Text('Изменить')),
-                                PopupMenuItem(value: 'delete', child: Text('Удалить')),
-                              ],
-                            ),
+                        ...fields.map((field) => ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(field.label),
+                          subtitle: Text(field.type.name),
+                          trailing: PopupMenuButton<String>(
+                            onSelected: (value) async {
+                              if (value == 'edit') {
+                                await Navigator.of(context).push(MaterialPageRoute(builder: (_) => EditFieldPage(field: field)));
+                                if (!context.mounted) return;
+                                ref.invalidate(fieldsProvider(collectionId));
+                              } else if (value == 'delete') {
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (dialogContext) => AlertDialog(
+                                    title: const Text('Удалить поле?'),
+                                    content: Text(field.label),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Отмена')),
+                                      FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Удалить')),
+                                    ],
+                                  ),
+                                );
+                                if (!context.mounted || confirmed != true) return;
+                                final service = await ref.read(fieldServiceProvider.future);
+                                await service.deleteField(field.id);
+                                if (!context.mounted) return;
+                                ref.invalidate(fieldsProvider(collectionId));
+                                ref.invalidate(itemsProvider(collectionId));
+                              }
+                            },
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(value: 'edit', child: Text('Изменить')),
+                              PopupMenuItem(value: 'delete', child: Text('Удалить')),
+                            ],
                           ),
-                        ),
+                        )),
                     ],
                   ),
                 ),
@@ -227,19 +187,14 @@ class CollectionDetailPage extends ConsumerWidget {
             onPressed: () async {
               final currentFields = ref.read(fieldsProvider(collectionId)).valueOrNull ?? [];
               final stored = ref.read(collectionProvider(collectionId)).valueOrNull;
-              final collection = stored?.copyWith(fields: currentFields) ??
-                  Collection(
-                    id: collectionId,
-                    name: collectionName,
-                    fields: currentFields,
-                    createdAt: DateTime.now(),
-                    updatedAt: DateTime.now(),
-                  );
-              await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ItemEditorPage(collection: collection),
-                ),
+              final collection = stored?.copyWith(fields: currentFields) ?? Collection(
+                id: collectionId,
+                name: collectionName,
+                fields: currentFields,
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
               );
+              await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ItemEditorPage(collection: collection)));
               if (!context.mounted) return;
               ref.invalidate(itemsProvider(collectionId));
             },
@@ -250,11 +205,7 @@ class CollectionDetailPage extends ConsumerWidget {
             icon: const Icon(Icons.add),
             label: const Text('Поле'),
             onPressed: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => AddFieldPage(collectionId: collectionId),
-                ),
-              );
+              await Navigator.of(context).push(MaterialPageRoute(builder: (_) => AddFieldPage(collectionId: collectionId)));
               if (!context.mounted) return;
               ref.invalidate(fieldsProvider(collectionId));
             },
@@ -264,14 +215,9 @@ class CollectionDetailPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _restoreTemplateFields(
-    BuildContext context,
-    WidgetRef ref,
-    Collection collection,
-  ) async {
+  Future<void> _restoreTemplateFields(BuildContext context, WidgetRef ref, Collection collection) async {
     final templateId = collection.templateId;
     if (templateId == null) return;
-
     final template = CatalogTemplateRegistry.byId(templateId);
     if (template == null) return;
 
@@ -279,32 +225,23 @@ class CollectionDetailPage extends ConsumerWidget {
       final fieldService = await ref.read(fieldServiceProvider.future);
       final existing = await ref.read(fieldsProvider(collection.id).future);
       final existingLabels = existing.map((field) => field.label).toSet();
-
-      final missing = template.fields.where(
-        (field) => !existingLabels.contains(field.label),
-      );
+      final missing = template.fields.where((field) => !existingLabels.contains(field.label)).toList();
 
       for (final field in missing) {
-        final restored = FieldDefinition(
+        await fieldService.addField(FieldDefinition(
           id: '${collection.id}_${field.id}',
           collectionId: collection.id,
           label: field.label,
           type: field.type,
-        );
-        await fieldService.addField(restored);
+        ));
       }
 
       ref.invalidate(fieldsProvider(collection.id));
-
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Восстановлено полей: ${missing.length}')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Восстановлено полей: ${missing.length}')));
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Не удалось восстановить поля: $error')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Не удалось восстановить поля: $error')));
     }
   }
 }
@@ -312,23 +249,16 @@ class CollectionDetailPage extends ConsumerWidget {
 class _SectionCard extends StatelessWidget {
   final String title;
   final Widget child;
-
   const _SectionCard({required this.title, required this.child});
-
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+  Widget build(BuildContext context) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             child,
-          ],
+          ]),
         ),
-      ),
-    );
-  }
+      );
 }
