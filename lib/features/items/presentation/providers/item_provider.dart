@@ -6,55 +6,43 @@ import '../../domain/entities/item_value.dart';
 import 'item_service_provider.dart';
 
 /// Получение всех предметов коллекции.
-final itemsProvider = FutureProvider.family<
-    List<Item>,
-    String>(
-  (
-    ref,
-    collectionId,
-  ) {
-    return ref
-        .watch(
-          itemServiceProvider,
-        )
-        .getItems(
-          collectionId,
-        );
+final itemsProvider = FutureProvider.family<List<Item>, String>(
+  (ref, collectionId) {
+    return ref.watch(itemServiceProvider).getItems(collectionId);
   },
 );
 
 /// Получение одного предмета.
-final itemProvider = FutureProvider.family<
-    Item?,
-    String>(
-  (
-    ref,
-    itemId,
-  ) {
-    return ref
-        .watch(
-          itemServiceProvider,
-        )
-        .getItem(
-          itemId,
-        );
+final itemProvider = FutureProvider.family<Item?, String>(
+  (ref, itemId) {
+    return ref.watch(itemServiceProvider).getItem(itemId);
   },
 );
 
 /// Получение значений полей предмета.
-final itemValuesProvider = FutureProvider.family<
-    List<ItemValue>,
+final itemValuesProvider = FutureProvider.family<List<ItemValue>, String>(
+  (ref, itemId) {
+    return ref.watch(itemServiceProvider).getValues(itemId);
+  },
+);
+
+/// Все значения предметов коллекции в форме itemId -> fieldId -> value.
+/// Используется экраном списка для поиска, сортировки и группировки.
+final collectionItemValuesProvider = FutureProvider.family<
+    Map<String, Map<String, String>>,
     String>(
-  (
-    ref,
-    itemId,
-  ) {
-    return ref
-        .watch(
-          itemServiceProvider,
-        )
-        .getValues(
-          itemId,
-        );
+  (ref, collectionId) async {
+    final service = ref.watch(itemServiceProvider);
+    final items = await service.getItems(collectionId);
+    final result = <String, Map<String, String>>{};
+
+    for (final item in items) {
+      final values = await service.getValues(item.id);
+      result[item.id] = {
+        for (final value in values) value.fieldId: value.value,
+      };
+    }
+
+    return result;
   },
 );

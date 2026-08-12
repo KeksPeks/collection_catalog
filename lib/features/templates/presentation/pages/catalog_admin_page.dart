@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../../collections/domain/entities/collection.dart';
 import '../../../collections/presentation/pages/collection_detail_page.dart';
 import '../../../collections/presentation/providers/collection_provider.dart';
@@ -24,17 +23,9 @@ class CatalogAdminPage extends ConsumerWidget {
         children: [
           Text('Готовые шаблоны', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
-          const Text('Создаёт настоящий каталог с полями. После создания он сразу появляется в основном каталоге.'),
+          const Text('Выберите направление, чтобы создать полноценный каталог. Он сразу появится в основном каталоге.'),
           const SizedBox(height: 12),
-          ...BuiltInTemplateRegistry.templates.map((template) => Card(
-                child: ListTile(
-                  leading: const Icon(Icons.auto_awesome),
-                  title: Text(template.name),
-                  subtitle: Text(template.description),
-                  trailing: const Icon(Icons.add_circle_outline),
-                  onTap: () => _create(context, ref, template),
-                ),
-              )),
+          ...BuiltInTemplateRegistry.templates.map((template) => Card(child: ListTile(leading: const Icon(Icons.auto_awesome), title: Text(template.name), subtitle: Text(template.description), trailing: const Icon(Icons.add_circle_outline), onTap: () => _create(context, ref, template)))),
           const SizedBox(height: 24),
           Text('Существующие каталоги', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
@@ -43,26 +34,13 @@ class CatalogAdminPage extends ConsumerWidget {
             error: (error, _) => Text(error.toString()),
             data: (items) => items.isEmpty
                 ? const Card(child: ListTile(title: Text('Каталогов пока нет')))
-                : Column(
-                    children: items.map((collection) => Card(
-                      child: ListTile(
-                        leading: const Icon(Icons.collections_bookmark),
-                        title: Text(collection.name),
-                        subtitle: Text(collection.templateId ?? 'Пользовательский каталог'),
-                        onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => CollectionDetailPage(
-                            collectionId: collection.id,
-                            collectionName: collection.name,
-                          ),
-                        )),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          tooltip: 'Удалить',
-                          onPressed: () => _delete(context, ref, collection),
-                        ),
-                      ),
-                    )).toList(),
-                  ),
+                : Column(children: items.map((collection) => Card(child: ListTile(
+                    leading: const Icon(Icons.collections_bookmark),
+                    title: Text(collection.name),
+                    subtitle: Text(collection.templateId ?? 'Пользовательский каталог'),
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CollectionDetailPage(collectionId: collection.id, collectionName: collection.name))),
+                    trailing: IconButton(icon: const Icon(Icons.delete_outline), tooltip: 'Удалить', onPressed: () => _delete(context, ref, collection)),
+                  ))).toList()),
           ),
         ],
       ),
@@ -70,29 +48,14 @@ class CatalogAdminPage extends ConsumerWidget {
   }
 
   Future<void> _create(BuildContext context, WidgetRef ref, Template template) async {
-    final name = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => _CreateCatalogDialog(template: template),
-    );
+    final name = await showDialog<String>(context: context, builder: (_) => _CreateCatalogDialog(template: template));
     if (!context.mounted || name == null || name.trim().isEmpty) return;
-
     final now = DateTime.now();
-    final collection = Collection(
-      id: '${template.id}_${now.microsecondsSinceEpoch}',
-      name: name.trim(),
-      templateId: template.id,
-      createdAt: now,
-      updatedAt: now,
-    );
+    final collection = Collection(id: '${template.id}_${now.microsecondsSinceEpoch}', name: name.trim(), templateId: template.id, createdAt: now, updatedAt: now);
     await ref.read(collectionServiceProvider).createCollection(collection);
     final fieldService = await ref.read(fieldServiceProvider.future);
     for (final field in template.fields) {
-      await fieldService.addField(FieldDefinition(
-        id: '${collection.id}_${field.id}',
-        collectionId: collection.id,
-        label: field.label,
-        type: field.type,
-      ));
+      await fieldService.addField(FieldDefinition(id: '${collection.id}_${field.id}', collectionId: collection.id, label: field.label, type: field.type));
     }
     ref.invalidate(collectionsProvider);
     if (!context.mounted) return;
@@ -100,17 +63,7 @@ class CatalogAdminPage extends ConsumerWidget {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref, Collection collection) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Удалить каталог?'),
-        content: Text(collection.name),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Отмена')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Удалить')),
-        ],
-      ),
-    );
+    final ok = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(title: const Text('Удалить каталог?'), content: Text(collection.name), actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Отмена')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Удалить'))]));
     if (!context.mounted || ok != true) return;
     await ref.read(collectionServiceProvider).deleteCollection(collection.id);
     ref.invalidate(collectionsProvider);
@@ -120,39 +73,23 @@ class CatalogAdminPage extends ConsumerWidget {
 class _CreateCatalogDialog extends StatefulWidget {
   final Template template;
   const _CreateCatalogDialog({required this.template});
-
   @override
   State<_CreateCatalogDialog> createState() => _CreateCatalogDialogState();
 }
 
 class _CreateCatalogDialogState extends State<_CreateCatalogDialog> {
   late final TextEditingController controller;
-
   @override
-  void initState() {
-    super.initState();
-    controller = TextEditingController(text: widget.template.name);
-  }
-
+  void initState() { super.initState(); controller = TextEditingController(text: widget.template.name); }
   @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
+  void dispose() { controller.dispose(); super.dispose(); }
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text('Создать каталог «${widget.template.name}»'),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        decoration: const InputDecoration(labelText: 'Название каталога'),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
-        FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Создать')),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text('Создать каталог «${widget.template.name}»'),
+    content: TextField(controller: controller, autofocus: true, decoration: const InputDecoration(labelText: 'Название каталога')),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+      FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Создать')),
+    ],
+  );
 }
