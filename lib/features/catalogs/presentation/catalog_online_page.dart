@@ -51,7 +51,45 @@ class CatalogOnlinePage extends StatelessWidget {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
-          if (catalog.sections.isEmpty)
+          if (catalog.id == 'coins') ...[
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.public),
+                        SizedBox(width: 10),
+                        Text('Монеты'),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('Страны'),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Для каждой страны используются одинаковые категории:',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 8),
+                    ...const [
+                      'Юбилейные',
+                      'Регулярный чекан',
+                      'Драгоценные металлы',
+                    ].map(
+                      (name) => ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(Icons.subdirectory_arrow_right),
+                        title: Text(name),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ] else if (catalog.sections.isEmpty)
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
