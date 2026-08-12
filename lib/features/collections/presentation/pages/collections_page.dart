@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../fields/presentation/providers/field_service_provider.dart';
 import '../../../templates/data/catalog_template_registry.dart';
 import '../../../templates/domain/entities/template.dart';
 import '../../../templates/presentation/pages/catalog_templates_page.dart';
@@ -202,13 +201,6 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
 
     try {
       await ref.read(collectionServiceProvider).createCollection(collection);
-
-      if (result.template != null) {
-        final fieldService = await ref.read(fieldServiceProvider.future);
-        for (final field in fields) {
-          await fieldService.addField(field);
-        }
-      }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
