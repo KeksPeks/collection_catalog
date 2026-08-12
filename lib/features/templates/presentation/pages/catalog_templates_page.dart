@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/catalog_template_registry.dart';
+import '../../domain/entities/template.dart';
 import '../../../collections/domain/entities/collection.dart';
 import '../../../collections/presentation/providers/collection_provider.dart';
 import '../../../collections/presentation/providers/collection_service_provider.dart';
@@ -21,14 +22,16 @@ class CatalogTemplatesPage extends ConsumerWidget {
       body: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: templates.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
+        separatorBuilder: (context, index) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
           final template = templates[index];
           return Card(
             child: ListTile(
               leading: const CircleAvatar(child: Icon(Icons.category)),
               title: Text(template.name),
-              subtitle: Text('${template.description}\n${template.fields.length} полей'),
+              subtitle: Text(
+                '${template.description}\n${template.fields.length} полей',
+              ),
               isThreeLine: true,
               trailing: const Icon(Icons.add_circle_outline),
               onTap: () => _create(context, ref, template),
@@ -39,7 +42,11 @@ class CatalogTemplatesPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _create(BuildContext context, WidgetRef ref, dynamic template) async {
+  Future<void> _create(
+    BuildContext context,
+    WidgetRef ref,
+    Template template,
+  ) async {
     final controller = TextEditingController(text: template.name);
     final name = await showDialog<String>(
       context: context,
@@ -51,8 +58,17 @@ class CatalogTemplatesPage extends ConsumerWidget {
           decoration: const InputDecoration(labelText: 'Название'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Отмена')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, controller.text.trim()), child: const Text('Создать')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(
+              dialogContext,
+              controller.text.trim(),
+            ),
+            child: const Text('Создать'),
+          ),
         ],
       ),
     );
@@ -61,9 +77,13 @@ class CatalogTemplatesPage extends ConsumerWidget {
     if (name == null || name.isEmpty || !context.mounted) return;
 
     final id = DateTime.now().microsecondsSinceEpoch.toString();
-    final fields = (template.fields as List<FieldDefinition>)
-        .map((field) => field.copyWith(id: '${id}_${field.id}', collectionId: id))
-        .toList();
+    final fields = <FieldDefinition>[
+      for (final field in template.fields)
+        field.copyWith(
+          id: '${id}_${field.id}',
+          collectionId: id,
+        ),
+    ];
     final now = DateTime.now();
     final collection = Collection(
       id: id,
@@ -86,7 +106,9 @@ class CatalogTemplatesPage extends ConsumerWidget {
       Navigator.pop(context, collection);
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Не удалось создать каталог: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Не удалось создать каталог: $error')),
+      );
     }
   }
 }
