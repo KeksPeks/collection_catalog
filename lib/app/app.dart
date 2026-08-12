@@ -115,11 +115,25 @@ class _SettingsPage extends StatelessWidget {
   void _showThemes(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
-      builder: (context) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        RadioListTile<ThemeMode>(value: ThemeMode.system, groupValue: themeMode, onChanged: (v) { if (v != null) { onThemeChanged(v); Navigator.pop(context); } }, title: const Text('Системная')),
-        RadioListTile<ThemeMode>(value: ThemeMode.light, groupValue: themeMode, onChanged: (v) { if (v != null) { onThemeChanged(v); Navigator.pop(context); } }, title: const Text('Светлая')),
-        RadioListTile<ThemeMode>(value: ThemeMode.dark, groupValue: themeMode, onChanged: (v) { if (v != null) { onThemeChanged(v); Navigator.pop(context); } }, title: const Text('Тёмная')),
-      ])),
+      builder: (context) => SafeArea(
+        child: RadioGroup<ThemeMode>(
+          groupValue: themeMode,
+          onChanged: (value) {
+            if (value != null) {
+              onThemeChanged(value);
+              Navigator.pop(context);
+            }
+          },
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<ThemeMode>(value: ThemeMode.system, title: Text('Системная')),
+              RadioListTile<ThemeMode>(value: ThemeMode.light, title: Text('Светлая')),
+              RadioListTile<ThemeMode>(value: ThemeMode.dark, title: Text('Тёмная')),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
