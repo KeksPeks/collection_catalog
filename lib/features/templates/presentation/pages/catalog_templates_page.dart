@@ -68,7 +68,12 @@ class CatalogTemplatesPage extends ConsumerWidget {
 
     final id = DateTime.now().microsecondsSinceEpoch.toString();
     final fields = (template.fields as List<FieldDefinition>)
-        .map((field) => field.copyWith(collectionId: id))
+        .map(
+          (field) => field.copyWith(
+            id: '${id}_${field.id}',
+            collectionId: id,
+          ),
+        )
         .toList();
     final now = DateTime.now();
     final collection = Collection(
@@ -80,17 +85,24 @@ class CatalogTemplatesPage extends ConsumerWidget {
       updatedAt: now,
     );
 
-    final collectionService = ref.read(collectionServiceProvider);
-    final fieldService = await ref.read(fieldServiceProvider.future);
+    try {
+      final collectionService = ref.read(collectionServiceProvider);
+      final fieldService = await ref.read(fieldServiceProvider.future);
 
-    await collectionService.createCollection(collection);
-    for (final field in fields) {
-      await fieldService.addField(field);
+      await collectionService.createCollection(collection);
+      for (final field in fields) {
+        await fieldService.addField(field);
+      }
+
+      ref.invalidate(collectionsProvider);
+
+      if (!context.mounted) return;
+      Navigator.pop(context, collection);
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Не удалось создать каталог: $error')),
+      );
     }
-
-    ref.invalidate(collectionsProvider);
-
-    if (!context.mounted) return;
-    Navigator.pop(context, collection);
   }
 }
