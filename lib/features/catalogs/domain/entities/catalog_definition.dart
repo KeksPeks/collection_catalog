@@ -10,6 +10,12 @@ class CatalogDefinition {
   final String description;
   final String templateId;
   final Template template;
+
+  /// Общее число записей в серверном каталоге.
+  ///
+  /// Пока серверный источник не подключён, значение равно null и интерфейс
+  /// показывает «—», не подменяя реальные данные вымышленным числом.
+  final int? totalItems;
   final List<CatalogSectionDefinition> sections;
 
   const CatalogDefinition({
@@ -18,6 +24,7 @@ class CatalogDefinition {
     required this.description,
     required this.templateId,
     required this.template,
+    this.totalItems,
     this.sections = const [],
   });
 }
