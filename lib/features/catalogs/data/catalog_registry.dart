@@ -1,4 +1,5 @@
 import '../../templates/data/catalog_template_registry.dart';
+import '../../templates/domain/entities/template.dart';
 import '../domain/entities/catalog_definition.dart';
 
 /// Реестр готовых каталогов приложения.
@@ -9,19 +10,6 @@ class CatalogRegistry {
   static List<CatalogDefinition> get all {
     final templates = CatalogTemplateRegistry.all;
 
-    CatalogDefinition? byTemplate(String templateId) {
-      final template = templates.firstWhere(
-        (item) => item.id == templateId,
-      );
-      return CatalogDefinition(
-        id: template.id,
-        name: template.name,
-        description: template.description,
-        templateId: template.id,
-        template: template,
-      );
-    }
-
     return [
       _coins(templates),
       _simple(templates, 'banknotes'),
@@ -30,7 +18,7 @@ class CatalogRegistry {
       _simple(templates, 'games'),
       _simple(templates, 'movies'),
       _simple(templates, 'figurines'),
-    ].whereType<CatalogDefinition>().toList();
+    ];
   }
 
   static CatalogDefinition? byId(String id) {
@@ -40,7 +28,7 @@ class CatalogRegistry {
     return null;
   }
 
-  static CatalogDefinition _coins(List<dynamic> templates) {
+  static CatalogDefinition _coins(List<Template> templates) {
     final template = templates.firstWhere((item) => item.id == 'coins');
     return CatalogDefinition(
       id: 'coins',
@@ -72,7 +60,7 @@ class CatalogRegistry {
   }
 
   static CatalogDefinition _simple(
-    List<dynamic> templates,
+    List<Template> templates,
     String templateId,
   ) {
     final template = templates.firstWhere((item) => item.id == templateId);
