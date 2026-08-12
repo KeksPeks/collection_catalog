@@ -28,8 +28,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _sending = true);
-    final subject = Uri.encodeComponent(
-      'Collection Catalog: $_type — ${_subjectController.text.trim()}',
+    final title = Uri.encodeComponent(
+      '$_type: ${_subjectController.text.trim()}',
     );
     final body = Uri.encodeComponent(
       'Каталог: $_catalog\n'
@@ -37,16 +37,14 @@ class _FeedbackPageState extends State<FeedbackPage> {
       '${_detailsController.text.trim()}',
     );
     final uri = Uri.parse(
-      'mailto:catalog@collection-catalog.example?subject=$subject&body=$body',
+      'https://github.com/KeksPeks/collection_catalog/issues/new?title=$title&body=$body',
     );
 
     try {
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('На устройстве не найдено почтовое приложение.'),
-          ),
+          const SnackBar(content: Text('Не удалось открыть форму отправки заявки.')),
         );
       }
     } finally {
@@ -67,7 +65,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'Сообщите о недостающем файле, ошибке в каталоге или предложите изменение. Заявка откроется в почтовом приложении.',
+                  'Сообщите о недостающем файле, ошибке в каталоге или предложите изменение. После отправки откроется форма заявки в GitHub.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
@@ -80,22 +78,10 @@ class _FeedbackPageState extends State<FeedbackPage> {
                 border: OutlineInputBorder(),
               ),
               items: const [
-                DropdownMenuItem(
-                  value: 'Добавить файл',
-                  child: Text('Добавить файл'),
-                ),
-                DropdownMenuItem(
-                  value: 'Изменить файл',
-                  child: Text('Изменить файл'),
-                ),
-                DropdownMenuItem(
-                  value: 'Исправить данные',
-                  child: Text('Исправить данные'),
-                ),
-                DropdownMenuItem(
-                  value: 'Предложение',
-                  child: Text('Предложение'),
-                ),
+                DropdownMenuItem(value: 'Добавить файл', child: Text('Добавить файл')),
+                DropdownMenuItem(value: 'Изменить файл', child: Text('Изменить файл')),
+                DropdownMenuItem(value: 'Исправить данные', child: Text('Исправить данные')),
+                DropdownMenuItem(value: 'Предложение', child: Text('Предложение')),
               ],
               onChanged: (value) {
                 if (value != null) setState(() => _type = value);
