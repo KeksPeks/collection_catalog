@@ -183,7 +183,12 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     final fields = result.template == null
         ? <dynamic>[]
         : result.template!.fields
-            .map((field) => field.copyWith(collectionId: collectionId))
+            .map(
+              (field) => field.copyWith(
+                id: '${collectionId}_${field.id}',
+                collectionId: collectionId,
+              ),
+            )
             .toList();
 
     final collection = Collection(
@@ -195,13 +200,21 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
       updatedAt: now,
     );
 
-    await ref.read(collectionServiceProvider).createCollection(collection);
+    try {
+      await ref.read(collectionServiceProvider).createCollection(collection);
 
-    if (result.template != null) {
-      final fieldService = await ref.read(fieldServiceProvider.future);
-      for (final field in fields) {
-        await fieldService.addField(field);
+      if (result.template != null) {
+        final fieldService = await ref.read(fieldServiceProvider.future);
+        for (final field in fields) {
+          await fieldService.addField(field);
+        }
       }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Не удалось создать каталог: $error')),
+      );
+      return;
     }
 
     if (!mounted) return;
