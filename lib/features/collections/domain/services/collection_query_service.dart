@@ -23,9 +23,11 @@ class CollectionQueryService {
 
     final query = filter.query.toLowerCase().trim();
     final matchingItemIds = values
-        .where((value) =>
-            value.fieldId == filter.fieldId &&
-            value.value.toLowerCase().contains(query))
+        .where(
+          (value) =>
+              value.fieldId == filter.fieldId &&
+              value.value.toLowerCase().contains(query),
+        )
         .map((value) => value.itemId)
         .toSet();
 
@@ -34,16 +36,20 @@ class CollectionQueryService {
         .toList();
 
     if (filter.descending) {
-      result.reverse();
+      return result.reversed.toList();
     }
 
     return result;
   }
 
-  List<String> visibleFieldIds(CollectionView view, List<FieldDefinition> fields) {
+  List<String> visibleFieldIds(
+    CollectionView view,
+    List<FieldDefinition> fields,
+  ) {
     if (view.fieldIds.isEmpty) {
       return fields.map((field) => field.id).toList();
     }
+
     return fields
         .where((field) => view.fieldIds.contains(field.id))
         .map((field) => field.id)
