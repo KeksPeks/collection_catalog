@@ -40,7 +40,7 @@ class ItemDetailPage extends ConsumerWidget {
               );
             },
             loading: () => const SizedBox.shrink(),
-            error: (_, _) => const SizedBox.shrink(),
+            error: (error, stack) => const SizedBox.shrink(),
           ),
         ],
       ),
@@ -53,7 +53,7 @@ class ItemDetailPage extends ConsumerWidget {
 
           return fieldsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => Center(child: Text(error.toString())),
+            error: (error, stack) => Center(child: Text(error.toString())),
             data: (fields) {
               final labels = {for (final field in fields) field.id: field.label};
               return ListView(
@@ -85,7 +85,7 @@ class ItemDetailPage extends ConsumerWidget {
                         return Column(children: values.map((value) => _ValueTile(value: value, label: labels[value.fieldId] ?? value.fieldId)).toList());
                       },
                       loading: () => const Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()),
-                      error: (error, _) => Text(error.toString()),
+                      error: (error, stack) => Text(error.toString()),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -96,7 +96,7 @@ class ItemDetailPage extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text(error.toString())),
+        error: (error, stack) => Center(child: Text(error.toString())),
       ),
     );
   }
@@ -141,7 +141,7 @@ class _AttachmentsCard extends ConsumerWidget {
         title: 'Вложения',
         child: attachmentsAsync.when(
           loading: () => const Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()),
-          error: (error, _) => Text(error.toString()),
+          error: (error, stack) => Text(error.toString()),
           data: (attachments) => Column(
             children: [
               if (attachments.isEmpty)
@@ -178,20 +178,35 @@ class _AttachmentsCard extends ConsumerWidget {
       );
 
   Future<void> _addAttachment(BuildContext context, WidgetRef ref) async {
-    final result = await showDialog<_AttachmentInput>(context: context, builder: (_) => const _AttachmentDialog());
+    final result = await showDialog<_AttachmentInput>(
+      context: context,
+      builder: (_) => const _AttachmentDialog(),
+    );
     if (result == null || result.path.isEmpty) return;
     final id = DateTime.now().microsecondsSinceEpoch.toString();
-    await ref.read(itemServiceProvider).saveAttachment(ItemAttachment(id: id, itemId: itemId, path: result.path, type: result.type));
+    await ref.read(itemServiceProvider).saveAttachment(
+      ItemAttachment(
+        id: id,
+        itemId: itemId,
+        path: result.path,
+        type: result.type,
+      ),
+    );
     ref.invalidate(itemAttachmentsProvider(itemId));
   }
 
   static IconData _attachmentIcon(String type) {
     switch (type) {
-      case 'image': return Icons.image_outlined;
-      case 'pdf': return Icons.picture_as_pdf_outlined;
-      case 'video': return Icons.video_file_outlined;
-      case 'archive': return Icons.archive_outlined;
-      default: return Icons.insert_drive_file_outlined;
+      case 'image':
+        return Icons.image_outlined;
+      case 'pdf':
+        return Icons.picture_as_pdf_outlined;
+      case 'video':
+        return Icons.video_file_outlined;
+      case 'archive':
+        return Icons.archive_outlined;
+      default:
+        return Icons.insert_drive_file_outlined;
     }
   }
 }
@@ -204,6 +219,7 @@ class _AttachmentInput {
 
 class _AttachmentDialog extends StatefulWidget {
   const _AttachmentDialog();
+
   @override
   State<_AttachmentDialog> createState() => _AttachmentDialogState();
 }
@@ -224,11 +240,20 @@ class _AttachmentDialogState extends State<_AttachmentDialog> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: _pathController, decoration: const InputDecoration(labelText: 'Путь к файлу', border: OutlineInputBorder())),
+            TextField(
+              controller: _pathController,
+              decoration: const InputDecoration(
+                labelText: 'Путь к файлу',
+                border: OutlineInputBorder(),
+              ),
+            ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _type,
-              decoration: const InputDecoration(labelText: 'Тип', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Тип',
+                border: OutlineInputBorder(),
+              ),
               items: const [
                 DropdownMenuItem(value: 'file', child: Text('Файл')),
                 DropdownMenuItem(value: 'image', child: Text('Изображение')),
@@ -243,12 +268,18 @@ class _AttachmentDialogState extends State<_AttachmentDialog> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена'),
+          ),
           FilledButton(
             onPressed: () {
               final path = _pathController.text.trim();
               if (path.isEmpty) return;
-              Navigator.pop(context, _AttachmentInput(path: path, type: _type));
+              Navigator.pop(
+                context,
+                _AttachmentInput(path: path, type: _type),
+              );
             },
             child: const Text('Добавить'),
           ),
