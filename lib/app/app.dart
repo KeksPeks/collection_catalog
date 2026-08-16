@@ -140,10 +140,7 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     final seed = colors[colorIndex];
     final densityValue = (uiScale - 1.0) * 4.0;
-    final density = VisualDensity(
-      horizontal: densityValue,
-      vertical: densityValue,
-    );
+    final density = VisualDensity(horizontal: densityValue, vertical: densityValue);
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -162,9 +159,7 @@ class _MyAppState extends State<MyApp> {
       builder: (context, child) {
         final media = MediaQuery.of(context);
         return MediaQuery(
-          data: media.copyWith(
-            textScaler: TextScaler.linear(fontScale),
-          ),
+          data: media.copyWith(textScaler: TextScaler.linear(fontScale)),
           child: child ?? const SizedBox.shrink(),
         );
       },
@@ -183,33 +178,18 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  ThemeData _buildTheme(
-    Color seed,
-    Brightness brightness,
-    VisualDensity density,
-  ) {
+  ThemeData _buildTheme(Color seed, Brightness brightness, VisualDensity density) {
     return ThemeData(
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: seed,
-        brightness: brightness,
-      ),
+      colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: brightness),
       useMaterial3: true,
       visualDensity: density,
       listTileTheme: ListTileThemeData(
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 16 * uiScale,
-          vertical: 2 * uiScale,
-        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16 * uiScale, vertical: 2 * uiScale),
         minVerticalPadding: 8 * uiScale,
       ),
-      cardTheme: CardThemeData(
-        margin: EdgeInsets.all(4 * uiScale),
-      ),
+      cardTheme: CardThemeData(margin: EdgeInsets.all(4 * uiScale)),
       inputDecorationTheme: InputDecorationTheme(
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 16 * uiScale,
-          vertical: 14 * uiScale,
-        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16 * uiScale, vertical: 14 * uiScale),
       ),
     );
   }
@@ -277,26 +257,10 @@ class _MainNavigationState extends State<MainNavigation> {
         selectedIndex: currentIndex,
         onDestinationSelected: (index) => setState(() => currentIndex = index),
         destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.menu_book_outlined),
-            selectedIcon: const Icon(Icons.menu_book),
-            label: l10n.catalog,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.star_border_rounded),
-            selectedIcon: const Icon(Icons.star_rounded),
-            label: l10n.favorites,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.collections_bookmark_outlined),
-            selectedIcon: const Icon(Icons.collections_bookmark),
-            label: l10n.myCollections,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.settings_outlined),
-            selectedIcon: const Icon(Icons.settings),
-            label: l10n.settings,
-          ),
+          NavigationDestination(icon: const Icon(Icons.menu_book_outlined), selectedIcon: const Icon(Icons.menu_book), label: l10n.catalog),
+          NavigationDestination(icon: const Icon(Icons.star_border_rounded), selectedIcon: const Icon(Icons.star_rounded), label: l10n.favorites),
+          NavigationDestination(icon: const Icon(Icons.collections_bookmark_outlined), selectedIcon: const Icon(Icons.collections_bookmark), label: l10n.myCollections),
+          NavigationDestination(icon: const Icon(Icons.settings_outlined), selectedIcon: const Icon(Icons.settings), label: l10n.settings),
         ],
       ),
     );
@@ -328,20 +292,7 @@ class _SettingsPage extends StatelessWidget {
     required this.onLocaleChanged,
   });
 
-  String _text(
-    BuildContext context,
-    String ru,
-    String en,
-    String de,
-    String fr,
-    String es,
-    String it,
-    String pt,
-    String zh,
-    String ja,
-    String ko,
-    String ar,
-  ) {
+  String _text(BuildContext context, String ru, String en, String de, String fr, String es, String it, String pt, String zh, String ja, String ko, String ar) {
     switch (Localizations.localeOf(context).languageCode) {
       case 'ru': return ru;
       case 'de': return de;
@@ -358,13 +309,19 @@ class _SettingsPage extends StatelessWidget {
   }
 
   String _sizeName(BuildContext context, double value) {
-    if (value < 0.95) {
+    if (value < 0.8125) {
+      return _text(context, 'Очень маленький', 'Very small', 'Sehr klein', 'Très petit', 'Muy pequeño', 'Molto piccolo', 'Muito pequeno', '极小', '極小', '매우 작게', 'صغير جدًا');
+    }
+    if (value < 0.9375) {
       return _text(context, 'Маленький', 'Small', 'Klein', 'Petit', 'Pequeño', 'Piccolo', 'Pequeno', '小', '小', '작게', 'صغير');
     }
-    if (value > 1.05) {
+    if (value < 1.0625) {
+      return _text(context, 'Средний', 'Medium', 'Mittel', 'Moyen', 'Medio', 'Medio', 'Médio', '中', '中', '중간', 'متوسط');
+    }
+    if (value < 1.1875) {
       return _text(context, 'Большой', 'Large', 'Groß', 'Grand', 'Grande', 'Grande', 'Grande', '大', '大', '크게', 'كبير');
     }
-    return _text(context, 'Средний', 'Medium', 'Mittel', 'Moyen', 'Medio', 'Medio', 'Médio', '中', '中', '중간', 'متوسط');
+    return _text(context, 'Очень большой', 'Very large', 'Sehr groß', 'Très grand', 'Muy grande', 'Molto grande', 'Muito grande', '极大', '極大', '매우 크게', 'كبير جدًا');
   }
 
   String _themeName(BuildContext context, ThemeMode mode) {
@@ -542,7 +499,7 @@ class _SettingsPage extends StatelessWidget {
 
   Future<void> _showScale(BuildContext context, bool font) async {
     final current = font ? fontScale : uiScale;
-    final values = font ? const [0.85, 1.0, 1.15] : const [0.75, 1.0, 1.25];
+    final values = font ? const [0.75, 0.875, 1.0, 1.125, 1.25] : const [0.70, 0.85, 1.0, 1.15, 1.30];
     final selected = await showModalBottomSheet<double>(
       context: context,
       builder: (sheetContext) => SafeArea(
