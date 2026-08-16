@@ -59,7 +59,7 @@ class ResponsiveInfo {
   static ResponsiveInfo of(BuildContext context) => ResponsiveInfo.fromMediaQuery(MediaQuery.of(context));
 
   double spacing(double value) => value * layoutScale;
-  double size(double value) => value * layoutScale;
+  double scaledSize(double value) => value * layoutScale;
 }
 
 class ResponsiveContent extends StatelessWidget {
