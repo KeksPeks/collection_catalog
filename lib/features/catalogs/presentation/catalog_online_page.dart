@@ -138,8 +138,10 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                 child: FilledButton.icon(
                   onPressed: () async {
+                    final navigator = Navigator.of(context);
                     await widget.onDownload!.call();
-                    if (mounted) Navigator.of(context).pop();
+                    if (!mounted) return;
+                    navigator.pop();
                   },
                   icon: const Icon(Icons.download_rounded),
                   label: Text(l10n.download),
