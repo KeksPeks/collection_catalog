@@ -8,7 +8,6 @@ import '../features/collections/presentation/pages/catalog_page.dart';
 import '../features/collections/presentation/pages/collections_page.dart';
 import '../features/downloads/presentation/downloads_page.dart';
 import '../features/feedback/presentation/feedback_page.dart';
-import '../features/templates/presentation/pages/catalog_admin_page.dart';
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -140,7 +139,10 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     final seed = colors[colorIndex];
     final densityValue = (uiScale - 1.0) * 4.0;
-    final density = VisualDensity(horizontal: densityValue, vertical: densityValue);
+    final density = VisualDensity(
+      horizontal: densityValue,
+      vertical: densityValue,
+    );
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -178,18 +180,31 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  ThemeData _buildTheme(Color seed, Brightness brightness, VisualDensity density) {
+  ThemeData _buildTheme(
+    Color seed,
+    Brightness brightness,
+    VisualDensity density,
+  ) {
     return ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: brightness),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: seed,
+        brightness: brightness,
+      ),
       useMaterial3: true,
       visualDensity: density,
       listTileTheme: ListTileThemeData(
-        contentPadding: EdgeInsets.symmetric(horizontal: 16 * uiScale, vertical: 2 * uiScale),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 16 * uiScale,
+          vertical: 2 * uiScale,
+        ),
         minVerticalPadding: 8 * uiScale,
       ),
       cardTheme: CardThemeData(margin: EdgeInsets.all(4 * uiScale)),
       inputDecorationTheme: InputDecorationTheme(
-        contentPadding: EdgeInsets.symmetric(horizontal: 16 * uiScale, vertical: 14 * uiScale),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 16 * uiScale,
+          vertical: 14 * uiScale,
+        ),
       ),
     );
   }
@@ -231,6 +246,28 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final destinations = [
+      _NavigationDestinationData(
+        label: l10n.catalog,
+        icon: Icons.menu_book_outlined,
+        selectedIcon: Icons.menu_book,
+      ),
+      _NavigationDestinationData(
+        label: l10n.favorites,
+        icon: Icons.star_border_rounded,
+        selectedIcon: Icons.star_rounded,
+      ),
+      _NavigationDestinationData(
+        label: l10n.myCollections,
+        icon: Icons.collections_bookmark_outlined,
+        selectedIcon: Icons.collections_bookmark,
+      ),
+      _NavigationDestinationData(
+        label: l10n.settings,
+        icon: Icons.settings_outlined,
+        selectedIcon: Icons.settings,
+      ),
+    ];
 
     return Scaffold(
       body: IndexedStack(
@@ -253,15 +290,122 @@ class _MainNavigationState extends State<MainNavigation> {
           ),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: _BottomNavigationBar(
+        destinations: destinations,
         selectedIndex: currentIndex,
-        onDestinationSelected: (index) => setState(() => currentIndex = index),
-        destinations: [
-          NavigationDestination(icon: const Icon(Icons.menu_book_outlined), selectedIcon: const Icon(Icons.menu_book), label: l10n.catalog),
-          NavigationDestination(icon: const Icon(Icons.star_border_rounded), selectedIcon: const Icon(Icons.star_rounded), label: l10n.favorites),
-          NavigationDestination(icon: const Icon(Icons.collections_bookmark_outlined), selectedIcon: const Icon(Icons.collections_bookmark), label: l10n.myCollections),
-          NavigationDestination(icon: const Icon(Icons.settings_outlined), selectedIcon: const Icon(Icons.settings), label: l10n.settings),
-        ],
+        onSelected: (index) => setState(() => currentIndex = index),
+      ),
+    );
+  }
+}
+
+class _NavigationDestinationData {
+  final String label;
+  final IconData icon;
+  final IconData selectedIcon;
+
+  const _NavigationDestinationData({
+    required this.label,
+    required this.icon,
+    required this.selectedIcon,
+  });
+}
+
+class _BottomNavigationBar extends StatelessWidget {
+  final List<_NavigationDestinationData> destinations;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  const _BottomNavigationBar({
+    required this.destinations,
+    required this.selectedIndex,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Material(
+      color: colors.surface,
+      elevation: 3,
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 76,
+          child: Row(
+            children: [
+              for (var index = 0; index < destinations.length; index++)
+                Expanded(
+                  child: _BottomNavigationItem(
+                    data: destinations[index],
+                    selected: index == selectedIndex,
+                    onTap: () => onSelected(index),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BottomNavigationItem extends StatelessWidget {
+  final _NavigationDestinationData data;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _BottomNavigationItem({
+    required this.data,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: data.label,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                decoration: BoxDecoration(
+                  color: selected ? colors.secondaryContainer : Colors.transparent,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Icon(
+                  selected ? data.selectedIcon : data.icon,
+                  color: selected ? colors.onSecondaryContainer : colors.onSurfaceVariant,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(height: 3),
+              SizedBox(
+                width: double.infinity,
+                child: Text(
+                  data.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                        color: selected ? colors.onSurface : colors.onSurfaceVariant,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -292,7 +436,20 @@ class _SettingsPage extends StatelessWidget {
     required this.onLocaleChanged,
   });
 
-  String _text(BuildContext context, String ru, String en, String de, String fr, String es, String it, String pt, String zh, String ja, String ko, String ar) {
+  String _text(
+    BuildContext context,
+    String ru,
+    String en,
+    String de,
+    String fr,
+    String es,
+    String it,
+    String pt,
+    String zh,
+    String ja,
+    String ko,
+    String ar,
+  ) {
     switch (Localizations.localeOf(context).languageCode) {
       case 'ru': return ru;
       case 'de': return de;
@@ -386,13 +543,6 @@ class _SettingsPage extends StatelessWidget {
             title: l10n.catalog,
             children: [
               ListTile(
-                leading: const Icon(Icons.admin_panel_settings_outlined),
-                title: Text(l10n.chooseCatalog),
-                subtitle: Text(l10n.catalogDescription),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CatalogAdminPage())),
-              ),
-              ListTile(
                 leading: const Icon(Icons.download_outlined),
                 title: Text(downloads),
                 subtitle: Text(downloadDescription),
@@ -426,7 +576,11 @@ class _SettingsPage extends StatelessWidget {
                 leading: const Icon(Icons.help_outline),
                 title: Text(about),
                 subtitle: Text(l10n.catalogDescription),
-                onTap: () => showAboutDialog(context: context, applicationName: 'Collection Catalog', applicationVersion: '1.0.0'),
+                onTap: () => showAboutDialog(
+                  context: context,
+                  applicationName: 'Collection Catalog',
+                  applicationVersion: '1.0.0',
+                ),
               ),
             ],
           ),
@@ -468,11 +622,15 @@ class _SettingsPage extends StatelessWidget {
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: ThemeMode.values.map((mode) => ListTile(
-            title: Text(_themeName(context, mode)),
-            selected: mode == themeMode,
-            onTap: () => Navigator.pop(sheetContext, mode),
-          )).toList(),
+          children: ThemeMode.values
+              .map(
+                (mode) => ListTile(
+                  title: Text(_themeName(context, mode)),
+                  selected: mode == themeMode,
+                  onTap: () => Navigator.pop(sheetContext, mode),
+                ),
+              )
+              .toList(),
         ),
       ),
     );
@@ -485,12 +643,15 @@ class _SettingsPage extends StatelessWidget {
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: List.generate(_MyAppState.colors.length, (index) => ListTile(
-            leading: CircleAvatar(backgroundColor: _MyAppState.colors[index]),
-            title: Text(_colorName(context, index)),
-            selected: index == colorIndex,
-            onTap: () => Navigator.pop(sheetContext, index),
-          )),
+          children: List.generate(
+            _MyAppState.colors.length,
+            (index) => ListTile(
+              leading: CircleAvatar(backgroundColor: _MyAppState.colors[index]),
+              title: Text(_colorName(context, index)),
+              selected: index == colorIndex,
+              onTap: () => Navigator.pop(sheetContext, index),
+            ),
+          ),
         ),
       ),
     );
@@ -499,18 +660,28 @@ class _SettingsPage extends StatelessWidget {
 
   Future<void> _showScale(BuildContext context, bool font) async {
     final current = font ? fontScale : uiScale;
-    final values = font ? const [0.75, 0.875, 1.0, 1.125, 1.25] : const [0.70, 0.85, 1.0, 1.15, 1.30];
+    final values = font
+        ? const [0.75, 0.875, 1.0, 1.125, 1.25]
+        : const [0.70, 0.85, 1.0, 1.15, 1.30];
     final selected = await showModalBottomSheet<double>(
       context: context,
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: values.map((value) => ListTile(
-            leading: Icon((value - current).abs() < 0.01 ? Icons.radio_button_checked : Icons.radio_button_unchecked),
-            title: Text(_sizeName(context, value)),
-            subtitle: Text('${(value * 100).round()}%'),
-            onTap: () => Navigator.pop(sheetContext, value),
-          )).toList(),
+          children: values
+              .map(
+                (value) => ListTile(
+                  leading: Icon(
+                    (value - current).abs() < 0.01
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                  ),
+                  title: Text(_sizeName(context, value)),
+                  subtitle: Text('${(value * 100).round()}%'),
+                  onTap: () => Navigator.pop(sheetContext, value),
+                ),
+              )
+              .toList(),
         ),
       ),
     );
@@ -542,7 +713,10 @@ class _SettingsGroup extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
               child: Text(
                 title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w800),
               ),
             ),
             ...children,
