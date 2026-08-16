@@ -38,35 +38,20 @@ class _MyAppState extends State<MyApp> {
     Colors.green,
   ];
 
-  static const colorNames = [
-    'Indigo',
-    'Teal',
-    'Purple',
-    'Orange',
-    'Green',
-  ];
-
   @override
   void initState() {
     super.initState();
     _loadSettings();
   }
 
-  Future<void> _loadSettings() async {
-    try {
-      final preferences = await SharedPreferences.getInstance();
-      if (!mounted) return;
-      final language = preferences.getString(_localeKey);
-      setState(() {
-        themeMode = _themeModeFromString(preferences.getString(_themeKey));
-        colorIndex = _validColorIndex(preferences.getInt(_colorKey));
-        fontScale = _validScale(preferences.getDouble(_fontScaleKey));
-        uiScale = _validScale(preferences.getDouble(_uiScaleKey));
-        locale = language == null || language.isEmpty ? null : Locale(language);
-      });
-    } catch (_) {
-      // Настройки оформления не должны блокировать запуск приложения.
-    }
+  double _validScale(double? value) {
+    if (value == null || !value.isFinite) return 1.0;
+    return value.clamp(0.70, 1.40).toDouble();
+  }
+
+  int _validColorIndex(int? value) {
+    if (value == null || value < 0 || value >= colors.length) return 0;
+    return value;
   }
 
   ThemeMode _themeModeFromString(String? value) {
@@ -91,14 +76,21 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  int _validColorIndex(int? value) {
-    if (value == null || value < 0 || value >= colors.length) return 0;
-    return value;
-  }
-
-  double _validScale(double? value) {
-    if (value == null || !value.isFinite || value <= 0) return 1.0;
-    return value.clamp(0.5, 2.0).toDouble();
+  Future<void> _loadSettings() async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      final language = preferences.getString(_localeKey);
+      setState(() {
+        themeMode = _themeModeFromString(preferences.getString(_themeKey));
+        colorIndex = _validColorIndex(preferences.getInt(_colorKey));
+        fontScale = _validScale(preferences.getDouble(_fontScaleKey));
+        uiScale = _validScale(preferences.getDouble(_uiScaleKey));
+        locale = language == null || language.isEmpty ? null : Locale(language);
+      });
+    } catch (_) {
+      // Локальные настройки не должны блокировать запуск приложения.
+    }
   }
 
   Future<void> _saveSettings() async {
@@ -115,7 +107,7 @@ class _MyAppState extends State<MyApp> {
           preferences.setString(_localeKey, locale!.languageCode),
       ]);
     } catch (_) {
-      // Локальные настройки не должны ломать интерфейс.
+      // Настройки не должны ломать приложение.
     }
   }
 
@@ -144,43 +136,19 @@ class _MyAppState extends State<MyApp> {
     _saveSettings();
   }
 
-  TextTheme _scaleTextTheme(TextTheme base) {
-    TextStyle? scale(TextStyle? style) {
-      if (style == null || style.fontSize == null) return style;
-      return style.copyWith(fontSize: style.fontSize! * fontScale);
-    }
-
-    return base.copyWith(
-      displayLarge: scale(base.displayLarge),
-      displayMedium: scale(base.displayMedium),
-      displaySmall: scale(base.displaySmall),
-      headlineLarge: scale(base.headlineLarge),
-      headlineMedium: scale(base.headlineMedium),
-      headlineSmall: scale(base.headlineSmall),
-      titleLarge: scale(base.titleLarge),
-      titleMedium: scale(base.titleMedium),
-      titleSmall: scale(base.titleSmall),
-      bodyLarge: scale(base.bodyLarge),
-      bodyMedium: scale(base.bodyMedium),
-      bodySmall: scale(base.bodySmall),
-      labelLarge: scale(base.labelLarge),
-      labelMedium: scale(base.labelMedium),
-      labelSmall: scale(base.labelSmall),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final seed = colors[colorIndex];
+    final densityValue = (uiScale - 1.0) * 4.0;
     final density = VisualDensity(
-      horizontal: (uiScale - 1) * 2,
-      vertical: (uiScale - 1) * 2,
+      horizontal: densityValue,
+      vertical: densityValue,
     );
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      onGenerateTitle: (context) => AppLocalizations.of(context).catalog,
       locale: locale,
+      onGenerateTitle: (context) => AppLocalizations.of(context).catalog,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -188,22 +156,18 @@ class _MyAppState extends State<MyApp> {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: seed),
-        useMaterial3: true,
-        visualDensity: density,
-        textTheme: _scaleTextTheme(ThemeData.light().textTheme),
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: seed,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-        visualDensity: density,
-        textTheme: _scaleTextTheme(ThemeData.dark().textTheme),
-      ),
+      theme: _buildTheme(seed, Brightness.light, density),
+      darkTheme: _buildTheme(seed, Brightness.dark, density),
       themeMode: themeMode,
+      builder: (context, child) {
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(
+            textScaler: TextScaler.linear(fontScale),
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: MainNavigation(
         themeMode: themeMode,
         colorIndex: colorIndex,
@@ -215,6 +179,37 @@ class _MyAppState extends State<MyApp> {
         onFontScaleChanged: _changeFontScale,
         onUiScaleChanged: _changeUiScale,
         onLocaleChanged: _changeLocale,
+      ),
+    );
+  }
+
+  ThemeData _buildTheme(
+    Color seed,
+    Brightness brightness,
+    VisualDensity density,
+  ) {
+    return ThemeData(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: seed,
+        brightness: brightness,
+      ),
+      useMaterial3: true,
+      visualDensity: density,
+      listTileTheme: ListTileThemeData(
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 16 * uiScale,
+          vertical: 2 * uiScale,
+        ),
+        minVerticalPadding: 8 * uiScale,
+      ),
+      cardTheme: CardThemeData(
+        margin: EdgeInsets.all(4 * uiScale),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 16 * uiScale,
+          vertical: 14 * uiScale,
+        ),
       ),
     );
   }
@@ -333,14 +328,89 @@ class _SettingsPage extends StatelessWidget {
     required this.onLocaleChanged,
   });
 
+  String _text(
+    BuildContext context,
+    String ru,
+    String en,
+    String de,
+    String fr,
+    String es,
+    String it,
+    String pt,
+    String zh,
+    String ja,
+    String ko,
+    String ar,
+  ) {
+    switch (Localizations.localeOf(context).languageCode) {
+      case 'ru': return ru;
+      case 'de': return de;
+      case 'fr': return fr;
+      case 'es': return es;
+      case 'it': return it;
+      case 'pt': return pt;
+      case 'zh': return zh;
+      case 'ja': return ja;
+      case 'ko': return ko;
+      case 'ar': return ar;
+      default: return en;
+    }
+  }
+
+  String _sizeName(BuildContext context, double value) {
+    if (value < 0.95) {
+      return _text(context, 'Маленький', 'Small', 'Klein', 'Petit', 'Pequeño', 'Piccolo', 'Pequeno', '小', '小', '작게', 'صغير');
+    }
+    if (value > 1.05) {
+      return _text(context, 'Большой', 'Large', 'Groß', 'Grand', 'Grande', 'Grande', 'Grande', '大', '大', '크게', 'كبير');
+    }
+    return _text(context, 'Средний', 'Medium', 'Mittel', 'Moyen', 'Medio', 'Medio', 'Médio', '中', '中', '중간', 'متوسط');
+  }
+
+  String _themeName(BuildContext context, ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.system:
+        return _text(context, 'Системная', 'System', 'System', 'Système', 'Sistema', 'Sistema', 'Sistema', '系统', 'システム', '시스템', 'النظام');
+      case ThemeMode.light:
+        return _text(context, 'Светлая', 'Light', 'Hell', 'Clair', 'Claro', 'Chiaro', 'Claro', '浅色', 'ライト', '라이트', 'فاتح');
+      case ThemeMode.dark:
+        return _text(context, 'Тёмная', 'Dark', 'Dunkel', 'Sombre', 'Oscuro', 'Scuro', 'Escuro', '深色', 'ダーク', '다크', 'داكن');
+    }
+  }
+
+  String _colorName(BuildContext context, int index) {
+    const names = [
+      ['Индиго', 'Indigo', 'Indigo', 'Indigo', 'Índigo', 'Indaco', 'Índigo', '靛蓝', 'インディゴ', '인디고', 'نيلي'],
+      ['Бирюзовый', 'Teal', 'Türkis', 'Sarcelle', 'Verde azulado', 'Verde acqua', 'Verde-azulado', '蓝绿', 'ティール', '청록', 'أزرق مخضر'],
+      ['Фиолетовый', 'Purple', 'Violett', 'Violet', 'Morado', 'Viola', 'Roxo', '紫色', '紫', '보라', 'بنفسجي'],
+      ['Оранжевый', 'Orange', 'Orange', 'Orange', 'Naranja', 'Arancione', 'Laranja', '橙色', 'オレンジ', '주황', 'برتقالي'],
+      ['Зелёный', 'Green', 'Grün', 'Vert', 'Verde', 'Verde', 'Verde', '绿色', '緑', '초록', 'أخضر'],
+    ];
+    final lang = Localizations.localeOf(context).languageCode;
+    final languageIndex = switch (lang) {
+      'ru' => 0, 'de' => 2, 'fr' => 3, 'es' => 4, 'it' => 5,
+      'pt' => 6, 'zh' => 7, 'ja' => 8, 'ko' => 9, 'ar' => 10, _ => 1,
+    };
+    return names[index][languageIndex];
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final downloads = _text(context, 'Загрузки', 'Downloads', 'Downloads', 'Téléchargements', 'Descargas', 'Download', 'Transferências', '下载', 'ダウンロード', '다운로드', 'التنزيلات');
+    final downloadDescription = _text(context, 'Очередь загрузки каталогов', 'Catalog download queue', 'Katalog-Warteschlange', 'File de téléchargement', 'Cola de descargas', 'Coda download cataloghi', 'Fila de transferências', '目录下载队列', 'カタログのダウンロード待ち', '카탈로그 다운로드 대기열', 'قائمة تنزيل الفهارس');
+    final theme = _text(context, 'Тема', 'Theme', 'Thema', 'Thème', 'Tema', 'Tema', 'Tema', '主题', 'テーマ', '테마', 'السمة');
+    final colors = _text(context, 'Цветовая схема', 'Color scheme', 'Farbschema', 'Couleurs', 'Esquema de color', 'Schema colori', 'Esquema de cores', '配色', '配色', '색상', 'نظام الألوان');
+    final font = _text(context, 'Размер шрифта', 'Font size', 'Schriftgröße', 'Taille du texte', 'Tamaño de fuente', 'Dimensione carattere', 'Tamanho da fonte', '字体大小', 'フォントサイズ', '글자 크기', 'حجم الخط');
+    final ui = _text(context, 'Размер интерфейса', 'Interface size', 'Oberflächengröße', 'Taille de l’interface', 'Tamaño de interfaz', 'Dimensione interfaccia', 'Tamanho da interface', '界面大小', 'インターフェースサイズ', '인터페이스 크기', 'حجم الواجهة');
+    final feedback = _text(context, 'Обратная связь', 'Feedback', 'Feedback', 'Commentaires', 'Comentarios', 'Feedback', 'Feedback', '反馈', 'フィードバック', '피드백', 'ملاحظات');
+    final feedbackDescription = _text(context, 'Предложения по изменению каталогов', 'Suggest catalog changes', 'Katalogänderungen vorschlagen', 'Proposer des changements', 'Sugerir cambios', 'Proponi modifiche', 'Sugerir alterações', '建议修改目录', 'カタログ変更を提案', '카탈로그 변경 제안', 'اقتراح تغييرات الفهرس');
+    final about = _text(context, 'О приложении', 'About', 'Über', 'À propos', 'Acerca de', 'Informazioni', 'Sobre', '关于', 'アプリについて', '정보', 'حول التطبيق');
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settings)),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16 * uiScale),
         children: [
           _SettingsGroup(
             title: l10n.settings,
@@ -348,96 +418,58 @@ class _SettingsPage extends StatelessWidget {
               ListTile(
                 leading: const Icon(Icons.translate_rounded),
                 title: Text(l10n.language),
-                subtitle: Text(
-                  locale == null
-                      ? l10n.languageSystem
-                      : AppLocalizations(locale!).languageName,
-                ),
+                subtitle: Text(locale == null ? l10n.languageSystem : AppLocalizations(locale!).languageName),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _showLanguages(context),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12 * uiScale),
           _SettingsGroup(
             title: l10n.catalog,
             children: [
               ListTile(
                 leading: const Icon(Icons.admin_panel_settings_outlined),
-                title: Text(l10n.catalog),
-                subtitle: Text(l10n.chooseCatalog),
+                title: Text(l10n.chooseCatalog),
+                subtitle: Text(l10n.catalogDescription),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const CatalogAdminPage(),
-                  ),
-                ),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CatalogAdminPage())),
               ),
               ListTile(
                 leading: const Icon(Icons.download_outlined),
-                title: const Text('Downloads'),
-                subtitle: const Text('Catalog download queue'),
+                title: Text(downloads),
+                subtitle: Text(downloadDescription),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const DownloadsPage(),
-                  ),
-                ),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DownloadsPage())),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12 * uiScale),
           _SettingsGroup(
             title: l10n.appearance,
             children: [
-              ListTile(
-                leading: const Icon(Icons.palette_outlined),
-                title: const Text('Theme'),
-                subtitle: Text(_themeName(themeMode)),
-                onTap: () => _showThemes(context),
-              ),
-              ListTile(
-                leading: const Icon(Icons.color_lens_outlined),
-                title: const Text('Color scheme'),
-                subtitle: Text(_MyAppState.colorNames[colorIndex]),
-                onTap: () => _showColors(context),
-              ),
-              ListTile(
-                leading: const Icon(Icons.text_fields_outlined),
-                title: const Text('Font size'),
-                subtitle: Text(_sizeName(fontScale)),
-                onTap: () => _showScale(context, true),
-              ),
-              ListTile(
-                leading: const Icon(Icons.view_agenda_outlined),
-                title: const Text('Interface size'),
-                subtitle: Text(_sizeName(uiScale)),
-                onTap: () => _showScale(context, false),
-              ),
+              ListTile(leading: const Icon(Icons.palette_outlined), title: Text(theme), subtitle: Text(_themeName(context, themeMode)), onTap: () => _showThemes(context)),
+              ListTile(leading: const Icon(Icons.color_lens_outlined), title: Text(colors), subtitle: Text(_colorName(context, colorIndex)), onTap: () => _showColors(context)),
+              ListTile(leading: const Icon(Icons.text_fields_outlined), title: Text(font), subtitle: Text(_sizeName(context, fontScale)), onTap: () => _showScale(context, true)),
+              ListTile(leading: const Icon(Icons.view_agenda_outlined), title: Text(ui), subtitle: Text(_sizeName(context, uiScale)), onTap: () => _showScale(context, false)),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12 * uiScale),
           _SettingsGroup(
             title: l10n.settings,
             children: [
               ListTile(
                 leading: const Icon(Icons.feedback_outlined),
-                title: const Text('Feedback'),
-                subtitle: const Text('Request catalog changes'),
+                title: Text(feedback),
+                subtitle: Text(feedbackDescription),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const FeedbackPage()),
-                ),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FeedbackPage())),
               ),
               ListTile(
                 leading: const Icon(Icons.help_outline),
-                title: const Text('About'),
-                subtitle: const Text('Application information'),
-                onTap: () => showAboutDialog(
-                  context: context,
-                  applicationName: 'Collection Catalog',
-                  applicationVersion: '1.0.0',
-                ),
+                title: Text(about),
+                subtitle: Text(l10n.catalogDescription),
+                onTap: () => showAboutDialog(context: context, applicationName: 'Collection Catalog', applicationVersion: '1.0.0'),
               ),
             ],
           ),
@@ -446,57 +478,29 @@ class _SettingsPage extends StatelessWidget {
     );
   }
 
-  String _themeName(ThemeMode mode) {
-    switch (mode) {
-      case ThemeMode.system:
-        return 'System';
-      case ThemeMode.light:
-        return 'Light';
-      case ThemeMode.dark:
-        return 'Dark';
-    }
-  }
-
-  String _sizeName(double value) {
-    if (value < 0.95) return 'Small';
-    if (value > 1.05) return 'Large';
-    return 'Medium';
-  }
-
   Future<void> _showLanguages(BuildContext context) async {
     final result = await showModalBottomSheet<String>(
       context: context,
-      builder: (sheetContext) {
-        return SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              ListTile(
-                leading: Icon(
-                  locale == null
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_unchecked,
-                ),
-                title: Text(AppLocalizations.of(context).languageSystem),
-                onTap: () => Navigator.pop(sheetContext, '__system__'),
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            ListTile(
+              leading: Icon(locale == null ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+              title: Text(AppLocalizations.of(context).languageSystem),
+              onTap: () => Navigator.pop(sheetContext, '__system__'),
+            ),
+            ...AppLocalizations.supportedLocales.map(
+              (item) => ListTile(
+                leading: Icon(locale?.languageCode == item.languageCode ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+                title: Text(AppLocalizations(item).languageName),
+                onTap: () => Navigator.pop(sheetContext, item.languageCode),
               ),
-              ...AppLocalizations.supportedLocales.map(
-                (item) => ListTile(
-                  leading: Icon(
-                    locale?.languageCode == item.languageCode
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_unchecked,
-                  ),
-                  title: Text(AppLocalizations(item).languageName),
-                  onTap: () => Navigator.pop(sheetContext, item.languageCode),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+            ),
+          ],
+        ),
+      ),
     );
-
     if (!context.mounted || result == null) return;
     onLocaleChanged(result == '__system__' ? null : Locale(result));
   }
@@ -507,15 +511,11 @@ class _SettingsPage extends StatelessWidget {
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: ThemeMode.values
-              .map(
-                (mode) => ListTile(
-                  title: Text(_themeName(mode)),
-                  selected: mode == themeMode,
-                  onTap: () => Navigator.pop(sheetContext, mode),
-                ),
-              )
-              .toList(),
+          children: ThemeMode.values.map((mode) => ListTile(
+            title: Text(_themeName(context, mode)),
+            selected: mode == themeMode,
+            onTap: () => Navigator.pop(sheetContext, mode),
+          )).toList(),
         ),
       ),
     );
@@ -528,17 +528,12 @@ class _SettingsPage extends StatelessWidget {
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: List.generate(
-            _MyAppState.colors.length,
-            (index) => ListTile(
-              leading: CircleAvatar(
-                backgroundColor: _MyAppState.colors[index],
-              ),
-              title: Text(_MyAppState.colorNames[index]),
-              selected: index == colorIndex,
-              onTap: () => Navigator.pop(sheetContext, index),
-            ),
-          ),
+          children: List.generate(_MyAppState.colors.length, (index) => ListTile(
+            leading: CircleAvatar(backgroundColor: _MyAppState.colors[index]),
+            title: Text(_colorName(context, index)),
+            selected: index == colorIndex,
+            onTap: () => Navigator.pop(sheetContext, index),
+          )),
         ),
       ),
     );
@@ -546,25 +541,19 @@ class _SettingsPage extends StatelessWidget {
   }
 
   Future<void> _showScale(BuildContext context, bool font) async {
+    final current = font ? fontScale : uiScale;
+    final values = font ? const [0.85, 1.0, 1.15] : const [0.75, 1.0, 1.25];
     final selected = await showModalBottomSheet<double>(
       context: context,
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text('Small'),
-              onTap: () => Navigator.pop(sheetContext, font ? 0.90 : 0.85),
-            ),
-            ListTile(
-              title: const Text('Medium'),
-              onTap: () => Navigator.pop(sheetContext, 1.0),
-            ),
-            ListTile(
-              title: const Text('Large'),
-              onTap: () => Navigator.pop(sheetContext, 1.15),
-            ),
-          ],
+          children: values.map((value) => ListTile(
+            leading: Icon((value - current).abs() < 0.01 ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+            title: Text(_sizeName(context, value)),
+            subtitle: Text('${(value * 100).round()}%'),
+            onTap: () => Navigator.pop(sheetContext, value),
+          )).toList(),
         ),
       ),
     );
@@ -586,6 +575,7 @@ class _SettingsGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Column(
@@ -595,10 +585,7 @@ class _SettingsGroup extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
               child: Text(
                 title,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w800),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
             ),
             ...children,
