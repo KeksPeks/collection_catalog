@@ -1,22 +1,21 @@
 import '../../../templates/domain/entities/template.dart';
+import 'catalog_entry_definition.dart';
 
-/// Описание готового каталога, доступного пользователю.
-///
-/// Каталог является источником структуры и может быть просмотрен онлайн
-/// или загружен в локальное хранилище телефона.
+/// Универсальное описание готового каталога.
 class CatalogDefinition {
   final String id;
   final String name;
   final String description;
   final String templateId;
   final Template template;
-
-  /// Общее число записей в серверном каталоге.
-  ///
-  /// Пока серверный источник не подключён, значение равно null и интерфейс
-  /// показывает «—», не подменяя реальные данные вымышленным числом.
   final int? totalItems;
   final List<CatalogSectionDefinition> sections;
+
+  /// Поле, по которому записи открываются по умолчанию.
+  final String primaryField;
+
+  /// Демонстрационные записи. Сервер сможет заменить их реальными данными.
+  final List<CatalogEntryDefinition> entries;
 
   const CatalogDefinition({
     required this.id,
@@ -26,10 +25,11 @@ class CatalogDefinition {
     required this.template,
     this.totalItems,
     this.sections = const [],
+    this.primaryField = '',
+    this.entries = const [],
   });
 }
 
-/// Раздел готового каталога.
 class CatalogSectionDefinition {
   final String id;
   final String name;

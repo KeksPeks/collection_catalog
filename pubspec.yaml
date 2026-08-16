@@ -1,9 +1,7 @@
 name: collection_catalog
 
 description: "Universal collection engine application."
-
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
@@ -12,17 +10,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+  flutter_localizations:
+    sdk: flutter
   cupertino_icons: ^1.0.8
-
   flutter_riverpod: ^2.6.1
-
   dio: ^5.9.0
-
   drift: 2.32.1
   sqlite3: ^3.5.0
   sqlite3_flutter_libs: 0.5.42
-
   path_provider: ^2.1.5
   path: ^1.9.1
   url_launcher: ^6.3.2
@@ -31,7 +26,6 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
   build_runner: ^2.7.0
   drift_dev: 2.32.1
   flutter_lints: ^6.0.0
