@@ -1,290 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers/collection_section_provider.dart';
-import '../providers/collection_section_service_provider.dart';
-
 import '../../domain/entities/collection_section.dart';
+import '../providers/collection_section_provider.dart';
+import '../../domain/entities/collection.dart';
+import 'items_page.dart';
 
-
-
+/// Иерархические разделы загруженного каталога.
+///
+/// Разделы каталога являются частью серверной структуры и доступны только
+/// для просмотра. Изменять их пользователь не может.
 class CollectionSectionsPage extends ConsumerWidget {
-
   final String collectionId;
-
   final String collectionName;
+  final Collection collection;
 
-
-  const CollectionSectionsPage({
-
-    super.key,
-
-    required this.collectionId,
-
-    required this.collectionName,
-
-  });
-
-
+  const CollectionSectionsPage({super.key, required this.collectionId, required this.collectionName, required this.collection});
 
   @override
-  Widget build(
-    BuildContext context,
-    WidgetRef ref,
-  ) {
-
-
-    final sections =
-        ref.watch(
-          collectionSectionsProvider(
-            collectionId,
-          ),
-        );
-
-
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sections = ref.watch(collectionSectionsProvider(collectionId));
     return Scaffold(
-
-      appBar: AppBar(
-
-        title: Text(
-          collectionName,
-        ),
-
-      ),
-
-
-      body:
-
-          sections.when(
-
-        loading: () =>
-            const Center(
-              child:
-                  CircularProgressIndicator(),
-            ),
-
-
-        error: (error, stack) =>
-            Center(
-              child:
-                  Text(
-                error.toString(),
-              ),
-            ),
-
-
+      appBar: AppBar(title: Text(collectionName)),
+      body: sections.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(child: Text(error.toString())),
         data: (items) {
-
-
-          if(items.isEmpty){
-
-            return const Center(
-              child:
-                  Text(
-                'Разделов пока нет',
-              ),
-            );
-
-          }
-
-
-          return ListView.builder(
-
-            itemCount:
-                items.length,
-
-
-            itemBuilder:
-                (context,index){
-
-
-              final section =
-                  items[index];
-
-
-              return ListTile(
-
-                title:
-                    Text(
-                  section.name,
-                ),
-
-              );
-
-
-            },
-
-          );
-
+          final roots = items.where((section) => section.parentId == null).toList()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+          if (roots.isEmpty) return const Center(child: Text('Разделов пока нет'));
+          return ListView(padding: const EdgeInsets.all(16), children: roots.map((section) => _buildSection(context, items, section, 0)).toList());
         },
-
       ),
-
-
-
-      floatingActionButton:
-
-          FloatingActionButton(
-
-        child:
-            const Icon(
-          Icons.add,
-        ),
-
-
-        onPressed: () async {
-
-
-          final controller =
-              TextEditingController();
-
-
-          final name =
-              await showDialog<String>(
-
-            context: context,
-
-
-            builder:
-                (dialogContext){
-
-              return AlertDialog(
-
-                title:
-                    const Text(
-                  'Новый раздел',
-                ),
-
-
-                content:
-                    TextField(
-
-                  controller:
-                      controller,
-
-                  decoration:
-                      const InputDecoration(
-                    hintText:
-                        'Название',
-                  ),
-
-                ),
-
-
-
-                actions: [
-
-                  TextButton(
-
-                    onPressed: (){
-
-                      Navigator.pop(
-                        dialogContext,
-                      );
-
-                    },
-
-
-                    child:
-                        const Text(
-                      'Отмена',
-                    ),
-
-                  ),
-
-
-                  ElevatedButton(
-
-                    onPressed: (){
-
-                      Navigator.pop(
-                        dialogContext,
-                        controller.text.trim(),
-                      );
-
-                    },
-
-
-                    child:
-                        const Text(
-                      'Создать',
-                    ),
-
-                  ),
-
-                ],
-
-              );
-
-            },
-
-          );
-
-
-          controller.dispose();
-
-
-          if(name == null ||
-             name.isEmpty){
-
-            return;
-
-          }
-
-
-
-          final service =
-              await ref.read(
-                collectionSectionServiceProvider.future,
-              );
-
-
-
-          final now =
-              DateTime.now();
-
-
-
-          final section =
-              CollectionSection(
-
-            id:
-                now.microsecondsSinceEpoch.toString(),
-
-            collectionId:
-                collectionId,
-
-            name:
-                name,
-
-            createdAt:
-                now,
-
-            updatedAt:
-                now,
-
-          );
-
-
-
-          await service.createSection(
-            section,
-          );
-
-
-          ref.invalidate(
-            collectionSectionsProvider(
-              collectionId,
-            ),
-          );
-
-
-        },
-
-      ),
-
     );
-
   }
 
+  Widget _buildSection(BuildContext context, List<CollectionSection> all, CollectionSection section, int depth) {
+    final children = all.where((item) => item.parentId == section.id).toList()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return Padding(
+      padding: EdgeInsets.only(left: depth * 18.0, bottom: 10),
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            ListTile(
+              leading: Icon(children.isEmpty ? Icons.folder_open_outlined : Icons.folder_outlined),
+              title: Text(section.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ItemsPage(collection: collection, sectionId: section.id, sectionName: section.name))),
+            ),
+            if (children.isNotEmpty) ...children.map((child) => _buildSection(context, all, child, depth + 1)),
+          ],
+        ),
+      ),
+    );
+  }
 }
