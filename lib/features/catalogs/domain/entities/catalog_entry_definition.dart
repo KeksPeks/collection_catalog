@@ -8,11 +8,16 @@ class CatalogEntryDefinition {
   final String subtitle;
   final Map<String, String> attributes;
 
+  /// Иерархический путь раздела внутри каталога.
+  /// Например: countries -> russia -> regular.
+  final List<String> sectionPath;
+
   const CatalogEntryDefinition({
     required this.id,
     required this.title,
     required this.primaryValue,
     required this.subtitle,
     this.attributes = const {},
+    this.sectionPath = const [],
   });
 }
