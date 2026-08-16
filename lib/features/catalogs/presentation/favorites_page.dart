@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../data/catalog_registry.dart';
+import '../data/favorites_store.dart';
 import '../domain/entities/catalog_definition.dart';
 import 'catalog_online_page.dart';
 
 /// Отдельный экран избранных каталогов.
-///
-/// Избранное не смешивается с локальными коллекциями пользователя:
-/// здесь хранятся только ссылки на каталоги, которые пользователь хочет
-/// быстро открывать и учитывать отдельно.
 class FavoritesPage extends StatefulWidget {
   const FavoritesPage({super.key});
 
@@ -19,29 +15,34 @@ class FavoritesPage extends StatefulWidget {
 }
 
 class _FavoritesPageState extends State<FavoritesPage> {
-  static const _favoritesKey = 'catalog.favoriteIds';
   Set<String> _favoriteIds = <String>{};
+  VoidCallback? _revisionListener;
 
   @override
   void initState() {
     super.initState();
+    _revisionListener = _load;
+    FavoritesStore.revision.addListener(_revisionListener!);
     _load();
   }
 
+  @override
+  void dispose() {
+    final listener = _revisionListener;
+    if (listener != null) {
+      FavoritesStore.revision.removeListener(listener);
+    }
+    super.dispose();
+  }
+
   Future<void> _load() async {
-    final preferences = await SharedPreferences.getInstance();
+    final ids = await FavoritesStore.load();
     if (!mounted) return;
-    setState(() {
-      _favoriteIds = preferences.getStringList(_favoritesKey)?.toSet() ?? <String>{};
-    });
+    setState(() => _favoriteIds = ids);
   }
 
   Future<void> _remove(CatalogDefinition catalog) async {
-    final next = {..._favoriteIds}..remove(catalog.id);
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setStringList(_favoritesKey, next.toList()..sort());
-    if (!mounted) return;
-    setState(() => _favoriteIds = next);
+    await FavoritesStore.remove(catalog.id);
   }
 
   @override
@@ -90,7 +91,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                             builder: (_) => CatalogOnlinePage(catalog: catalog),
                           ),
                         );
-                        if (mounted) _load();
+                        _load();
                       },
                       onRemove: () => _remove(catalog),
                     );
@@ -122,28 +123,18 @@ class _EmptyFavorites extends StatelessWidget {
                 color: colors.primaryContainer,
                 borderRadius: BorderRadius.circular(28),
               ),
-              child: Icon(
-                Icons.star_border_rounded,
-                size: 48,
-                color: colors.primary,
-              ),
+              child: Icon(Icons.star_border_rounded, size: 48, color: colors.primary),
             ),
             const SizedBox(height: 20),
             Text(
               l10n.noFavorites,
               textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w800),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
-              child: Text(
-                l10n.noFavoritesDescription,
-                textAlign: TextAlign.center,
-              ),
+              child: Text(l10n.noFavoritesDescription, textAlign: TextAlign.center),
             ),
           ],
         ),
@@ -167,7 +158,6 @@ class _FavoriteCatalogCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
-
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -179,15 +169,8 @@ class _FavoriteCatalogCard extends StatelessWidget {
               Container(
                 width: 58,
                 height: 58,
-                decoration: BoxDecoration(
-                  color: colors.primaryContainer,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Icon(
-                  _icon(catalog.id),
-                  color: colors.primary,
-                  size: 30,
-                ),
+                decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(18)),
+                child: Icon(_icon(catalog.id), color: colors.primary, size: 30),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -195,28 +178,13 @@ class _FavoriteCatalogCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      l10n.catalogName(catalog.id),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w800),
-                    ),
+                    Text(l10n.catalogName(catalog.id), maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 5),
-                    Text(
-                      l10n.recordsCount(catalog.entries.length),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    Text(l10n.recordsCount(catalog.entries.length), style: Theme.of(context).textTheme.bodySmall),
                   ],
                 ),
               ),
-              IconButton(
-                tooltip: l10n.removeFavorite,
-                onPressed: onRemove,
-                icon: const Icon(Icons.star_rounded),
-              ),
+              IconButton(tooltip: l10n.removeFavorite, onPressed: onRemove, icon: const Icon(Icons.star_rounded)),
               const Icon(Icons.chevron_right_rounded),
             ],
           ),
@@ -227,24 +195,15 @@ class _FavoriteCatalogCard extends StatelessWidget {
 
   IconData _icon(String id) {
     switch (id) {
-      case 'lego':
-        return Icons.extension_rounded;
-      case 'coins':
-        return Icons.monetization_on_outlined;
-      case 'banknotes':
-        return Icons.payments_outlined;
-      case 'pokemon_tcg':
-        return Icons.style_outlined;
-      case 'games':
-        return Icons.sports_esports_outlined;
-      case 'discs':
-        return Icons.album_outlined;
-      case 'movies':
-        return Icons.movie_outlined;
-      case 'figurines':
-        return Icons.toys_outlined;
-      default:
-        return Icons.inventory_2_outlined;
+      case 'lego': return Icons.extension_rounded;
+      case 'coins': return Icons.monetization_on_outlined;
+      case 'banknotes': return Icons.payments_outlined;
+      case 'pokemon_tcg': return Icons.style_outlined;
+      case 'games': return Icons.sports_esports_outlined;
+      case 'discs': return Icons.album_outlined;
+      case 'movies': return Icons.movie_outlined;
+      case 'figurines': return Icons.toys_outlined;
+      default: return Icons.inventory_2_outlined;
     }
   }
 }
