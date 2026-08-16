@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../fields/presentation/providers/field_provider.dart';
 import '../../domain/entities/item_attachment.dart';
+import '../../domain/entities/item_value.dart';
 import '../providers/item_attachment_provider.dart';
 import '../providers/item_provider.dart';
 
@@ -106,7 +107,7 @@ class _SectionCard extends StatelessWidget {
 }
 
 class _ValueTile extends StatelessWidget {
-  final dynamic value;
+  final ItemValue value;
   final String label;
 
   const _ValueTile({required this.value, required this.label});
@@ -115,7 +116,7 @@ class _ValueTile extends StatelessWidget {
   Widget build(BuildContext context) => ListTile(
         contentPadding: EdgeInsets.zero,
         title: Text(label),
-        subtitle: Text(value.value.toString()),
+        subtitle: Text(value.value),
       );
 }
 
