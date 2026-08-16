@@ -7,8 +7,8 @@ import '../domain/entities/catalog_entry_definition.dart';
 
 /// Универсальный экран готового каталога.
 ///
-/// Для иерархических каталогов сортировка и дополнительные действия
-/// появляются только внутри выбранного подкаталога.
+/// Весь каталог доступен для просмотра. Специальная сортировка появляется
+/// только внутри выбранного подраздела, где она имеет смысл.
 class CatalogOnlinePage extends StatefulWidget {
   final CatalogDefinition catalog;
   final Future<void> Function()? onDownload;
@@ -32,12 +32,17 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
 
   bool get _hasSections => widget.catalog.sections.isNotEmpty;
   bool get _insideSection => widget.sectionPath.isNotEmpty;
+  bool get _isRussiaRegularCoins => widget.catalog.id == 'coins' &&
+      widget.sectionPath.length == 3 &&
+      widget.sectionPath[0] == 'countries' &&
+      widget.sectionPath[1] == 'russia' &&
+      widget.sectionPath[2] == 'regular';
 
   @override
   void initState() {
     super.initState();
     _loadFavorite();
-    _sortField = _insideSection ? _defaultSortField(widget.sectionPath.last) : widget.catalog.primaryField;
+    _sortField = _insideSection ? _defaultSortField(widget.sectionPath) : widget.catalog.primaryField;
   }
 
   Future<void> _loadFavorite() async {
@@ -81,14 +86,20 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
     return _currentSection?.children ?? const [];
   }
 
-  String _defaultSortField(String sectionId) {
-    if (widget.catalog.id == 'coins' && sectionId == 'regular') return 'year';
+  String _defaultSortField(List<String> path) {
+    if (widget.catalog.id == 'coins' &&
+        path.length == 3 &&
+        path[0] == 'countries' &&
+        path[1] == 'russia' &&
+        path[2] == 'regular') {
+      return 'year';
+    }
     return widget.catalog.primaryField;
   }
 
   List<String> _sortFields(AppLocalizations l10n) {
-    if (widget.catalog.id == 'coins' && _insideSection) {
-      return ['year', 'series', 'rarity', 'owned'];
+    if (_isRussiaRegularCoins) {
+      return const ['year', 'series', 'rarity'];
     }
     return [widget.catalog.primaryField];
   }
@@ -108,19 +119,16 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
   List<CatalogEntryDefinition> _sortedEntries(List<CatalogEntryDefinition> source) {
     final entries = [...source];
     final field = _sortField;
-    if (field == null || field == 'owned') {
-      if (field == 'owned') {
-        entries.sort((a, b) => a.id.compareTo(b.id));
-      }
-      return _descending ? entries.reversed.toList() : entries;
-    }
+    if (field == null) return entries;
 
     entries.sort((a, b) {
       final av = a.attributes[field] ?? a.attributes[_fieldLabel(field)] ?? a.primaryValue;
       final bv = b.attributes[field] ?? b.attributes[_fieldLabel(field)] ?? b.primaryValue;
       final an = int.tryParse(av);
       final bn = int.tryParse(bv);
-      final result = an != null && bn != null ? an.compareTo(bn) : av.toLowerCase().compareTo(bv.toLowerCase());
+      final result = an != null && bn != null
+          ? an.compareTo(bn)
+          : av.toLowerCase().compareTo(bv.toLowerCase());
       return _descending ? -result : result;
     });
     return entries;
@@ -144,7 +152,7 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
             tooltip: _favorite ? l10n.removeFavorite : l10n.favorite,
             icon: Icon(_favorite ? Icons.star_rounded : Icons.star_border_rounded),
           ),
-          if (_insideSection || !_hasSections)
+          if (_isRussiaRegularCoins)
             PopupMenuButton<String>(
               icon: const Icon(Icons.sort_rounded),
               onSelected: (value) {
@@ -156,6 +164,22 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
               },
               itemBuilder: (_) => [
                 ...sortFields.map((field) => PopupMenuItem(value: field, child: Text('По ${_fieldLabel(field).toLowerCase()}'))),
+                const PopupMenuDivider(),
+                PopupMenuItem(value: 'reverse', child: Text(_descending ? 'Прямой порядок' : 'Обратный порядок')),
+              ],
+            ),
+          if (!_isRussiaRegularCoins && (_insideSection || !_hasSections))
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.sort_rounded),
+              onSelected: (value) {
+                if (value == 'reverse') {
+                  setState(() => _descending = !_descending);
+                } else {
+                  setState(() => _sortField = value);
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(value: widget.catalog.primaryField, child: Text('По ${_fieldLabel(widget.catalog.primaryField).toLowerCase()}')),
                 const PopupMenuDivider(),
                 PopupMenuItem(value: 'reverse', child: Text(_descending ? 'Прямой порядок' : 'Обратный порядок')),
               ],
@@ -227,7 +251,7 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
                 child: FilledButton.icon(
                   onPressed: () async {
                     await widget.onDownload!.call();
-                    if (!mounted) return;
+                    if (!context.mounted) return;
                     Navigator.of(context).pop();
                   },
                   icon: const Icon(Icons.download_rounded),
@@ -260,7 +284,7 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(title, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
             const SizedBox(height: 6),
-            Text(_insideSection ? 'Подкаталог ${l10n.catalogName(widget.catalog.id)}' : l10n.catalogDescriptionFor(widget.catalog.id)),
+            Text(_isRussiaRegularCoins ? 'Регулярный чекан России' : _insideSection ? 'Подкаталог ${l10n.catalogName(widget.catalog.id)}' : l10n.catalogDescriptionFor(widget.catalog.id)),
           ])),
         ],
       ),
