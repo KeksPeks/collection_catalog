@@ -3,14 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/collection.dart';
 import '../providers/collection_provider.dart';
-import '../providers/collection_service_provider.dart';
 import 'collection_detail_page.dart';
-import 'edit_collection_page.dart';
 
-/// Экран загруженных пользователем каталогов.
+/// Экран загруженных каталогов.
 ///
-/// Готовые каталоги находятся во вкладке «Каталог». После скачивания
-/// локальная копия появляется здесь и используется для ведения коллекции.
+/// Каталоги и их структура поставляются приложением. Пользователь не может
+/// менять каталог, удалять его содержимое или добавлять новые записи.
 class CollectionsPage extends ConsumerStatefulWidget {
   const CollectionsPage({super.key});
 
@@ -36,7 +34,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
               .toList(growable: false);
           final filtered = downloaded.where((item) {
             return item.name.toLowerCase().contains(_search.toLowerCase());
-          }).toList();
+          }).toList(growable: false);
 
           return RefreshIndicator(
             onRefresh: () async {
@@ -63,9 +61,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
                 ),
                 const SizedBox(height: 16),
                 if (filtered.isEmpty)
-                  _EmptyCollectionsCard(
-                    hasCollections: downloaded.isNotEmpty,
-                  )
+                  _EmptyCollectionsCard(hasCollections: downloaded.isNotEmpty)
                 else
                   ...filtered.map(_buildCollectionTile),
               ],
@@ -85,54 +81,11 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
           child: Icon(Icons.collections_bookmark),
         ),
         title: Text(collection.name),
-        subtitle: Text('Каталог сохранён на устройстве'),
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) => _collectionAction(collection, value),
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'open', child: Text('Открыть')),
-            PopupMenuItem(value: 'edit', child: Text('Изменить данные')),
-            PopupMenuItem(value: 'delete', child: Text('Удалить локальную копию')),
-          ],
-        ),
+        subtitle: const Text('Каталог сохранён на устройстве'),
+        trailing: const Icon(Icons.chevron_right),
         onTap: () => _openCollection(collection),
       ),
     );
-  }
-
-  Future<void> _collectionAction(Collection collection, String value) async {
-    if (value == 'open') {
-      await _openCollection(collection);
-    } else if (value == 'edit') {
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => EditCollectionPage(collection: collection),
-        ),
-      );
-    } else if (value == 'delete') {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Удалить локальную копию?'),
-          content: Text(collection.name),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Отмена'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Удалить'),
-            ),
-          ],
-        ),
-      );
-      if (confirmed == true) {
-        await ref.read(collectionServiceProvider).deleteCollection(collection.id);
-      }
-    }
-
-    if (!mounted) return;
-    ref.invalidate(collectionsProvider);
   }
 
   Future<void> _openCollection(Collection collection) async {
