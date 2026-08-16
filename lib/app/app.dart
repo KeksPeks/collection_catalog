@@ -13,6 +13,31 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
+TextTheme _scaleTextTheme(TextTheme base, double scale) {
+  TextStyle? scaleStyle(TextStyle? style) {
+    if (style == null || style.fontSize == null) return style;
+    return style.copyWith(fontSize: style.fontSize! * scale);
+  }
+
+  return base.copyWith(
+    displayLarge: scaleStyle(base.displayLarge),
+    displayMedium: scaleStyle(base.displayMedium),
+    displaySmall: scaleStyle(base.displaySmall),
+    headlineLarge: scaleStyle(base.headlineLarge),
+    headlineMedium: scaleStyle(base.headlineMedium),
+    headlineSmall: scaleStyle(base.headlineSmall),
+    titleLarge: scaleStyle(base.titleLarge),
+    titleMedium: scaleStyle(base.titleMedium),
+    titleSmall: scaleStyle(base.titleSmall),
+    bodyLarge: scaleStyle(base.bodyLarge),
+    bodyMedium: scaleStyle(base.bodyMedium),
+    bodySmall: scaleStyle(base.bodySmall),
+    labelLarge: scaleStyle(base.labelLarge),
+    labelMedium: scaleStyle(base.labelMedium),
+    labelSmall: scaleStyle(base.labelSmall),
+  );
+}
+
 class _MyAppState extends State<MyApp> {
   ThemeMode themeMode = ThemeMode.system;
   int colorIndex = 0;
@@ -43,6 +68,9 @@ class _MyAppState extends State<MyApp> {
       vertical: (uiScale - 1) * 2,
     );
 
+    final lightBaseTextTheme = ThemeData.light().textTheme;
+    final darkBaseTextTheme = ThemeData.dark().textTheme;
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Collection Catalog',
@@ -50,9 +78,7 @@ class _MyAppState extends State<MyApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: seed),
         useMaterial3: true,
         visualDensity: density,
-        textTheme: ThemeData.light().textTheme.apply(
-              fontSizeFactor: fontScale,
-            ),
+        textTheme: _scaleTextTheme(lightBaseTextTheme, fontScale),
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -61,9 +87,7 @@ class _MyAppState extends State<MyApp> {
         ),
         useMaterial3: true,
         visualDensity: density,
-        textTheme: ThemeData.dark().textTheme.apply(
-              fontSizeFactor: fontScale,
-            ),
+        textTheme: _scaleTextTheme(darkBaseTextTheme, fontScale),
       ),
       themeMode: themeMode,
       home: MainNavigation(
