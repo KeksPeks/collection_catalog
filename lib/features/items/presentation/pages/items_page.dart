@@ -31,6 +31,8 @@ class _ItemsPageState extends ConsumerState<ItemsPage> {
   bool ownedOnly = false;
   bool gridView = false;
 
+  bool get _isRussiaRegularCoins => widget.collection.templateId == 'coins' && widget.sectionName == 'Регулярный чекан';
+
   void _refresh() {
     if (!mounted) return;
     ref.invalidate(itemsProvider(widget.collection.id));
@@ -51,6 +53,17 @@ class _ItemsPageState extends ConsumerState<ItemsPage> {
       if (field.id.endsWith('_owned') || field.id == 'owned') return field.id;
     }
     return null;
+  }
+
+  List<dynamic> _sortFields(List<dynamic> fields) {
+    if (!_isRussiaRegularCoins) return fields;
+    final allowed = <String>{'year', 'series', 'rarity'};
+    return fields.where((field) {
+      final id = field.id.toString().toLowerCase();
+      final label = field.label.toString().toLowerCase();
+      return allowed.contains(id) || allowed.contains(id.split('_').last) ||
+          label == 'год' || label == 'серия' || label == 'редкость';
+    }).toList();
   }
 
   List<Item> _prepareItems(List<Item> source, Map<String, Map<String, String>> values) {
@@ -75,14 +88,13 @@ class _ItemsPageState extends ConsumerState<ItemsPage> {
     return result;
   }
 
-  Future<void> _setOwned(Item item, Map<String, Map<String, String>> values, bool owned) async {
+  Future<void> _setOwned(Item item, bool owned) async {
     final fieldId = _ownedFieldId();
     if (fieldId == null) return;
-    final itemId = item.id;
     await ref.read(itemServiceProvider).saveValue(
       ItemValue(
-        id: '${itemId}_$fieldId',
-        itemId: itemId,
+        id: '${item.id}_$fieldId',
+        itemId: item.id,
         fieldId: fieldId,
         value: owned ? 'true' : 'false',
       ),
@@ -125,7 +137,7 @@ class _ItemsPageState extends ConsumerState<ItemsPage> {
               }
             },
             itemBuilder: (_) {
-              final fields = fieldsAsync.valueOrNull ?? widget.collection.fields;
+              final fields = _sortFields(fieldsAsync.valueOrNull ?? widget.collection.fields);
               final ownedId = _ownedFieldId();
               return [
                 const PopupMenuItem(enabled: false, child: Text('Сортировка')),
@@ -165,6 +177,11 @@ class _ItemsPageState extends ConsumerState<ItemsPage> {
                     ),
                     onChanged: (value) => setState(() => search = value),
                   ),
+                  if (_isRussiaRegularCoins)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 10),
+                      child: Text('Для регулярного чекана России доступны сортировка по году, серии, редкости и наличию.'),
+                    ),
                   if (ownedOnly || sortField != null)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -172,8 +189,7 @@ class _ItemsPageState extends ConsumerState<ItemsPage> {
                         spacing: 8,
                         children: [
                           if (ownedOnly) const Chip(label: Text('Только имеющиеся')),
-                          if (sortField != null)
-                            Chip(label: Text('Сортировка: ${_fieldLabel(fields, sortField!)}')),
+                          if (sortField != null) Chip(label: Text('Сортировка: ${_fieldLabel(fields, sortField!)}')),
                         ],
                       ),
                     ),
@@ -210,7 +226,7 @@ class _ItemsPageState extends ConsumerState<ItemsPage> {
                         fields: fields,
                         owned: _owned(prepared[index], values),
                         hasOwnedField: _ownedFieldId() != null,
-                        onOwnedChanged: (value) => _setOwned(prepared[index], values, value),
+                        onOwnedChanged: (value) => _setOwned(prepared[index], value),
                         onOpen: () => _openItem(prepared[index]),
                       ),
                     )
@@ -223,7 +239,7 @@ class _ItemsPageState extends ConsumerState<ItemsPage> {
                         fields: fields,
                         owned: _owned(entry.value, values),
                         hasOwnedField: _ownedFieldId() != null,
-                        onOwnedChanged: (value) => _setOwned(entry.value, values, value),
+                        onOwnedChanged: (value) => _setOwned(entry.value, value),
                         onOpen: () => _openItem(entry.value),
                       ),
                     ),
@@ -273,7 +289,10 @@ class _ItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final itemValues = values[item.id] ?? const <String, String>{};
-    final visible = fields.where((field) => (itemValues[field.id] ?? '').isNotEmpty && field.id != _ownedFieldId(fields)).take(3).toList();
+    final visible = fields
+        .where((field) => (itemValues[field.id] ?? '').isNotEmpty && field.id != _ownedFieldId(fields))
+        .take(3)
+        .toList();
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
