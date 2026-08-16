@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
-import '../../data/catalog_registry.dart';
-import '../../domain/entities/catalog_category_definition.dart';
-import '../../domain/entities/catalog_definition.dart';
+import '../data/catalog_registry.dart';
+import '../domain/entities/catalog_category_definition.dart';
+import '../domain/entities/catalog_definition.dart';
 import 'catalog_online_page.dart';
 
 class CatalogCategoryPage extends StatelessWidget {
