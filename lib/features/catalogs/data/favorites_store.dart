@@ -4,8 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Единое локальное хранилище избранных каталогов.
 ///
 /// Избранное хранится в SharedPreferences и переживает перезапуск приложения.
-/// В памяти используется кэш, а записи сериализуются, чтобы быстрые нажатия
-/// не перетирали друг друга.
+/// Перед каждой операцией записи хранилище перечитывается, поэтому кэш не
+/// может затереть состояние, сохранённое другим экраном приложения.
 class FavoritesStore {
   FavoritesStore._();
 
@@ -39,12 +39,9 @@ class FavoritesStore {
   static Future<Set<String>> toggle(String catalogId) {
     return _enqueue(() async {
       final preferences = await SharedPreferences.getInstance();
-      if (_cachedIds == null) {
-        await preferences.reload();
-      }
-      final ids = Set<String>.from(_cachedIds ??
-          (preferences.getStringList(key)?.toSet() ?? <String>{}));
+      await preferences.reload();
 
+      final ids = preferences.getStringList(key)?.toSet() ?? <String>{};
       if (!ids.add(catalogId)) {
         ids.remove(catalogId);
       }
@@ -64,12 +61,9 @@ class FavoritesStore {
   static Future<void> remove(String catalogId) {
     return _enqueue(() async {
       final preferences = await SharedPreferences.getInstance();
-      if (_cachedIds == null) {
-        await preferences.reload();
-      }
-      final ids = Set<String>.from(_cachedIds ??
-          (preferences.getStringList(key)?.toSet() ?? <String>{}));
+      await preferences.reload();
 
+      final ids = preferences.getStringList(key)?.toSet() ?? <String>{};
       if (!ids.remove(catalogId)) {
         _cachedIds = ids;
         return;
