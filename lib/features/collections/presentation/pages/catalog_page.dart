@@ -205,7 +205,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
             crossAxisCount: columns,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            mainAxisExtent: 190,
+            mainAxisExtent: 230,
           ),
           itemBuilder: (context, index) {
             final category = categories[index];
@@ -227,7 +227,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: catalogs.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        separatorBuilder: (_, index) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final catalog = catalogs[index];
           return _FavoriteCard(
@@ -332,7 +332,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
 
   Future<void> _createSections(CollectionSectionService service, List<dynamic> definitions, String collectionId, String? parentId) async {
     for (var index = 0; index < definitions.length; index++) {
-      final definition = definitions[index] as CollectionSectionDefinition;
+      final definition = definitions[index] as CatalogSectionDefinition;
       final id = '${collectionId}_section_${definition.id}';
       final now = DateTime.now();
       await service.createSection(CollectionSection(id: id, collectionId: collectionId, parentId: parentId, name: definition.name, sortOrder: index, createdAt: now, updatedAt: now));
