@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/collections/presentation/pages/catalog_page.dart';
 import '../features/collections/presentation/pages/collections_page.dart';
@@ -39,6 +40,11 @@ TextTheme _scaleTextTheme(TextTheme base, double scale) {
 }
 
 class _MyAppState extends State<MyApp> {
+  static const _themeKey = 'settings.themeMode';
+  static const _colorKey = 'settings.colorIndex';
+  static const _fontScaleKey = 'settings.fontScale';
+  static const _uiScaleKey = 'settings.uiScale';
+
   ThemeMode themeMode = ThemeMode.system;
   int colorIndex = 0;
   double fontScale = 1.0;
@@ -59,6 +65,94 @@ class _MyAppState extends State<MyApp> {
     'Оранжевый',
     'Зелёный',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      if (!mounted) return;
+
+      setState(() {
+        themeMode = _themeModeFromString(preferences.getString(_themeKey));
+        colorIndex = _validColorIndex(preferences.getInt(_colorKey));
+        fontScale = _validScale(preferences.getDouble(_fontScaleKey));
+        uiScale = _validScale(preferences.getDouble(_uiScaleKey));
+      });
+    } catch (_) {
+      // Используем значения по умолчанию, если хранилище временно недоступно.
+    }
+  }
+
+  ThemeMode _themeModeFromString(String? value) {
+    switch (value) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      default:
+        return ThemeMode.system;
+    }
+  }
+
+  String _themeModeToString(ThemeMode value) {
+    switch (value) {
+      case ThemeMode.light:
+        return 'light';
+      case ThemeMode.dark:
+        return 'dark';
+      case ThemeMode.system:
+        return 'system';
+    }
+  }
+
+  int _validColorIndex(int? value) {
+    if (value == null || value < 0 || value >= colors.length) return 0;
+    return value;
+  }
+
+  double _validScale(double? value) {
+    if (value == null || !value.isFinite || value <= 0) return 1.0;
+    return value.clamp(0.5, 2.0).toDouble();
+  }
+
+  Future<void> _saveSettings() async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await Future.wait([
+        preferences.setString(_themeKey, _themeModeToString(themeMode)),
+        preferences.setInt(_colorKey, colorIndex),
+        preferences.setDouble(_fontScaleKey, fontScale),
+        preferences.setDouble(_uiScaleKey, uiScale),
+      ]);
+    } catch (_) {
+      // Локальные настройки не должны ломать приложение.
+    }
+  }
+
+  void _changeTheme(ThemeMode value) {
+    setState(() => themeMode = value);
+    _saveSettings();
+  }
+
+  void _changeColor(int value) {
+    setState(() => colorIndex = _validColorIndex(value));
+    _saveSettings();
+  }
+
+  void _changeFontScale(double value) {
+    setState(() => fontScale = _validScale(value));
+    _saveSettings();
+  }
+
+  void _changeUiScale(double value) {
+    setState(() => uiScale = _validScale(value));
+    _saveSettings();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,10 +189,10 @@ class _MyAppState extends State<MyApp> {
         colorIndex: colorIndex,
         fontScale: fontScale,
         uiScale: uiScale,
-        onThemeChanged: (value) => setState(() => themeMode = value),
-        onColorChanged: (value) => setState(() => colorIndex = value),
-        onFontScaleChanged: (value) => setState(() => fontScale = value),
-        onUiScaleChanged: (value) => setState(() => uiScale = value),
+        onThemeChanged: _changeTheme,
+        onColorChanged: _changeColor,
+        onFontScaleChanged: _changeFontScale,
+        onUiScaleChanged: _changeUiScale,
       ),
     );
   }
@@ -133,7 +227,6 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int currentIndex = 0;
 
-  // Страницы создаются один раз и не пересоздаются при смене настроек.
   late final Widget _catalogPage = const CatalogPage();
   late final Widget _collectionsPage = const CollectionsPage();
 
