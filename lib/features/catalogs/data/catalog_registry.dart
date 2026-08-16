@@ -5,58 +5,16 @@ import '../domain/entities/catalog_definition.dart';
 import '../domain/entities/catalog_entry_definition.dart';
 
 /// Реестр готовых каталогов и их верхнеуровневых категорий.
-///
-/// Структура универсальна: категория -> каталог -> записи.
 class CatalogRegistry {
   static List<CatalogCategoryDefinition> get categories => const [
-        CatalogCategoryDefinition(
-          id: 'constructors',
-          name: 'Конструкторы',
-          description: 'Конструкторы и наборы разных производителей.',
-          catalogIds: ['lego'],
-        ),
-        CatalogCategoryDefinition(
-          id: 'coins',
-          name: 'Монеты',
-          description: 'Нумизматические каталоги.',
-          catalogIds: ['coins'],
-        ),
-        CatalogCategoryDefinition(
-          id: 'banknotes',
-          name: 'Банкноты',
-          description: 'Бонистические каталоги.',
-          catalogIds: ['banknotes'],
-        ),
-        CatalogCategoryDefinition(
-          id: 'cards',
-          name: 'Карточки',
-          description: 'Коллекционные карточки.',
-          catalogIds: ['pokemon_tcg'],
-        ),
-        CatalogCategoryDefinition(
-          id: 'games',
-          name: 'Игры',
-          description: 'Видеоигры разных платформ.',
-          catalogIds: ['games'],
-        ),
-        CatalogCategoryDefinition(
-          id: 'discs',
-          name: 'Диски',
-          description: 'Игровые и музыкальные диски.',
-          catalogIds: ['discs'],
-        ),
-        CatalogCategoryDefinition(
-          id: 'movies',
-          name: 'Фильмы',
-          description: 'Фильмы и видео.',
-          catalogIds: ['movies'],
-        ),
-        CatalogCategoryDefinition(
-          id: 'figurines',
-          name: 'Фигурки',
-          description: 'Фигурки и миниатюры.',
-          catalogIds: ['figurines'],
-        ),
+        CatalogCategoryDefinition(id: 'constructors', name: 'Конструкторы', description: 'Конструкторы и наборы разных производителей.', catalogIds: ['lego']),
+        CatalogCategoryDefinition(id: 'coins', name: 'Монеты', description: 'Нумизматические каталоги.', catalogIds: ['coins']),
+        CatalogCategoryDefinition(id: 'banknotes', name: 'Банкноты', description: 'Бонистические каталоги.', catalogIds: ['banknotes']),
+        CatalogCategoryDefinition(id: 'cards', name: 'Карточки', description: 'Коллекционные карточки.', catalogIds: ['pokemon_tcg']),
+        CatalogCategoryDefinition(id: 'games', name: 'Игры', description: 'Видеоигры разных платформ.', catalogIds: ['games']),
+        CatalogCategoryDefinition(id: 'discs', name: 'Диски', description: 'Игровые и музыкальные диски.', catalogIds: ['discs']),
+        CatalogCategoryDefinition(id: 'movies', name: 'Фильмы', description: 'Фильмы и видео.', catalogIds: ['movies']),
+        CatalogCategoryDefinition(id: 'figurines', name: 'Фигурки', description: 'Фигурки и миниатюры.', catalogIds: ['figurines']),
       ];
 
   static List<CatalogDefinition> get all {
@@ -73,39 +31,21 @@ class CatalogRegistry {
     ];
   }
 
-  static CatalogDefinition? byId(String id) {
-    for (final catalog in all) {
-      if (catalog.id == id) return catalog;
-    }
-    return null;
-  }
+  static CatalogDefinition? byId(String id) => all.where((catalog) => catalog.id == id).firstOrNull;
 
-  static CatalogCategoryDefinition? categoryById(String id) {
-    for (final category in categories) {
-      if (category.id == id) return category;
-    }
-    return null;
-  }
+  static CatalogCategoryDefinition? categoryById(String id) => categories.where((category) => category.id == id).firstOrNull;
 
   static List<CatalogDefinition> catalogsForCategory(String categoryId) {
     final category = categoryById(categoryId);
     if (category == null) return const [];
-    return category.catalogIds
-        .map(byId)
-        .whereType<CatalogDefinition>()
-        .toList(growable: false);
+    return category.catalogIds.map(byId).whereType<CatalogDefinition>().toList(growable: false);
   }
 
   static CatalogDefinition _lego(List<Template> templates) {
     final template = templates.firstWhere((item) => item.id == 'constructors');
     return CatalogDefinition(
-      id: 'lego',
-      name: 'LEGO',
-      description: 'Каталог конструкторов LEGO по сериям и моделям.',
-      templateId: template.id,
-      template: template,
-      primaryField: 'series',
-      totalItems: 8,
+      id: 'lego', name: 'LEGO', description: 'Каталог конструкторов LEGO по сериям и моделям.',
+      templateId: template.id, template: template, primaryField: 'series', totalItems: 8,
       entries: const [
         CatalogEntryDefinition(id: 'lego-1', title: 'LEGO City Пожарная станция', primaryValue: 'City', subtitle: '60414 • 2025', attributes: {'Серия': 'City', 'Модель': '60414', 'Год': '2025', 'Деталей': '843'}),
         CatalogEntryDefinition(id: 'lego-2', title: 'LEGO Technic Ferrari SF-24', primaryValue: 'Technic', subtitle: '42207 • 2025', attributes: {'Серия': 'Technic', 'Модель': '42207', 'Год': '2025', 'Деталей': '1361'}),
@@ -122,48 +62,37 @@ class CatalogRegistry {
   static CatalogDefinition _coins(List<Template> templates) {
     final template = templates.firstWhere((item) => item.id == 'coins');
     return CatalogDefinition(
-      id: 'coins',
-      name: 'Монеты',
-      description: 'Каталог монет по странам, типам чеканки и годам.',
-      templateId: template.id,
-      template: template,
-      primaryField: 'country',
-      totalItems: 6,
+      id: 'coins', name: 'Монеты', description: 'Каталог монет по странам, типам чеканки и годам.',
+      templateId: template.id, template: template, primaryField: 'country', totalItems: 8,
       entries: const [
-        CatalogEntryDefinition(id: 'coin-1', title: '2 евро Германия', primaryValue: 'Германия', subtitle: '2024 • регулярный чекан', attributes: {'Страна': 'Германия', 'Год': '2024', 'Номинал': '2 EUR'}),
-        CatalogEntryDefinition(id: 'coin-2', title: '1 евро Италия', primaryValue: 'Италия', subtitle: '2023 • регулярный чекан', attributes: {'Страна': 'Италия', 'Год': '2023', 'Номинал': '1 EUR'}),
-        CatalogEntryDefinition(id: 'coin-3', title: '2 евро Франция', primaryValue: 'Франция', subtitle: '2022 • юбилейная', attributes: {'Страна': 'Франция', 'Год': '2022', 'Номинал': '2 EUR'}),
-        CatalogEntryDefinition(id: 'coin-4', title: '10 рублей Россия', primaryValue: 'Россия', subtitle: '2020 • памятная', attributes: {'Страна': 'Россия', 'Год': '2020', 'Номинал': '10 RUB'}),
-        CatalogEntryDefinition(id: 'coin-5', title: '1 евро Испания', primaryValue: 'Испания', subtitle: '2021 • регулярный чекан', attributes: {'Страна': 'Испания', 'Год': '2021', 'Номинал': '1 EUR'}),
-        CatalogEntryDefinition(id: 'coin-6', title: '5 долларов Канада', primaryValue: 'Канада', subtitle: '2023 • серебро', attributes: {'Страна': 'Канада', 'Год': '2023', 'Номинал': '5 CAD'}),
+        CatalogEntryDefinition(id: 'coin-1', title: '2 евро Германия', primaryValue: 'Германия', subtitle: '2024 • регулярный чекан', attributes: {'Страна': 'Германия', 'Категория чеканки': 'Регулярный чекан', 'Год': '2024', 'Серия': 'Регулярные выпуски', 'Номинал': '2 EUR', 'Редкость': 'Обычная'}, sectionPath: ['countries', 'germany', 'regular']),
+        CatalogEntryDefinition(id: 'coin-2', title: '1 евро Италия', primaryValue: 'Италия', subtitle: '2023 • регулярный чекан', attributes: {'Страна': 'Италия', 'Категория чеканки': 'Регулярный чекан', 'Год': '2023', 'Серия': 'Регулярные выпуски', 'Номинал': '1 EUR', 'Редкость': 'Обычная'}, sectionPath: ['countries', 'italy', 'regular']),
+        CatalogEntryDefinition(id: 'coin-3', title: '2 евро Франция', primaryValue: 'Франция', subtitle: '2022 • юбилейная', attributes: {'Страна': 'Франция', 'Категория чеканки': 'Юбилейная', 'Год': '2022', 'Серия': 'Юбилейные выпуски', 'Номинал': '2 EUR', 'Редкость': 'Обычная'}, sectionPath: ['countries', 'france', 'commemorative']),
+        CatalogEntryDefinition(id: 'coin-4', title: '10 рублей Россия', primaryValue: 'Россия', subtitle: '2020 • памятная', attributes: {'Страна': 'Россия', 'Категория чеканки': 'Памятная', 'Год': '2020', 'Серия': 'Города воинской славы', 'Номинал': '10 RUB', 'Редкость': 'Обычная'}, sectionPath: ['countries', 'russia', 'commemorative']),
+        CatalogEntryDefinition(id: 'coin-5', title: '1 рубль Россия', primaryValue: 'Россия', subtitle: '2021 • регулярный чекан', attributes: {'Страна': 'Россия', 'Категория чеканки': 'Регулярный чекан', 'Год': '2021', 'Серия': 'Регулярные выпуски', 'Номинал': '1 RUB', 'Редкость': 'Обычная'}, sectionPath: ['countries', 'russia', 'regular']),
+        CatalogEntryDefinition(id: 'coin-6', title: '2 рубля Россия', primaryValue: 'Россия', subtitle: '2022 • регулярный чекан', attributes: {'Страна': 'Россия', 'Категория чеканки': 'Регулярный чекан', 'Год': '2022', 'Серия': 'Регулярные выпуски', 'Номинал': '2 RUB', 'Редкость': 'Обычная'}, sectionPath: ['countries', 'russia', 'regular']),
+        CatalogEntryDefinition(id: 'coin-7', title: '5 рублей Россия', primaryValue: 'Россия', subtitle: '2023 • регулярный чекан', attributes: {'Страна': 'Россия', 'Категория чеканки': 'Регулярный чекан', 'Год': '2023', 'Серия': 'Регулярные выпуски', 'Номинал': '5 RUB', 'Редкость': 'Редкая'}, sectionPath: ['countries', 'russia', 'regular']),
+        CatalogEntryDefinition(id: 'coin-8', title: '3 рубля Россия', primaryValue: 'Россия', subtitle: '2024 • серебро', attributes: {'Страна': 'Россия', 'Категория чеканки': 'Драгоценные металлы', 'Год': '2024', 'Серия': 'Памятные серебряные', 'Номинал': '3 RUB', 'Редкость': 'Редкая'}, sectionPath: ['countries', 'russia', 'precious']),
       ],
       sections: const [
         CatalogSectionDefinition(id: 'countries', name: 'Страны', children: [
-          CatalogSectionDefinition(id: 'commemorative', name: 'Юбилейные'),
-          CatalogSectionDefinition(id: 'regular', name: 'Регулярный чекан'),
-          CatalogSectionDefinition(id: 'precious', name: 'Драгоценные металлы'),
+          CatalogSectionDefinition(id: 'russia', name: 'Россия', children: [
+            CatalogSectionDefinition(id: 'regular', name: 'Регулярный чекан'),
+            CatalogSectionDefinition(id: 'commemorative', name: 'Памятные и юбилейные'),
+            CatalogSectionDefinition(id: 'precious', name: 'Драгоценные металлы'),
+          ]),
+          CatalogSectionDefinition(id: 'germany', name: 'Германия', children: [CatalogSectionDefinition(id: 'regular', name: 'Регулярный чекан')]),
+          CatalogSectionDefinition(id: 'italy', name: 'Италия', children: [CatalogSectionDefinition(id: 'regular', name: 'Регулярный чекан')]),
+          CatalogSectionDefinition(id: 'france', name: 'Франция', children: [CatalogSectionDefinition(id: 'commemorative', name: 'Памятные и юбилейные')]),
         ]),
       ],
     );
   }
 
-  static CatalogDefinition _simple(
-    List<Template> templates,
-    String templateId,
-    String primaryField,
-  ) {
+  static CatalogDefinition _simple(List<Template> templates, String templateId, String primaryField) {
     final template = templates.firstWhere((item) => item.id == templateId);
     final entries = _sampleEntries(templateId);
-    return CatalogDefinition(
-      id: template.id,
-      name: template.name,
-      description: template.description,
-      templateId: template.id,
-      template: template,
-      primaryField: primaryField,
-      totalItems: entries.length,
-      entries: entries,
-    );
+    return CatalogDefinition(id: template.id, name: template.name, description: template.description, templateId: template.id, template: template, primaryField: primaryField, totalItems: entries.length, entries: entries);
   }
 
   static List<CatalogEntryDefinition> _sampleEntries(String id) {
@@ -208,4 +137,8 @@ class CatalogRegistry {
         return const [];
     }
   }
+}
+
+extension _FirstOrNull<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }
