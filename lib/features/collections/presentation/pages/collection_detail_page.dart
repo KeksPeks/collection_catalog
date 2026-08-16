@@ -6,7 +6,6 @@ import '../../../items/presentation/pages/item_detail_page.dart';
 import '../../../items/presentation/pages/items_page.dart';
 import '../../../items/presentation/providers/item_provider.dart';
 import '../../../templates/data/catalog_template_registry.dart';
-import '../../../fields/domain/entities/field_definition.dart';
 import '../../../fields/presentation/providers/field_provider.dart';
 import '../../domain/entities/collection.dart';
 import '../providers/collection_provider.dart';
