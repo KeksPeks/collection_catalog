@@ -39,6 +39,9 @@ class FavoritesStore {
   static Future<Set<String>> toggle(String catalogId) {
     return _enqueue(() async {
       final preferences = await SharedPreferences.getInstance();
+      if (_cachedIds == null) {
+        await preferences.reload();
+      }
       final ids = Set<String>.from(_cachedIds ??
           (preferences.getStringList(key)?.toSet() ?? <String>{}));
 
@@ -61,6 +64,9 @@ class FavoritesStore {
   static Future<void> remove(String catalogId) {
     return _enqueue(() async {
       final preferences = await SharedPreferences.getInstance();
+      if (_cachedIds == null) {
+        await preferences.reload();
+      }
       final ids = Set<String>.from(_cachedIds ??
           (preferences.getStringList(key)?.toSet() ?? <String>{}));
 
