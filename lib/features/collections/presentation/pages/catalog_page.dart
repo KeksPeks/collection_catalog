@@ -26,19 +26,30 @@ class CatalogPage extends ConsumerStatefulWidget {
 
 class _CatalogPageState extends ConsumerState<CatalogPage> {
   static const _favoritesKey = 'catalog.favoriteIds';
+  static const _layoutKey = 'catalog.categoryLayout';
   String _search = '';
   Set<String> _favorites = <String>{};
+  bool _grid = false;
 
   @override
   void initState() {
     super.initState();
-    _loadFavorites();
+    _loadPreferences();
   }
 
-  Future<void> _loadFavorites() async {
+  Future<void> _loadPreferences() async {
     final preferences = await SharedPreferences.getInstance();
     if (!mounted) return;
-    setState(() => _favorites = preferences.getStringList(_favoritesKey)?.toSet() ?? <String>{});
+    setState(() {
+      _favorites = preferences.getStringList(_favoritesKey)?.toSet() ?? <String>{};
+      _grid = preferences.getBool(_layoutKey) ?? false;
+    });
+  }
+
+  Future<void> _setLayout(bool grid) async {
+    setState(() => _grid = grid);
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setBool(_layoutKey, grid);
   }
 
   Future<void> _toggleFavorite(String catalogId) async {
@@ -58,7 +69,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
 
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: _loadFavorites,
+        onRefresh: _loadPreferences,
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
@@ -81,14 +92,35 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
                   const SizedBox(height: 18),
                   _buildSearch(context, l10n),
                   const SizedBox(height: 24),
-                  _SectionTitle(title: l10n.favorites, icon: Icons.star_rounded),
+                  Row(
+                    children: [
+                      Expanded(child: _SectionTitle(title: l10n.favorites, icon: Icons.star_rounded)),
+                      if (favoriteCatalogs.isNotEmpty) ...[
+                        IconButton(onPressed: () => _setLayout(false), icon: const Icon(Icons.view_list_rounded)),
+                        IconButton(onPressed: () => _setLayout(true), icon: const Icon(Icons.grid_view_rounded)),
+                      ],
+                    ],
+                  ),
                   const SizedBox(height: 10),
                   if (favoriteCatalogs.isEmpty)
                     _buildNoFavorites(context, l10n)
                   else
                     _buildFavorites(context, favoriteCatalogs, l10n),
                   const SizedBox(height: 26),
-                  _SectionTitle(title: l10n.categories, icon: Icons.category_outlined),
+                  Row(
+                    children: [
+                      Expanded(child: _SectionTitle(title: l10n.categories, icon: Icons.category_outlined)),
+                      SegmentedButton<bool>(
+                        segments: const [
+                          ButtonSegment(value: false, icon: Icon(Icons.view_list_rounded)),
+                          ButtonSegment(value: true, icon: Icon(Icons.grid_view_rounded)),
+                        ],
+                        selected: {_grid},
+                        showSelectedIcon: false,
+                        onSelectionChanged: (value) => _setLayout(value.first),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 10),
                   if (categories.isEmpty)
                     _buildEmpty(context, l10n)
@@ -146,6 +178,22 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
   }
 
   Widget _buildCategories(BuildContext context, List<CatalogCategoryDefinition> categories, AppLocalizations l10n) {
+    if (!_grid) {
+      return Column(
+        children: categories.map((category) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _CategoryListTile(
+              category: category,
+              title: l10n.categoryName(category.id),
+              subtitle: '${category.catalogIds.length} ${l10n.chooseCatalog.toLowerCase()}',
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogCategoryPage(categoryId: category.id, onDownload: _downloadCatalog))),
+            ),
+          );
+        }).toList(),
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = constraints.maxWidth >= 1000 ? 4 : constraints.maxWidth >= 650 ? 3 : 2;
@@ -153,7 +201,12 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: categories.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: columns, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.12),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            mainAxisExtent: 190,
+          ),
           itemBuilder: (context, index) {
             final category = categories[index];
             return _CategoryCard(
@@ -293,7 +346,45 @@ class _SectionTitle extends StatelessWidget {
   final IconData icon;
   const _SectionTitle({required this.title, required this.icon});
   @override
-  Widget build(BuildContext context) => Row(children: [Icon(icon, size: 21), const SizedBox(width: 8), Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800))]);
+  Widget build(BuildContext context) => Row(children: [Icon(icon, size: 21), const SizedBox(width: 8), Expanded(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)))]);
+}
+
+class _CategoryListTile extends StatelessWidget {
+  final CatalogCategoryDefinition category;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  const _CategoryListTile({required this.category, required this.title, required this.subtitle, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          leading: Container(width: 52, height: 52, decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(15)), child: Icon(_icon(category.id), color: colors.primary)),
+          title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+          subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
+          trailing: const Icon(Icons.chevron_right_rounded),
+        ),
+      ),
+    );
+  }
+  IconData _icon(String id) {
+    switch (id) {
+      case 'constructors': return Icons.extension_rounded;
+      case 'coins': return Icons.monetization_on_outlined;
+      case 'banknotes': return Icons.payments_outlined;
+      case 'cards': return Icons.style_outlined;
+      case 'games': return Icons.sports_esports_outlined;
+      case 'discs': return Icons.album_outlined;
+      case 'movies': return Icons.movie_outlined;
+      case 'figurines': return Icons.toys_outlined;
+      default: return Icons.category_outlined;
+    }
+  }
 }
 
 class _CategoryCard extends StatelessWidget {
@@ -316,7 +407,7 @@ class _CategoryCard extends StatelessWidget {
             const Spacer(),
             Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
-            Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
+            Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
           ]),
         ),
       ),
