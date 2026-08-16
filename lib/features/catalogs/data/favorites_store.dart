@@ -3,8 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Единое локальное хранилище избранных каталогов.
 ///
-/// Избранное хранится в SharedPreferences и поэтому переживает перезапуск
-/// приложения. Операции записи сериализуются, чтобы быстрые повторные нажатия
+/// Избранное хранится в SharedPreferences и переживает перезапуск приложения.
+/// В памяти используется кэш, а записи сериализуются, чтобы быстрые нажатия
 /// не перетирали друг друга.
 class FavoritesStore {
   FavoritesStore._();
@@ -12,6 +12,7 @@ class FavoritesStore {
   static const key = 'catalog.favoriteIds';
   static final ValueNotifier<int> revision = ValueNotifier<int>(0);
   static Future<void> _writeQueue = Future<void>.value();
+  static Set<String>? _cachedIds;
 
   static Future<T> _enqueue<T>(Future<T> Function() operation) {
     final result = _writeQueue.then((_) => operation());
@@ -20,9 +21,14 @@ class FavoritesStore {
   }
 
   static Future<Set<String>> load() async {
+    if (_cachedIds != null) {
+      return Set<String>.from(_cachedIds!);
+    }
+
     final preferences = await SharedPreferences.getInstance();
     await preferences.reload();
-    return preferences.getStringList(key)?.toSet() ?? <String>{};
+    _cachedIds = preferences.getStringList(key)?.toSet() ?? <String>{};
+    return Set<String>.from(_cachedIds!);
   }
 
   static Future<bool> contains(String catalogId) async {
@@ -33,26 +39,43 @@ class FavoritesStore {
   static Future<Set<String>> toggle(String catalogId) {
     return _enqueue(() async {
       final preferences = await SharedPreferences.getInstance();
-      await preferences.reload();
-      final ids = preferences.getStringList(key)?.toSet() ?? <String>{};
+      final ids = Set<String>.from(_cachedIds ??
+          (preferences.getStringList(key)?.toSet() ?? <String>{}));
 
       if (!ids.add(catalogId)) {
         ids.remove(catalogId);
       }
 
-      await preferences.setStringList(key, ids.toList()..sort());
+      final sorted = ids.toList()..sort();
+      final saved = await preferences.setStringList(key, sorted);
+      if (!saved) {
+        throw StateError('Не удалось сохранить избранное');
+      }
+
+      _cachedIds = ids;
       revision.value++;
-      return ids;
+      return Set<String>.from(ids);
     });
   }
 
   static Future<void> remove(String catalogId) {
     return _enqueue(() async {
       final preferences = await SharedPreferences.getInstance();
-      await preferences.reload();
-      final ids = preferences.getStringList(key)?.toSet() ?? <String>{};
-      if (!ids.remove(catalogId)) return;
-      await preferences.setStringList(key, ids.toList()..sort());
+      final ids = Set<String>.from(_cachedIds ??
+          (preferences.getStringList(key)?.toSet() ?? <String>{}));
+
+      if (!ids.remove(catalogId)) {
+        _cachedIds = ids;
+        return;
+      }
+
+      final sorted = ids.toList()..sort();
+      final saved = await preferences.setStringList(key, sorted);
+      if (!saved) {
+        throw StateError('Не удалось сохранить избранное');
+      }
+
+      _cachedIds = ids;
       revision.value++;
     });
   }
