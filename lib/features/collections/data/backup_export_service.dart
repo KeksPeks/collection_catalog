@@ -117,6 +117,10 @@ class BackupExportService {
     archive.addFile(ArchiveFile('README.txt', readme.length, readme));
 
     final bytes = ZipEncoder().encode(archive);
+    if (bytes == null) {
+      throw StateError('Не удалось сформировать ZIP');
+    }
+
     final file = await _write('collection_backup_${_stamp()}.zip', bytes);
     await _share(file);
     return file;
