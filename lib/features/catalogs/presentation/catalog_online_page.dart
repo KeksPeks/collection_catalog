@@ -1,15 +1,321 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/localization/app_localizations.dart';
 import '../data/catalog_version_store.dart';
 import '../data/favorites_store.dart';
 import '../domain/entities/catalog_definition.dart';
 import '../domain/entities/catalog_entry_definition.dart';
 
-class CatalogOnlinePage extends StatefulWidget { final CatalogDefinition catalog; final Future<void> Function()? onDownload; final List<String> sectionPath; const CatalogOnlinePage({super.key,required this.catalog,this.onDownload,this.sectionPath=const[]}); @override State<CatalogOnlinePage> createState()=>_CatalogOnlinePageState(); }
-class _CatalogOnlinePageState extends State<CatalogOnlinePage>{ bool favorite=false; Set<String> favoriteSections={}; String? sortField; bool descending=false; bool get regularCoins=>widget.catalog.id=='coins'&&widget.sectionPath.length==3&&widget.sectionPath[0]=='countries'&&widget.sectionPath[1]=='russia'&&widget.sectionPath[2]=='regular'; @override void initState(){super.initState();_load();if(regularCoins)sortField='year';} Future<void> _load()async{final f=await FavoritesStore.contains(widget.catalog.id);final all=await FavoritesStore.loadKeys();if(mounted)setState((){favorite=f;favoriteSections=all.where((x)=>x.startsWith('section:')).map((x)=>x.substring(8)).toSet();});} Future<void> _catalogFavorite()async{final ids=await FavoritesStore.toggle(widget.catalog.id);if(mounted)setState(()=>favorite=ids.contains(FavoritesStore.catalogKey(widget.catalog.id)));} Future<void> _sectionFavorite(String id)async{final ids=await FavoritesStore.toggleKey(FavoritesStore.sectionKey(id));if(mounted)setState(()=>favoriteSections=ids.where((x)=>x.startsWith('section:')).map((x)=>x.substring(8)).toSet());}
- CatalogSectionDefinition? get current{if(widget.sectionPath.isEmpty)return null;CatalogSectionDefinition? c;Iterable<CatalogSectionDefinition> list=widget.catalog.sections;for(final id in widget.sectionPath){c=list.where((s)=>s.id==id).firstOrNull;if(c==null)return null;list=c.children;}return c;} List<CatalogSectionDefinition> get sections=>widget.sectionPath.isEmpty?widget.catalog.sections:current?.children??const[]; List<CatalogEntryDefinition> get entries{final e=widget.catalog.entries;if(widget.sectionPath.isEmpty)return e;return e.where((x)=>x.sectionPath.length>=widget.sectionPath.length&&List.generate(widget.sectionPath.length,(i)=>x.sectionPath[i]==widget.sectionPath[i]).every((v)=>v)).toList();}
- List<CatalogEntryDefinition> _sorted(){final e=[...entries];if(!regularCoins||sortField==null)return e;e.sort((a,b){final av=a.attributes[sortField!]??a.primaryValue;final bv=b.attributes[sortField!]??b.primaryValue;final an=int.tryParse(av),bn=int.tryParse(bv);final c=an!=null&&bn!=null?an.compareTo(bn):av.toLowerCase().compareTo(bv.toLowerCase());return descending?-c:c;});return e;}
- @override Widget build(BuildContext context){final l10n=AppLocalizations.of(context);final title=current?.name??l10n.catalogName(widget.catalog.id);final list=_sorted();return Scaffold(appBar:AppBar(title:Text(title),actions:[IconButton(onPressed:_catalogFavorite,icon:Icon(favorite?Icons.star_rounded:Icons.star_border_rounded)),if(regularCoins)PopupMenuButton<String>(onSelected:(v){if(v=='reverse')setState(()=>descending=!descending);else setState(()=>sortField=v);},itemBuilder:(_)=>[const PopupMenuItem(enabled:false,child:Text('Сортировка')),const PopupMenuItem(value:'year',child:Text('По году')),const PopupMenuItem(value:'series',child:Text('По серии')),const PopupMenuItem(value:'rarity',child:Text('По редкости')),const PopupMenuItem(value:'reverse',child:Text('Изменить порядок'))])]),body:ListView(padding:const EdgeInsets.all(16),children:[Card(child:ListTile(leading:const Icon(Icons.inventory_2_outlined),title:Text(title),subtitle:Text('Версия каталога: ${widget.catalog.version}'))),const SizedBox(height:12),...sections.map((s)=>Card(margin:const EdgeInsets.only(bottom:10),child:ListTile(leading:const CircleAvatar(child:Icon(Icons.folder_outlined)),title:Text(s.name),subtitle:Text(s.children.isEmpty?'${_count(s)} записей':'${s.children.length} подразделов'),trailing:IconButton(onPressed:()=>_sectionFavorite(s.id),icon:Icon(favoriteSections.contains(s.id)?Icons.star_rounded:Icons.star_border_rounded)),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>CatalogOnlinePage(catalog:widget.catalog,onDownload:widget.onDownload,sectionPath:[...widget.sectionPath,s.id]))))),if((widget.sectionPath.isNotEmpty||widget.catalog.sections.isEmpty)&&list.isNotEmpty)const SizedBox(height:8),...((widget.sectionPath.isNotEmpty||widget.catalog.sections.isEmpty)?list.map((e)=>Card(child:ListTile(leading:const Icon(Icons.inventory_2_outlined),title:Text(e.title),subtitle:Text('${e.primaryValue} · ${e.subtitle}'))):const <Widget>[])),if((widget.sectionPath.isNotEmpty||widget.catalog.sections.isEmpty)&&list.isEmpty)const Padding(padding:EdgeInsets.all(24),child:Text('Записи не найдены',textAlign:TextAlign.center))]),bottomNavigationBar:widget.onDownload==null?null:SafeArea(child:Padding(padding:const EdgeInsets.all(16),child:FilledButton.icon(onPressed:()async{await widget.onDownload!.call();await CatalogVersionStore.markInstalled(widget.catalog.id,widget.catalog.version);if(!context.mounted)return;Navigator.pop(context);},icon:const Icon(Icons.download_rounded),label:Text(l10n.download)))));}
- int _count(CatalogSectionDefinition s){final path=[...widget.sectionPath,s.id];return widget.catalog.entries.where((e)=>e.sectionPath.length>=path.length&&List.generate(path.length,(i)=>e.sectionPath[i]==path[i]).every((v)=>v)).length;}
+class CatalogOnlinePage extends StatefulWidget {
+  final CatalogDefinition catalog;
+  final Future<void> Function()? onDownload;
+  final List<String> sectionPath;
+
+  const CatalogOnlinePage({
+    super.key,
+    required this.catalog,
+    this.onDownload,
+    this.sectionPath = const [],
+  });
+
+  @override
+  State<CatalogOnlinePage> createState() => _CatalogOnlinePageState();
 }
-extension _FirstOrNull<T> on Iterable<T>{T? get firstOrNull=>isEmpty?null:first;}
+
+class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
+  bool _favorite = false;
+  Set<String> _favoriteSections = <String>{};
+  String? _sortField;
+  bool _descending = false;
+
+  bool get _regularCoins =>
+      widget.catalog.id == 'coins' &&
+      widget.sectionPath.length == 3 &&
+      widget.sectionPath[0] == 'countries' &&
+      widget.sectionPath[1] == 'russia' &&
+      widget.sectionPath[2] == 'regular';
+
+  CatalogSectionDefinition? get _currentSection {
+    if (widget.sectionPath.isEmpty) {
+      return null;
+    }
+
+    Iterable<CatalogSectionDefinition> sections = widget.catalog.sections;
+    CatalogSectionDefinition? current;
+
+    for (final id in widget.sectionPath) {
+      current = sections.where((section) => section.id == id).firstOrNull;
+      if (current == null) {
+        return null;
+      }
+      sections = current.children;
+    }
+
+    return current;
+  }
+
+  List<CatalogSectionDefinition> get _sections {
+    if (widget.sectionPath.isEmpty) {
+      return widget.catalog.sections;
+    }
+    return _currentSection?.children ?? const <CatalogSectionDefinition>[];
+  }
+
+  List<CatalogEntryDefinition> get _entries {
+    if (widget.sectionPath.isEmpty) {
+      return widget.catalog.entries;
+    }
+
+    return widget.catalog.entries.where((entry) {
+      if (entry.sectionPath.length < widget.sectionPath.length) {
+        return false;
+      }
+      for (var index = 0; index < widget.sectionPath.length; index++) {
+        if (entry.sectionPath[index] != widget.sectionPath[index]) {
+          return false;
+        }
+      }
+      return true;
+    }).toList(growable: false);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (_regularCoins) {
+      _sortField = 'year';
+    }
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    final keys = await FavoritesStore.loadKeys();
+    final catalogFavorite = keys.contains(
+      FavoritesStore.catalogKey(widget.catalog.id),
+    );
+    final sectionFavorites = keys
+        .where((key) => key.startsWith('section:'))
+        .map((key) => key.substring('section:'.length))
+        .toSet();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _favorite = catalogFavorite;
+      _favoriteSections = sectionFavorites;
+    });
+  }
+
+  Future<void> _toggleCatalogFavorite() async {
+    final keys = await FavoritesStore.toggle(widget.catalog.id);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _favorite = keys.contains(FavoritesStore.catalogKey(widget.catalog.id));
+    });
+  }
+
+  Future<void> _toggleSectionFavorite(String id) async {
+    final keys = await FavoritesStore.toggleKey(
+      FavoritesStore.sectionKey(id),
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _favoriteSections = keys
+          .where((key) => key.startsWith('section:'))
+          .map((key) => key.substring('section:'.length))
+          .toSet();
+    });
+  }
+
+  List<CatalogEntryDefinition> _sortedEntries() {
+    final result = <CatalogEntryDefinition>[..._entries];
+    if (!_regularCoins || _sortField == null) {
+      return result;
+    }
+
+    result.sort((a, b) {
+      final aValue = a.attributes[_sortField!] ?? a.primaryValue;
+      final bValue = b.attributes[_sortField!] ?? b.primaryValue;
+      final aNumber = double.tryParse(aValue.replaceAll(',', '.'));
+      final bNumber = double.tryParse(bValue.replaceAll(',', '.'));
+      final comparison = aNumber != null && bNumber != null
+          ? aNumber.compareTo(bNumber)
+          : aValue.toLowerCase().compareTo(bValue.toLowerCase());
+      return _descending ? -comparison : comparison;
+    });
+
+    return result;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final title = _currentSection?.name ?? l10n.catalogName(widget.catalog.id);
+    final entries = _sortedEntries();
+    final showEntries =
+        widget.sectionPath.isNotEmpty || widget.catalog.sections.isEmpty;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+        actions: [
+          IconButton(
+            tooltip: l10n.favorites,
+            onPressed: _toggleCatalogFavorite,
+            icon: Icon(
+              _favorite ? Icons.star_rounded : Icons.star_border_rounded,
+            ),
+          ),
+          if (_regularCoins)
+            PopupMenuButton<String>(
+              tooltip: 'Сортировка',
+              onSelected: (value) {
+                if (value == 'reverse') {
+                  setState(() => _descending = !_descending);
+                } else {
+                  setState(() => _sortField = value);
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem<String>(
+                  value: 'year',
+                  child: Text('По году'),
+                ),
+                PopupMenuItem<String>(
+                  value: 'series',
+                  child: Text('По серии'),
+                ),
+                PopupMenuItem<String>(
+                  value: 'rarity',
+                  child: Text('По редкости'),
+                ),
+                PopupMenuItem<String>(
+                  value: 'reverse',
+                  child: Text('Изменить порядок'),
+                ),
+              ],
+            ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.inventory_2_outlined),
+              title: Text(title),
+              subtitle: Text('Версия каталога: ${widget.catalog.version}'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          for (final section in _sections)
+            Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(Icons.folder_outlined),
+                ),
+                title: Text(section.name),
+                subtitle: Text(
+                  section.children.isEmpty
+                      ? '${_count(section)} записей'
+                      : '${section.children.length} подразделов',
+                ),
+                trailing: IconButton(
+                  onPressed: () => _toggleSectionFavorite(section.id),
+                  icon: Icon(
+                    _favoriteSections.contains(section.id)
+                        ? Icons.star_rounded
+                        : Icons.star_border_rounded,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CatalogOnlinePage(
+                        catalog: widget.catalog,
+                        onDownload: widget.onDownload,
+                        sectionPath: [
+                          ...widget.sectionPath,
+                          section.id,
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          if (showEntries) ...[
+            const SizedBox(height: 8),
+            for (final entry in entries)
+              Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  leading: const Icon(Icons.inventory_2_outlined),
+                  title: Text(entry.title),
+                  subtitle: Text(
+                    '${entry.primaryValue} · ${entry.subtitle}',
+                  ),
+                ),
+              ),
+            if (entries.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'Записи не найдены',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+          ],
+        ],
+      ),
+      bottomNavigationBar: widget.onDownload == null
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    await widget.onDownload!.call();
+                    await CatalogVersionStore.markInstalled(
+                      widget.catalog.id,
+                      widget.catalog.version,
+                    );
+                    if (!mounted) {
+                      return;
+                    }
+                    Navigator.of(context).pop();
+                  },
+                  icon: const Icon(Icons.download_rounded),
+                  label: Text(l10n.download),
+                ),
+              ),
+            ),
+    );
+  }
+
+  int _count(CatalogSectionDefinition section) {
+    final path = [...widget.sectionPath, section.id];
+    return widget.catalog.entries.where((entry) {
+      if (entry.sectionPath.length < path.length) {
+        return false;
+      }
+      for (var index = 0; index < path.length; index++) {
+        if (entry.sectionPath[index] != path[index]) {
+          return false;
+        }
+      }
+      return true;
+    }).length;
+  }
+}
+
+extension _FirstOrNull<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
+}
