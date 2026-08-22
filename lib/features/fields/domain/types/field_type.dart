@@ -32,4 +32,19 @@ enum FieldType {
 
   /// Рейтинг.
   rating,
+
+  /// Состояние монет и других нумизматических предметов.
+  conditionNumismatic,
+
+  /// Состояние банкнот.
+  conditionBanknote,
+
+  /// Состояние коллекционных карточек.
+  conditionTradingCard,
+
+  /// Комплектность и состояние физических игр.
+  conditionGame,
+
+  /// Универсальное состояние для остальных коллекций.
+  conditionGeneric,
 }
