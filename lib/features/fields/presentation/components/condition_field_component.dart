@@ -18,7 +18,13 @@ class ConditionFieldComponent implements FieldComponent {
     required ValueChanged<String> onChanged,
   }) {
     final grades = ConditionGradeCatalog.forCollection(definition.collectionId);
-    final selected = grades.where((grade) => grade.code == value).firstOrNull;
+    ConditionGrade? selected;
+    for (final grade in grades) {
+      if (grade.code == value) {
+        selected = grade;
+        break;
+      }
+    }
 
     return DropdownButtonFormField<String>(
       initialValue: selected?.code,
@@ -28,10 +34,7 @@ class ConditionFieldComponent implements FieldComponent {
         prefixIcon: const Icon(Icons.verified_outlined),
       ),
       items: [
-        const DropdownMenuItem<String>(
-          value: null,
-          child: Text('—'),
-        ),
+        const DropdownMenuItem<String>(value: null, child: Text('—')),
         ...grades.map(
           (grade) => DropdownMenuItem<String>(
             value: grade.code,
@@ -80,7 +83,6 @@ class ConditionFieldComponent implements FieldComponent {
       'poor': {'ru': 'Плохое', 'en': 'Poor'},
       'unknown': {'ru': 'Не указано', 'en': 'Not specified'},
     };
-
     final values = labels[grade.code];
     return values?[language] ?? values?['en'] ?? grade.code;
   }
