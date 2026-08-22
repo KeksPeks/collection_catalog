@@ -9,12 +9,9 @@ class AppLocalizations {
   const AppLocalizations(this.locale);
 
   static const delegate = _AppLocalizationsDelegate();
-  static const supportedLocales = <Locale>[
-    Locale('ru'),Locale('en'),Locale('de'),Locale('fr'),Locale('es'),Locale('it'),Locale('pt'),Locale('zh'),Locale('ja'),Locale('ko'),Locale('ar'),
-  ];
+  static const supportedLocales = <Locale>[Locale('ru'),Locale('en'),Locale('de'),Locale('fr'),Locale('es'),Locale('it'),Locale('pt'),Locale('zh'),Locale('ja'),Locale('ko'),Locale('ar')];
 
   static AppLocalizations of(BuildContext context) => Localizations.of<AppLocalizations>(context, AppLocalizations) ?? const AppLocalizations(Locale('en'));
-
   String get languageName => _languageNames[locale.languageCode] ?? 'English';
   String get catalog => _t('catalog');
   String get myCollections => _t('myCollections');
@@ -58,13 +55,9 @@ class AppLocalizations {
   String get noFavoritesDescription => _t('noFavoritesDescription');
   String get catalogDescription => _t('catalogDescription');
 
-  String categoryName(String id) => CatalogUiLocalization.categoryName(_contextlessLocale, id);
-  String catalogName(String id) => CatalogUiLocalization.catalogName(_contextlessLocale, id);
-  String catalogDescriptionFor(String id) => CatalogUiLocalization.catalogDescription(_contextlessLocale, id);
-
-  // Локализация методов categoryName/catalogName не требует BuildContext.
-  BuildContext get _contextlessLocale => _LocaleBuildContext(locale);
-
+  String categoryName(String id) => CatalogUiLocalization.categoryNameForLocale(locale, id);
+  String catalogName(String id) => CatalogUiLocalization.catalogNameForLocale(locale, id);
+  String catalogDescriptionFor(String id) => CatalogUiLocalization.catalogDescriptionForLocale(locale, id);
   String recordsCount(int count) => '$count ${_plural(count, 'record', 'records')}';
 
   String _plural(int count, String one, String many) {
@@ -99,19 +92,9 @@ class AppLocalizations {
   };
 }
 
-class _LocaleBuildContext extends BuildContext {
-  final Locale localeValue;
-  _LocaleBuildContext(this.localeValue);
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
-  @override
-  bool isSupported(Locale locale) => AppLocalizations.supportedLocales.any((item) => item.languageCode == locale.languageCode);
-  @override
-  Future<AppLocalizations> load(Locale locale) => SynchronousFuture<AppLocalizations>(AppLocalizations(locale));
-  @override
-  bool shouldReload(covariant LocalizationsDelegate<AppLocalizations> old) => false;
+  @override bool isSupported(Locale locale) => AppLocalizations.supportedLocales.any((item) => item.languageCode == locale.languageCode);
+  @override Future<AppLocalizations> load(Locale locale) => SynchronousFuture<AppLocalizations>(AppLocalizations(locale));
+  @override bool shouldReload(covariant LocalizationsDelegate<AppLocalizations> old) => false;
 }
