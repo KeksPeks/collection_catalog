@@ -25,7 +25,7 @@ class UiLayoutSettings {
   static Future<void> load() async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.reload();
-    columns = (preferences.getInt(columnsKey) ?? 0).clamp(0, 4);
+    columns = (preferences.getInt(columnsKey) ?? 0).clamp(0, 4).toInt();
     density = preferences.getString(densityKey) ?? 'auto';
     navigation = preferences.getString(navigationKey) ?? 'auto';
     cardHeight = (preferences.getDouble(cardHeightKey) ?? 150).clamp(110, 220).toDouble();
@@ -45,7 +45,7 @@ class UiLayoutSettings {
   }) async {
     final preferences = await SharedPreferences.getInstance();
     if (columns != null) {
-      UiLayoutSettings.columns = columns.clamp(0, 4);
+      UiLayoutSettings.columns = columns.clamp(0, 4).toInt();
       await preferences.setInt(columnsKey, UiLayoutSettings.columns);
     }
     if (density != null) {
