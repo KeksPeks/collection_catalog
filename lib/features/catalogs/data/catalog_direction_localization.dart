@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
 /// Локализованные названия 31 основных направлений каталога.
-///
-/// Структура каталога остаётся централизованной: локализация меняет только
-/// отображаемый текст и не влияет на идентификаторы данных.
 class CatalogDirectionLocalization {
   CatalogDirectionLocalization._();
 
@@ -41,25 +38,31 @@ class CatalogDirectionLocalization {
     'holiday': {'ru':'Праздничные коллекции','en':'Holiday collections','de':'Festtagskollektionen','fr':'Collections de fêtes','es':'Colecciones festivas','it':'Collezioni festive','pt':'Coleções festivas','zh':'节日收藏','ja':'ホリデーコレクション','ko':'기념일 컬렉션','ar':'المقتنيات الاحتفالية'},
   };
 
-  static String name(BuildContext context, String id) {
-    final language = Localizations.localeOf(context).languageCode;
+  static String nameForLocale(Locale locale, String id) {
+    final language = locale.languageCode;
     return _names[id]?[language] ?? _names[id]?['en'] ?? id;
   }
 
-  static String description(BuildContext context, String id) {
-    final nameValue = name(context, id);
-    switch (Localizations.localeOf(context).languageCode) {
-      case 'ru': return 'Централизованный каталог: $nameValue.';
-      case 'de': return 'Zentraler Katalog: $nameValue.';
-      case 'fr': return 'Catalogue centralisé : $nameValue.';
-      case 'es': return 'Catálogo centralizado: $nameValue.';
-      case 'it': return 'Catalogo centralizzato: $nameValue.';
-      case 'pt': return 'Catálogo centralizado: $nameValue.';
-      case 'zh': return '集中式目录：$nameValue。';
-      case 'ja': return '中央カタログ：$nameValue。';
-      case 'ko': return '중앙 카탈로그: $nameValue.';
-      case 'ar': return 'فهرس مركزي: $nameValue.';
-      default: return 'Centralized catalog: $nameValue.';
+  static String name(BuildContext context, String id) =>
+      nameForLocale(Localizations.localeOf(context), id);
+
+  static String descriptionForLocale(Locale locale, String id) {
+    final value = nameForLocale(locale, id);
+    switch (locale.languageCode) {
+      case 'ru': return 'Централизованный каталог: $value.';
+      case 'de': return 'Zentraler Katalog: $value.';
+      case 'fr': return 'Catalogue centralisé : $value.';
+      case 'es': return 'Catálogo centralizado: $value.';
+      case 'it': return 'Catalogo centralizzato: $value.';
+      case 'pt': return 'Catálogo centralizado: $value.';
+      case 'zh': return '集中式目录：$value。';
+      case 'ja': return '中央カタログ：$value。';
+      case 'ko': return '중앙 카탈로그: $value.';
+      case 'ar': return 'فهرس مركزي: $value.';
+      default: return 'Centralized catalog: $value.';
     }
   }
+
+  static String description(BuildContext context, String id) =>
+      descriptionForLocale(Localizations.localeOf(context), id);
 }
