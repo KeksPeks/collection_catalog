@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Форма обратной связи для заявок пользователей.
+import '../../../catalogs/data/catalog_registry.dart';
+import '../../../catalogs/data/catalog_ui_localization.dart';
+
+/// Форма обратной связи для предложений по централизованным каталогам.
+///
+/// Пользователь не изменяет структуру каталога напрямую. Все изменения
+/// отправляются администратору через заявку.
 class FeedbackPage extends StatefulWidget {
   const FeedbackPage({super.key});
 
@@ -13,9 +19,16 @@ class _FeedbackPageState extends State<FeedbackPage> {
   final _formKey = GlobalKey<FormState>();
   final _subjectController = TextEditingController();
   final _detailsController = TextEditingController();
-  String _type = 'Добавить файл';
-  String _catalog = 'Монеты';
+  String _type = 'Предложение';
+  String? _catalogId;
   bool _sending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final catalogs = CatalogRegistry.all;
+    if (catalogs.isNotEmpty) _catalogId = catalogs.first.id;
+  }
 
   @override
   void dispose() {
@@ -26,26 +39,26 @@ class _FeedbackPageState extends State<FeedbackPage> {
 
   Future<void> _send() async {
     if (!_formKey.currentState!.validate()) return;
+    final catalog = CatalogRegistry.byId(_catalogId ?? '');
+    if (catalog == null) return;
 
     setState(() => _sending = true);
-    final title = Uri.encodeComponent(
-      '$_type: ${_subjectController.text.trim()}',
-    );
+    final locale = Localizations.localeOf(context);
+    final catalogName = CatalogUiLocalization.catalogNameForLocale(locale, catalog.id);
+    final title = Uri.encodeComponent('$_type: ${_subjectController.text.trim()}');
     final body = Uri.encodeComponent(
-      'Каталог: $_catalog\n'
+      'Каталог: $catalogName\n'
+      'Catalog ID: ${catalog.id}\n'
+      'Версия каталога: ${catalog.version}\n'
       'Тип заявки: $_type\n\n'
       '${_detailsController.text.trim()}',
     );
-    final uri = Uri.parse(
-      'https://github.com/KeksPeks/collection_catalog/issues/new?title=$title&body=$body',
-    );
+    final uri = Uri.parse('https://github.com/KeksPeks/collection_catalog/issues/new?title=$title&body=$body');
 
     try {
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Не удалось открыть форму отправки заявки.')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Не удалось открыть форму отправки заявки.')));
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -54,6 +67,9 @@ class _FeedbackPageState extends State<FeedbackPage> {
 
   @override
   Widget build(BuildContext context) {
+    final catalogs = CatalogRegistry.all;
+    final locale = Localizations.localeOf(context);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Обратная связь')),
       body: Form(
@@ -65,7 +81,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'Сообщите о недостающем файле, ошибке в каталоге или предложите изменение. После отправки откроется форма заявки в GitHub.',
+                  'Каталоги централизованные. Пользователь не изменяет их структуру напрямую — здесь можно предложить добавить предмет, исправить данные или обновить каталог.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
@@ -73,13 +89,10 @@ class _FeedbackPageState extends State<FeedbackPage> {
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               initialValue: _type,
-              decoration: const InputDecoration(
-                labelText: 'Тип заявки',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Тип заявки', border: OutlineInputBorder()),
               items: const [
-                DropdownMenuItem(value: 'Добавить файл', child: Text('Добавить файл')),
-                DropdownMenuItem(value: 'Изменить файл', child: Text('Изменить файл')),
+                DropdownMenuItem(value: 'Добавить предмет', child: Text('Добавить предмет')),
+                DropdownMenuItem(value: 'Добавить каталог', child: Text('Добавить каталог')),
                 DropdownMenuItem(value: 'Исправить данные', child: Text('Исправить данные')),
                 DropdownMenuItem(value: 'Предложение', child: Text('Предложение')),
               ],
@@ -89,62 +102,37 @@ class _FeedbackPageState extends State<FeedbackPage> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              initialValue: _catalog,
-              decoration: const InputDecoration(
-                labelText: 'Каталог',
-                border: OutlineInputBorder(),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'Монеты', child: Text('Монеты')),
-                DropdownMenuItem(value: 'Банкноты', child: Text('Банкноты')),
-                DropdownMenuItem(value: 'Pokémon TCG', child: Text('Pokémon TCG')),
-                DropdownMenuItem(value: 'Диски', child: Text('Диски')),
-                DropdownMenuItem(value: 'Игры', child: Text('Игры')),
-                DropdownMenuItem(value: 'Фильмы', child: Text('Фильмы')),
-                DropdownMenuItem(value: 'Фигурки', child: Text('Фигурки')),
+              initialValue: _catalogId,
+              decoration: const InputDecoration(labelText: 'Каталог', border: OutlineInputBorder()),
+              items: [
+                for (final catalog in catalogs)
+                  DropdownMenuItem(
+                    value: catalog.id,
+                    child: Text('${CatalogUiLocalization.catalogNameForLocale(locale, catalog.id)} · v${catalog.version}'),
+                  ),
               ],
-              onChanged: (value) {
-                if (value != null) setState(() => _catalog = value);
-              },
+              onChanged: (value) => setState(() => _catalogId = value),
+              validator: (value) => value == null ? 'Выберите каталог' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _subjectController,
-              decoration: const InputDecoration(
-                labelText: 'Название или идентификатор файла',
-                hintText: 'Например: 2 евро 2004, Германия',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) => value == null || value.trim().isEmpty
-                  ? 'Укажите название или идентификатор'
-                  : null,
+              decoration: const InputDecoration(labelText: 'Название или идентификатор', hintText: 'Например: 10 рублей 2020, Россия', border: OutlineInputBorder()),
+              validator: (value) => value == null || value.trim().isEmpty ? 'Укажите название или идентификатор' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _detailsController,
               minLines: 5,
               maxLines: 10,
-              decoration: const InputDecoration(
-                labelText: 'Описание заявки',
-                hintText: 'Что необходимо добавить или исправить?',
-                border: OutlineInputBorder(),
-                alignLabelWithHint: true,
-              ),
-              validator: (value) => value == null || value.trim().isEmpty
-                  ? 'Опишите заявку'
-                  : null,
+              decoration: const InputDecoration(labelText: 'Описание предложения', hintText: 'Что необходимо добавить или исправить?', border: OutlineInputBorder(), alignLabelWithHint: true),
+              validator: (value) => value == null || value.trim().isEmpty ? 'Опишите предложение' : null,
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: _sending ? null : _send,
-              icon: _sending
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.send_outlined),
-              label: const Text('Отправить заявку'),
+              icon: _sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send_outlined),
+              label: const Text('Отправить предложение'),
             ),
           ],
         ),
