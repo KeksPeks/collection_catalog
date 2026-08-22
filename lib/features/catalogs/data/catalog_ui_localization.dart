@@ -5,9 +5,15 @@ class CatalogUiLocalization {
   CatalogUiLocalization._();
 
   static String categoryName(BuildContext context, String id) =>
-      CatalogDirectionLocalization.name(context, id);
+      categoryNameForLocale(Localizations.localeOf(context), id);
 
-  static String catalogName(BuildContext context, String id) {
+  static String categoryNameForLocale(Locale locale, String id) =>
+      CatalogDirectionLocalization.nameForLocale(locale, id);
+
+  static String catalogName(BuildContext context, String id) =>
+      catalogNameForLocale(Localizations.localeOf(context), id);
+
+  static String catalogNameForLocale(Locale locale, String id) {
     const aliases = <String, String>{
       'lego': 'constructors',
       'pokemon_tcg': 'cards',
@@ -18,9 +24,23 @@ class CatalogUiLocalization {
       'coins': 'numismatics',
       'banknotes': 'banknotes',
     };
-    return CatalogDirectionLocalization.name(context, aliases[id] ?? id);
+    return CatalogDirectionLocalization.nameForLocale(locale, aliases[id] ?? id);
   }
 
   static String catalogDescription(BuildContext context, String id) =>
-      CatalogDirectionLocalization.description(context, id);
+      catalogDescriptionForLocale(Localizations.localeOf(context), id);
+
+  static String catalogDescriptionForLocale(Locale locale, String id) {
+    const aliases = <String, String>{
+      'lego': 'constructors',
+      'pokemon_tcg': 'cards',
+      'games': 'video_games',
+      'discs': 'video_games',
+      'movies': 'movies',
+      'figurines': 'figurines',
+      'coins': 'numismatics',
+      'banknotes': 'banknotes',
+    };
+    return CatalogDirectionLocalization.descriptionForLocale(locale, aliases[id] ?? id);
+  }
 }
