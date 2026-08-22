@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/settings/ui_layout_settings.dart';
 import '../../domain/entities/collection.dart';
 import '../providers/collection_provider.dart';
 import 'collection_detail_page.dart';
@@ -18,6 +19,24 @@ class CollectionsPage extends ConsumerStatefulWidget {
 
 class _CollectionsPageState extends ConsumerState<CollectionsPage> {
   String _search = '';
+  VoidCallback? _layoutListener;
+
+  @override
+  void initState() {
+    super.initState();
+    _layoutListener = () {
+      if (mounted) setState(() {});
+    };
+    UiLayoutSettings.revision.addListener(_layoutListener!);
+    UiLayoutSettings.ensureLoaded();
+  }
+
+  @override
+  void dispose() {
+    final listener = _layoutListener;
+    if (listener != null) UiLayoutSettings.revision.removeListener(listener);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,12 +48,8 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('Ошибка: $error')),
         data: (items) {
-          final downloaded = items
-              .where((item) => item.templateId != null)
-              .toList(growable: false);
-          final filtered = downloaded.where((item) {
-            return item.name.toLowerCase().contains(_search.toLowerCase());
-          }).toList(growable: false);
+          final downloaded = items.where((item) => item.templateId != null).toList(growable: false);
+          final filtered = downloaded.where((item) => item.name.toLowerCase().contains(_search.toLowerCase())).toList(growable: false);
 
           return RefreshIndicator(
             onRefresh: () async {
@@ -52,10 +67,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
                     border: const OutlineInputBorder(),
                     suffixIcon: _search.isEmpty
                         ? null
-                        : IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () => setState(() => _search = ''),
-                          ),
+                        : IconButton(icon: const Icon(Icons.clear), onPressed: () => setState(() => _search = '')),
                   ),
                   onChanged: (value) => setState(() => _search = value),
                 ),
@@ -73,17 +85,18 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
   }
 
   Widget _buildCollectionTile(Collection collection) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(12),
-        leading: const CircleAvatar(
-          child: Icon(Icons.collections_bookmark),
+    return SizedBox(
+      height: UiLayoutSettings.cardHeight,
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 10),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          leading: const CircleAvatar(child: Icon(Icons.collections_bookmark)),
+          title: Text(collection.name),
+          subtitle: const Text('Каталог сохранён на устройстве'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => _openCollection(collection),
         ),
-        title: Text(collection.name),
-        subtitle: const Text('Каталог сохранён на устройстве'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => _openCollection(collection),
       ),
     );
   }
@@ -91,10 +104,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
   Future<void> _openCollection(Collection collection) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => CollectionDetailPage(
-          collectionId: collection.id,
-          collectionName: collection.name,
-        ),
+        builder: (_) => CollectionDetailPage(collectionId: collection.id, collectionName: collection.name),
       ),
     );
     if (!mounted) return;
@@ -117,9 +127,7 @@ class _EmptyCollectionsCard extends StatelessWidget {
             const Icon(Icons.download_outlined, size: 52),
             const SizedBox(height: 12),
             Text(
-              hasCollections
-                  ? 'Ничего не найдено'
-                  : 'Загруженных коллекций пока нет',
+              hasCollections ? 'Ничего не найдено' : 'Загруженных коллекций пока нет',
               style: Theme.of(context).textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
