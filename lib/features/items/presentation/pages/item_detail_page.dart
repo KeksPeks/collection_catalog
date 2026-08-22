@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../catalogs/data/favorites_store.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../../../fields/presentation/providers/field_provider.dart';
 import '../../data/item_state_store.dart';
 import '../../domain/entities/item_value.dart';
@@ -34,9 +35,7 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
       FavoritesStore.itemKey(widget.itemId),
     );
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     setState(() {
       _state = state;
@@ -48,24 +47,15 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
     setState(() => _saving = true);
     try {
       final next = state.copyWith(updatedAt: DateTime.now());
-      await ItemStateStore.save(
-        widget.itemId,
-        next,
-        title: item.id,
-      );
+      await ItemStateStore.save(widget.itemId, next, title: item.id);
 
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
       setState(() {
         _state = next;
         _saving = false;
       });
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Ошибка сохранения: $error')),
@@ -77,9 +67,7 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
     final ids = await FavoritesStore.toggleKey(
       FavoritesStore.itemKey(widget.itemId),
     );
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     setState(() {
       _favorite = ids.contains(FavoritesStore.itemKey(widget.itemId));
     });
@@ -178,9 +166,7 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
                               .map(
                                 (attachment) => ListTile(
                                   contentPadding: EdgeInsets.zero,
-                                  leading: const Icon(
-                                    Icons.insert_drive_file_outlined,
-                                  ),
+                                  leading: const Icon(Icons.insert_drive_file_outlined),
                                   title: Text(attachment.path),
                                   subtitle: Text(attachment.type),
                                 ),
@@ -220,9 +206,7 @@ class _StateCard extends StatelessWidget {
         content: TextField(
           controller: controller,
           maxLines: 5,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(border: OutlineInputBorder()),
         ),
         actions: [
           TextButton(
@@ -245,6 +229,9 @@ class _StateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = AppLocalizations.of(context).locale.languageCode;
+    final condition = state.conditionValue;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -256,10 +243,7 @@ class _StateCard extends StatelessWidget {
                 const Expanded(
                   child: Text(
                     'Моё состояние',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
                   ),
                 ),
                 if (saving)
@@ -279,16 +263,14 @@ class _StateCard extends StatelessWidget {
               ),
               items: CollectionItemStatus.values
                   .map(
-                    (status) => DropdownMenuItem(
+                    (status) => DropdownMenuItem<CollectionItemStatus>(
                       value: status,
-                      child: Text(status.title),
+                      child: Text(status.localizedTitle(locale)),
                     ),
                   )
                   .toList(growable: false),
               onChanged: (value) {
-                if (value == null) {
-                  return;
-                }
+                if (value == null) return;
                 onChanged(
                   state.copyWith(
                     status: value,
@@ -298,6 +280,29 @@ class _StateCard extends StatelessWidget {
                   ),
                 );
               },
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<CollectionItemCondition?>(
+              initialValue: condition,
+              decoration: const InputDecoration(
+                labelText: 'Состояние',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                const DropdownMenuItem<CollectionItemCondition?>(
+                  value: null,
+                  child: Text('Не указано'),
+                ),
+                ...CollectionItemCondition.values.map(
+                  (value) => DropdownMenuItem<CollectionItemCondition?>(
+                    value: value,
+                    child: Text(value.localizedTitle(locale)),
+                  ),
+                ),
+              ],
+              onChanged: (value) => onChanged(
+                state.copyWith(condition: value?.name ?? ''),
+              ),
             ),
             const SizedBox(height: 12),
             Row(
@@ -314,19 +319,6 @@ class _StateCard extends StatelessWidget {
                       state.copyWith(
                         quantity: int.tryParse(value) ?? state.quantity,
                       ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextFormField(
-                    initialValue: state.condition,
-                    decoration: const InputDecoration(
-                      labelText: 'Состояние',
-                      border: OutlineInputBorder(),
-                    ),
-                    onFieldSubmitted: (value) => onChanged(
-                      state.copyWith(condition: value),
                     ),
                   ),
                 ),
@@ -361,9 +353,7 @@ class _StateCard extends StatelessWidget {
             ),
             TextFormField(
               initialValue: state.purchasePrice?.toString() ?? '',
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
                 labelText: 'Цена покупки',
                 prefixText: '€ ',
@@ -406,10 +396,7 @@ class _SectionCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text(title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 10),
             child,
           ],
