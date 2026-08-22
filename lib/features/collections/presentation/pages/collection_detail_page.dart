@@ -69,9 +69,16 @@ class CollectionDetailPage extends ConsumerWidget {
               child: ListTile(
                 leading: const Icon(Icons.insights_outlined),
                 title: const Text('Статистика'),
-                subtitle: _StatisticsText(
-                  items: items,
-                  fields: fields,
+                subtitle: items.when(
+                  data: (itemList) => fields.when(
+                    data: (fieldList) => Text(
+                      'Предметов: ${itemList.length} · Полей: ${fieldList.length}',
+                    ),
+                    loading: () => Text('Предметов: ${itemList.length}'),
+                    error: (error, stack) => Text('Предметов: ${itemList.length}'),
+                  ),
+                  loading: () => const Text('Загрузка...'),
+                  error: (error, stack) => Text(error.toString()),
                 ),
               ),
             ),
@@ -89,16 +96,17 @@ class CollectionDetailPage extends ConsumerWidget {
                             title: Text(item.id),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
+                              final current = collection.valueOrNull ??
+                                  Collection(
+                                    id: collectionId,
+                                    name: collectionName,
+                                    createdAt: DateTime.now(),
+                                    updatedAt: DateTime.now(),
+                                  );
                               Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) => ItemsPage(
-                                    collection: collection.valueOrNull ??
-                                        Collection(
-                                          id: collectionId,
-                                          name: collectionName,
-                                          createdAt: DateTime.now(),
-                                          updatedAt: DateTime.now(),
-                                        ),
+                                    collection: current,
                                     sectionId: item.sectionId,
                                   ),
                                 ),
@@ -152,31 +160,6 @@ class CollectionDetailPage extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _StatisticsText extends StatelessWidget {
-  final AsyncValue<List<dynamic>> items;
-  final AsyncValue<List<dynamic>> fields;
-
-  const _StatisticsText({
-    required this.items,
-    required this.fields,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return items.when(
-      data: (itemList) => fields.when(
-        data: (fieldList) => Text(
-          'Предметов: ${itemList.length} · Полей: ${fieldList.length}',
-        ),
-        loading: () => Text('Предметов: ${itemList.length}'),
-        error: (error, stack) => Text('Предметов: ${itemList.length}'),
-      ),
-      loading: () => const Text('Загрузка...'),
-      error: (error, stack) => Text(error.toString()),
     );
   }
 }
