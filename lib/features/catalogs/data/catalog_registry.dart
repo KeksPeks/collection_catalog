@@ -4,138 +4,100 @@ import '../domain/entities/catalog_category_definition.dart';
 import '../domain/entities/catalog_definition.dart';
 import '../domain/entities/catalog_entry_definition.dart';
 
-/// Реестр готовых каталогов и их верхнеуровневых категорий.
+/// Единый централизованный реестр направлений каталога.
 class CatalogRegistry {
   static List<CatalogCategoryDefinition> get categories => const [
-        CatalogCategoryDefinition(id: 'constructors', name: 'Конструкторы', description: 'Конструкторы и наборы разных производителей.', catalogIds: ['lego']),
-        CatalogCategoryDefinition(id: 'coins', name: 'Монеты', description: 'Нумизматические каталоги.', catalogIds: ['coins']),
-        CatalogCategoryDefinition(id: 'banknotes', name: 'Банкноты', description: 'Бонистические каталоги.', catalogIds: ['banknotes']),
-        CatalogCategoryDefinition(id: 'cards', name: 'Карточки', description: 'Коллекционные карточки.', catalogIds: ['pokemon_tcg']),
-        CatalogCategoryDefinition(id: 'games', name: 'Игры', description: 'Видеоигры разных платформ.', catalogIds: ['games']),
-        CatalogCategoryDefinition(id: 'discs', name: 'Диски', description: 'Игровые и музыкальные диски.', catalogIds: ['discs']),
-        CatalogCategoryDefinition(id: 'movies', name: 'Фильмы', description: 'Фильмы и видео.', catalogIds: ['movies']),
-        CatalogCategoryDefinition(id: 'figurines', name: 'Фигурки', description: 'Фигурки и миниатюры.', catalogIds: ['figurines']),
+        CatalogCategoryDefinition(id:'constructors',name:'Конструкторы',description:'Конструкторы и наборы.',catalogIds:['lego']),
+        CatalogCategoryDefinition(id:'cards',name:'Коллекционные карточки',description:'Коллекционные карточки.',catalogIds:['pokemon_tcg']),
+        CatalogCategoryDefinition(id:'numismatics',name:'Нумизматика',description:'Монеты и медали.',catalogIds:['coins']),
+        CatalogCategoryDefinition(id:'banknotes',name:'Бонистика',description:'Банкноты и денежные знаки.',catalogIds:['banknotes']),
+        CatalogCategoryDefinition(id:'philately',name:'Филателия',description:'Почтовые марки и связанные материалы.',catalogIds:['philately']),
+        CatalogCategoryDefinition(id:'figurines',name:'Фигурки и игрушки',description:'Фигурки, игрушки и персонажи.',catalogIds:['figurines']),
+        CatalogCategoryDefinition(id:'designer_toys',name:'Art Toys / Designer Toys',description:'Авторские и дизайнерские игрушки.',catalogIds:['designer_toys']),
+        CatalogCategoryDefinition(id:'models',name:'Модели',description:'Масштабные и коллекционные модели.',catalogIds:['models']),
+        CatalogCategoryDefinition(id:'video_games',name:'Видеоигры',description:'Видеоигры разных платформ.',catalogIds:['games']),
+        CatalogCategoryDefinition(id:'consoles',name:'Игровые консоли и оборудование',description:'Консоли, аксессуары и оборудование.',catalogIds:['consoles']),
+        CatalogCategoryDefinition(id:'comics',name:'Комиксы, манга и графические издания',description:'Комиксы, манга и графические издания.',catalogIds:['comics']),
+        CatalogCategoryDefinition(id:'books',name:'Книги',description:'Книги и печатные издания.',catalogIds:['books']),
+        CatalogCategoryDefinition(id:'music',name:'Музыка и аудио',description:'Музыкальные и аудиозаписи.',catalogIds:['music']),
+        CatalogCategoryDefinition(id:'movies',name:'Фильмы и видео',description:'Фильмы и видеоматериалы.',catalogIds:['movies']),
+        CatalogCategoryDefinition(id:'board_games',name:'Настольные игры и миниатюры',description:'Настольные игры и миниатюры.',catalogIds:['board_games']),
+        CatalogCategoryDefinition(id:'sports',name:'Спортивные коллекции',description:'Спортивные карточки, памятные предметы и memorabilia.',catalogIds:['sports']),
+        CatalogCategoryDefinition(id:'autographs',name:'Автографы и Memorabilia',description:'Автографы и памятные предметы.',catalogIds:['autographs']),
+        CatalogCategoryDefinition(id:'pins',name:'Значки, Pins и эмблемы',description:'Значки, pins и эмблемы.',catalogIds:['pins']),
+        CatalogCategoryDefinition(id:'postcards',name:'Открытки, фотографии и постеры',description:'Открытки, фотографии и постеры.',catalogIds:['postcards']),
+        CatalogCategoryDefinition(id:'stickers',name:'Стикеры и наклейки',description:'Стикеры, наклейки и коллекционные листы.',catalogIds:['stickers']),
+        CatalogCategoryDefinition(id:'playing_cards',name:'Игральные карты',description:'Колоды и отдельные игральные карты.',catalogIds:['playing_cards']),
+        CatalogCategoryDefinition(id:'beverages',name:'Напитки и промо-коллекции',description:'Бутылки, банки и промо-материалы.',catalogIds:['beverages']),
+        CatalogCategoryDefinition(id:'lighters_tobacco',name:'Зажигалки и табачные предметы',description:'Зажигалки и исторические табачные предметы.',catalogIds:['lighters_tobacco']),
+        CatalogCategoryDefinition(id:'watches_jewelry',name:'Часы и ювелирные изделия',description:'Часы, украшения и ювелирные предметы.',catalogIds:['watches_jewelry']),
+        CatalogCategoryDefinition(id:'clothing',name:'Одежда, обувь и аксессуары',description:'Коллекционная одежда, обувь и аксессуары.',catalogIds:['clothing']),
+        CatalogCategoryDefinition(id:'instruments',name:'Музыкальные инструменты',description:'Коллекционные музыкальные инструменты.',catalogIds:['instruments']),
+        CatalogCategoryDefinition(id:'militaria',name:'Военные, исторические и наградные предметы',description:'Военные, исторические предметы и награды.',catalogIds:['militaria']),
+        CatalogCategoryDefinition(id:'antiques',name:'Антиквариат',description:'Антикварные предметы.',catalogIds:['antiques']),
+        CatalogCategoryDefinition(id:'art',name:'Искусство',description:'Произведения искусства.',catalogIds:['art']),
+        CatalogCategoryDefinition(id:'advertising',name:'Реклама и промо',description:'Рекламные и промо-материалы.',catalogIds:['advertising']),
+        CatalogCategoryDefinition(id:'holiday',name:'Праздничные коллекции',description:'Праздничные и сезонные коллекции.',catalogIds:['holiday']),
       ];
 
   static List<CatalogDefinition> get all {
     final templates = CatalogTemplateRegistry.all;
     return [
-      _lego(templates),
-      _coins(templates),
-      _simple(templates, 'banknotes', 'country'),
-      _simple(templates, 'pokemon_tcg', 'series'),
-      _simple(templates, 'games', 'platform'),
-      _simple(templates, 'discs', 'platform'),
-      _simple(templates, 'movies', 'year'),
-      _simple(templates, 'figurines', 'series'),
+      _lego(templates), _coins(templates),
+      _sample(templates,'banknotes','Бонистика','country'),
+      _sample(templates,'pokemon_tcg','Коллекционные карточки','series'),
+      _sample(templates,'games','Видеоигры','platform'),
+      _sample(templates,'movies','Фильмы и видео','year'),
+      _sample(templates,'figurines','Фигурки и игрушки','series'),
+      _sample(templates,'discs','Игровые диски','platform'),
+      ..._emptyDirections(templates),
     ];
   }
 
-  static CatalogDefinition? byId(String id) => all.where((catalog) => catalog.id == id).firstOrNull;
-
-  static CatalogCategoryDefinition? categoryById(String id) => categories.where((category) => category.id == id).firstOrNull;
-
-  static List<CatalogDefinition> catalogsForCategory(String categoryId) {
-    final category = categoryById(categoryId);
-    if (category == null) return const [];
-    return category.catalogIds.map(byId).whereType<CatalogDefinition>().toList(growable: false);
+  static List<CatalogDefinition> _emptyDirections(List<Template> templates) {
+    const ids = ['philately','designer_toys','models','consoles','comics','books','music','board_games','sports','autographs','pins','postcards','stickers','playing_cards','beverages','lighters_tobacco','watches_jewelry','clothing','instruments','militaria','antiques','art','advertising','holiday'];
+    return ids.map((id) {
+      final template = templates.firstWhere((item) => item.id == id);
+      final primary = template.fields.isEmpty ? '' : template.fields.first.id;
+      return CatalogDefinition(id:id,name:template.name,description:template.description,templateId:id,template:template,primaryField:primary,totalItems:0,version:2,changes:const ['Добавлено направление в централизованный каталог.']);
+    }).toList(growable:false);
   }
+
+  static CatalogDefinition? byId(String id) => all.where((item) => item.id == id).firstOrNull;
+  static CatalogCategoryDefinition? categoryById(String id) => categories.where((item) => item.id == id).firstOrNull;
+  static List<CatalogDefinition> catalogsForCategory(String categoryId) => categoryById(categoryId)?.catalogIds.map(byId).whereType<CatalogDefinition>().toList(growable:false) ?? const [];
 
   static CatalogDefinition _lego(List<Template> templates) {
     final template = templates.firstWhere((item) => item.id == 'constructors');
-    return CatalogDefinition(
-      id: 'lego', name: 'LEGO', description: 'Каталог конструкторов LEGO по сериям и моделям.',
-      templateId: template.id, template: template, primaryField: 'series', totalItems: 8,
-      entries: const [
-        CatalogEntryDefinition(id: 'lego-1', title: 'LEGO City Пожарная станция', primaryValue: 'City', subtitle: '60414 • 2025', attributes: {'Серия': 'City', 'Модель': '60414', 'Год': '2025', 'Деталей': '843'}),
-        CatalogEntryDefinition(id: 'lego-2', title: 'LEGO Technic Ferrari SF-24', primaryValue: 'Technic', subtitle: '42207 • 2025', attributes: {'Серия': 'Technic', 'Модель': '42207', 'Год': '2025', 'Деталей': '1361'}),
-        CatalogEntryDefinition(id: 'lego-3', title: 'LEGO Icons Букет цветов', primaryValue: 'Icons', subtitle: '10280 • 2021', attributes: {'Серия': 'Icons', 'Модель': '10280', 'Год': '2021', 'Деталей': '756'}),
-        CatalogEntryDefinition(id: 'lego-4', title: 'LEGO Star Wars Millennium Falcon', primaryValue: 'Star Wars', subtitle: '75375 • 2024', attributes: {'Серия': 'Star Wars', 'Модель': '75375', 'Год': '2024', 'Деталей': '921'}),
-        CatalogEntryDefinition(id: 'lego-5', title: 'LEGO Friends Дом на озере', primaryValue: 'Friends', subtitle: '42625 • 2024', attributes: {'Серия': 'Friends', 'Модель': '42625', 'Год': '2024', 'Деталей': '326'}),
-        CatalogEntryDefinition(id: 'lego-6', title: 'LEGO Harry Potter Хогвартс', primaryValue: 'Harry Potter', subtitle: '76435 • 2024', attributes: {'Серия': 'Harry Potter', 'Модель': '76435', 'Год': '2024', 'Деталей': '1732'}),
-        CatalogEntryDefinition(id: 'lego-7', title: 'LEGO NINJAGO Храм', primaryValue: 'NINJAGO', subtitle: '71814 • 2024', attributes: {'Серия': 'NINJAGO', 'Модель': '71814', 'Год': '2024', 'Деталей': '1192'}),
-        CatalogEntryDefinition(id: 'lego-8', title: 'LEGO DUPLO Семейный дом', primaryValue: 'DUPLO', subtitle: '10983 • 2023', attributes: {'Серия': 'DUPLO', 'Модель': '10983', 'Год': '2023', 'Деталей': '40'}),
-      ],
-    );
+    return CatalogDefinition(id:'lego',name:'LEGO',description:'Каталог конструкторов LEGO по сериям и моделям.',templateId:template.id,template:template,primaryField:'series',totalItems:8,version:2,changes:const ['Обновлена структура каталога и сохранена совместимость с локальными коллекциями.'],entries:const [
+      CatalogEntryDefinition(id:'lego-1',title:'LEGO City Пожарная станция',primaryValue:'City',subtitle:'60414 • 2025',attributes:{'Серия':'City','Модель':'60414','Год':'2025','Деталей':'843'}),
+      CatalogEntryDefinition(id:'lego-2',title:'LEGO Technic Ferrari SF-24',primaryValue:'Technic',subtitle:'42207 • 2025',attributes:{'Серия':'Technic','Модель':'42207','Год':'2025','Деталей':'1361'}),
+      CatalogEntryDefinition(id:'lego-3',title:'LEGO Icons Букет цветов',primaryValue:'Icons',subtitle:'10280 • 2021',attributes:{'Серия':'Icons','Модель':'10280','Год':'2021','Деталей':'756'}),
+      CatalogEntryDefinition(id:'lego-4',title:'LEGO Star Wars Millennium Falcon',primaryValue:'Star Wars',subtitle:'75375 • 2024',attributes:{'Серия':'Star Wars','Модель':'75375','Год':'2024','Деталей':'921'}),
+      CatalogEntryDefinition(id:'lego-5',title:'LEGO Friends Дом на озере',primaryValue:'Friends',subtitle:'42625 • 2024',attributes:{'Серия':'Friends','Модель':'42625','Год':'2024','Деталей':'326'}),
+      CatalogEntryDefinition(id:'lego-6',title:'LEGO Harry Potter Хогвартс',primaryValue:'Harry Potter',subtitle:'76435 • 2024',attributes:{'Серия':'Harry Potter','Модель':'76435','Год':'2024','Деталей':'1732'}),
+      CatalogEntryDefinition(id:'lego-7',title:'LEGO NINJAGO Храм',primaryValue:'NINJAGO',subtitle:'71814 • 2024',attributes:{'Серия':'NINJAGO','Модель':'71814','Год':'2024','Деталей':'1192'}),
+      CatalogEntryDefinition(id:'lego-8',title:'LEGO DUPLO Семейный дом',primaryValue:'DUPLO',subtitle:'10983 • 2023',attributes:{'Серия':'DUPLO','Модель':'10983','Год':'2023','Деталей':'40'}),
+    ]);
   }
 
   static CatalogDefinition _coins(List<Template> templates) {
     final template = templates.firstWhere((item) => item.id == 'coins');
-    return CatalogDefinition(
-      id: 'coins', name: 'Монеты', description: 'Каталог монет по странам, типам чеканки и годам.',
-      templateId: template.id, template: template, primaryField: 'country', totalItems: 8,
-      entries: const [
-        CatalogEntryDefinition(id: 'coin-1', title: '2 евро Германия', primaryValue: 'Германия', subtitle: '2024 • регулярный чекан', attributes: {'Страна': 'Германия', 'Категория чеканки': 'Регулярный чекан', 'Год': '2024', 'Серия': 'Регулярные выпуски', 'Номинал': '2 EUR', 'Редкость': 'Обычная'}, sectionPath: ['countries', 'germany', 'regular']),
-        CatalogEntryDefinition(id: 'coin-2', title: '1 евро Италия', primaryValue: 'Италия', subtitle: '2023 • регулярный чекан', attributes: {'Страна': 'Италия', 'Категория чеканки': 'Регулярный чекан', 'Год': '2023', 'Серия': 'Регулярные выпуски', 'Номинал': '1 EUR', 'Редкость': 'Обычная'}, sectionPath: ['countries', 'italy', 'regular']),
-        CatalogEntryDefinition(id: 'coin-3', title: '2 евро Франция', primaryValue: 'Франция', subtitle: '2022 • юбилейная', attributes: {'Страна': 'Франция', 'Категория чеканки': 'Юбилейная', 'Год': '2022', 'Серия': 'Юбилейные выпуски', 'Номинал': '2 EUR', 'Редкость': 'Обычная'}, sectionPath: ['countries', 'france', 'commemorative']),
-        CatalogEntryDefinition(id: 'coin-4', title: '10 рублей Россия', primaryValue: 'Россия', subtitle: '2020 • памятная', attributes: {'Страна': 'Россия', 'Категория чеканки': 'Памятная', 'Год': '2020', 'Серия': 'Города воинской славы', 'Номинал': '10 RUB', 'Редкость': 'Обычная'}, sectionPath: ['countries', 'russia', 'commemorative']),
-        CatalogEntryDefinition(id: 'coin-5', title: '1 рубль Россия', primaryValue: 'Россия', subtitle: '2021 • регулярный чекан', attributes: {'Страна': 'Россия', 'Категория чеканки': 'Регулярный чекан', 'Год': '2021', 'Серия': 'Регулярные выпуски', 'Номинал': '1 RUB', 'Редкость': 'Обычная'}, sectionPath: ['countries', 'russia', 'regular']),
-        CatalogEntryDefinition(id: 'coin-6', title: '2 рубля Россия', primaryValue: 'Россия', subtitle: '2022 • регулярный чекан', attributes: {'Страна': 'Россия', 'Категория чеканки': 'Регулярный чекан', 'Год': '2022', 'Серия': 'Регулярные выпуски', 'Номинал': '2 RUB', 'Редкость': 'Обычная'}, sectionPath: ['countries', 'russia', 'regular']),
-        CatalogEntryDefinition(id: 'coin-7', title: '5 рублей Россия', primaryValue: 'Россия', subtitle: '2023 • регулярный чекан', attributes: {'Страна': 'Россия', 'Категория чеканки': 'Регулярный чекан', 'Год': '2023', 'Серия': 'Регулярные выпуски', 'Номинал': '5 RUB', 'Редкость': 'Редкая'}, sectionPath: ['countries', 'russia', 'regular']),
-        CatalogEntryDefinition(id: 'coin-8', title: '3 рубля Россия', primaryValue: 'Россия', subtitle: '2024 • серебро', attributes: {'Страна': 'Россия', 'Категория чеканки': 'Драгоценные металлы', 'Год': '2024', 'Серия': 'Памятные серебряные', 'Номинал': '3 RUB', 'Редкость': 'Редкая'}, sectionPath: ['countries', 'russia', 'precious']),
-      ],
-      sections: const [
-        CatalogSectionDefinition(id: 'countries', name: 'Страны', children: [
-          CatalogSectionDefinition(id: 'russia', name: 'Россия', children: [
-            CatalogSectionDefinition(id: 'regular', name: 'Регулярный чекан'),
-            CatalogSectionDefinition(id: 'commemorative', name: 'Памятные и юбилейные'),
-            CatalogSectionDefinition(id: 'precious', name: 'Драгоценные металлы'),
-          ]),
-          CatalogSectionDefinition(id: 'germany', name: 'Германия', children: [CatalogSectionDefinition(id: 'regular', name: 'Регулярный чекан')]),
-          CatalogSectionDefinition(id: 'italy', name: 'Италия', children: [CatalogSectionDefinition(id: 'regular', name: 'Регулярный чекан')]),
-          CatalogSectionDefinition(id: 'france', name: 'Франция', children: [CatalogSectionDefinition(id: 'commemorative', name: 'Памятные и юбилейные')]),
-        ]),
-      ],
-    );
+    return CatalogDefinition(id:'coins',name:'Монеты',description:'Каталог монет по странам, типам чеканки и годам.',templateId:template.id,template:template,primaryField:'country',totalItems:8,version:2,changes:const ['Добавлены стабильные разделы стран и типов чеканки.'],entries:const [
+      CatalogEntryDefinition(id:'coin-1',title:'2 евро Германия',primaryValue:'Германия',subtitle:'2024 • регулярный чекан',attributes:{'Страна':'Германия','Категория чеканки':'Регулярный чекан','Год':'2024','Серия':'Регулярные выпуски','Номинал':'2 EUR','Редкость':'Обычная'},sectionPath:['countries','germany','regular']),
+      CatalogEntryDefinition(id:'coin-2',title:'1 евро Италия',primaryValue:'Италия',subtitle:'2023 • регулярный чекан',attributes:{'Страна':'Италия','Категория чеканки':'Регулярный чекан','Год':'2023','Серия':'Регулярные выпуски','Номинал':'1 EUR','Редкость':'Обычная'},sectionPath:['countries','italy','regular']),
+      CatalogEntryDefinition(id:'coin-3',title:'2 евро Франция',primaryValue:'Франция',subtitle:'2022 • юбилейная',attributes:{'Страна':'Франция','Категория чеканки':'Юбилейная','Год':'2022','Серия':'Юбилейные выпуски','Номинал':'2 EUR','Редкость':'Обычная'},sectionPath:['countries','france','commemorative']),
+      CatalogEntryDefinition(id:'coin-4',title:'10 рублей Россия',primaryValue:'Россия',subtitle:'2020 • памятная',attributes:{'Страна':'Россия','Категория чеканки':'Памятная','Год':'2020','Серия':'Города воинской славы','Номинал':'10 RUB','Редкость':'Обычная'},sectionPath:['countries','russia','commemorative']),
+      CatalogEntryDefinition(id:'coin-5',title:'1 рубль Россия',primaryValue:'Россия',subtitle:'2021 • регулярный чекан',attributes:{'Страна':'Россия','Категория чеканки':'Регулярный чекан','Год':'2021','Серия':'Регулярные выпуски','Номинал':'1 RUB','Редкость':'Обычная'},sectionPath:['countries','russia','regular']),
+      CatalogEntryDefinition(id:'coin-6',title:'2 рубля Россия',primaryValue:'Россия',subtitle:'2022 • регулярный чекан',attributes:{'Страна':'Россия','Категория чеканки':'Регулярный чекан','Год':'2022','Серия':'Регулярные выпуски','Номинал':'2 RUB','Редкость':'Обычная'},sectionPath:['countries','russia','regular']),
+      CatalogEntryDefinition(id:'coin-7',title:'5 рублей Россия',primaryValue:'Россия',subtitle:'2023 • регулярный чекан',attributes:{'Страна':'Россия','Категория чеканки':'Регулярный чекан','Год':'2023','Серия':'Регулярные выпуски','Номинал':'5 RUB','Редкость':'Редкая'},sectionPath:['countries','russia','regular']),
+      CatalogEntryDefinition(id:'coin-8',title:'3 рубля Россия',primaryValue:'Россия',subtitle:'2024 • серебро',attributes:{'Страна':'Россия','Категория чеканки':'Драгоценные металлы','Год':'2024','Серия':'Памятные серебряные','Номинал':'3 RUB','Редкость':'Редкая'},sectionPath:['countries','russia','precious']),
+    ],sections:const [CatalogSectionDefinition(id:'countries',name:'Страны',children:[CatalogSectionDefinition(id:'russia',name:'Россия',children:[CatalogSectionDefinition(id:'regular',name:'Регулярный чекан'),CatalogSectionDefinition(id:'commemorative',name:'Памятные и юбилейные'),CatalogSectionDefinition(id:'precious',name:'Драгоценные металлы')]),CatalogSectionDefinition(id:'germany',name:'Германия',children:[CatalogSectionDefinition(id:'regular',name:'Регулярный чекан')]),CatalogSectionDefinition(id:'italy',name:'Италия',children:[CatalogSectionDefinition(id:'regular',name:'Регулярный чекан')]),CatalogSectionDefinition(id:'france',name:'Франция',children:[CatalogSectionDefinition(id:'commemorative',name:'Памятные и юбилейные')])])]);
   }
 
-  static CatalogDefinition _simple(List<Template> templates, String templateId, String primaryField) {
-    final template = templates.firstWhere((item) => item.id == templateId);
-    final entries = _sampleEntries(templateId);
-    return CatalogDefinition(id: template.id, name: template.name, description: template.description, templateId: template.id, template: template, primaryField: primaryField, totalItems: entries.length, entries: entries);
-  }
-
-  static List<CatalogEntryDefinition> _sampleEntries(String id) {
-    switch (id) {
-      case 'banknotes':
-        return const [
-          CatalogEntryDefinition(id: 'bank-1', title: '10 евро', primaryValue: 'Еврозона', subtitle: '2014 • серия Europa', attributes: {'Страна': 'Еврозона', 'Валюта': 'EUR', 'Год': '2014'}),
-          CatalogEntryDefinition(id: 'bank-2', title: '100 рублей', primaryValue: 'Россия', subtitle: '2018 • серия 2017', attributes: {'Страна': 'Россия', 'Валюта': 'RUB', 'Год': '2018'}),
-          CatalogEntryDefinition(id: 'bank-3', title: '20 долларов', primaryValue: 'Канада', subtitle: '2015 • polymer', attributes: {'Страна': 'Канада', 'Валюта': 'CAD', 'Год': '2015'}),
-        ];
-      case 'pokemon_tcg':
-        return const [
-          CatalogEntryDefinition(id: 'card-1', title: 'Pikachu', primaryValue: 'Base Set', subtitle: '#58 • Rare', attributes: {'Серия': 'Base Set', 'Номер': '58', 'Редкость': 'Rare'}),
-          CatalogEntryDefinition(id: 'card-2', title: 'Charizard', primaryValue: 'Base Set', subtitle: '#4 • Holo Rare', attributes: {'Серия': 'Base Set', 'Номер': '4', 'Редкость': 'Holo Rare'}),
-          CatalogEntryDefinition(id: 'card-3', title: 'Mew ex', primaryValue: '151', subtitle: '#193 • Double Rare', attributes: {'Серия': '151', 'Номер': '193', 'Редкость': 'Double Rare'}),
-        ];
-      case 'games':
-        return const [
-          CatalogEntryDefinition(id: 'game-1', title: 'The Legend of Zelda: Breath of the Wild', primaryValue: 'Nintendo Switch', subtitle: '2017 • Nintendo', attributes: {'Платформа': 'Nintendo Switch', 'Год': '2017'}),
-          CatalogEntryDefinition(id: 'game-2', title: 'Gran Turismo 7', primaryValue: 'PlayStation 5', subtitle: '2022 • Sony', attributes: {'Платформа': 'PlayStation 5', 'Год': '2022'}),
-          CatalogEntryDefinition(id: 'game-3', title: 'Forza Horizon 5', primaryValue: 'Xbox Series', subtitle: '2021 • Xbox', attributes: {'Платформа': 'Xbox Series', 'Год': '2021'}),
-        ];
-      case 'discs':
-        return const [
-          CatalogEntryDefinition(id: 'disc-1', title: 'Gran Turismo 7', primaryValue: 'PlayStation 5', subtitle: 'Blu-ray • 2022', attributes: {'Платформа': 'PlayStation 5', 'Год': '2022'}),
-          CatalogEntryDefinition(id: 'disc-2', title: 'The Last of Us Part II', primaryValue: 'PlayStation 4', subtitle: 'Blu-ray • 2020', attributes: {'Платформа': 'PlayStation 4', 'Год': '2020'}),
-          CatalogEntryDefinition(id: 'disc-3', title: 'Random Access Memories', primaryValue: 'Music CD', subtitle: '2013 • Daft Punk', attributes: {'Тип': 'Music CD', 'Год': '2013'}),
-        ];
-      case 'movies':
-        return const [
-          CatalogEntryDefinition(id: 'movie-1', title: 'Interstellar', primaryValue: '2014', subtitle: 'USA • Sci-Fi', attributes: {'Год': '2014', 'Страна': 'USA', 'Жанр': 'Sci-Fi'}),
-          CatalogEntryDefinition(id: 'movie-2', title: 'Spirited Away', primaryValue: '2001', subtitle: 'Japan • Animation', attributes: {'Год': '2001', 'Страна': 'Japan', 'Жанр': 'Animation'}),
-          CatalogEntryDefinition(id: 'movie-3', title: 'The Matrix', primaryValue: '1999', subtitle: 'USA • Sci-Fi', attributes: {'Год': '1999', 'Страна': 'USA', 'Жанр': 'Sci-Fi'}),
-        ];
-      case 'figurines':
-        return const [
-          CatalogEntryDefinition(id: 'fig-1', title: 'Spider-Man', primaryValue: 'Marvel', subtitle: '1:12 • PVC', attributes: {'Серия': 'Marvel', 'Персонаж': 'Spider-Man'}),
-          CatalogEntryDefinition(id: 'fig-2', title: 'Batman', primaryValue: 'DC', subtitle: '1:12 • PVC', attributes: {'Серия': 'DC', 'Персонаж': 'Batman'}),
-          CatalogEntryDefinition(id: 'fig-3', title: 'Geralt of Rivia', primaryValue: 'The Witcher', subtitle: '1:10 • PVC', attributes: {'Серия': 'The Witcher', 'Персонаж': 'Geralt'}),
-        ];
-      default:
-        return const [];
-    }
+  static CatalogDefinition _sample(List<Template> templates,String id,String name,String primary) {
+    final template = templates.firstWhere((item) => item.id == id);
+    return CatalogDefinition(id:id,name:name,description:template.description,templateId:id,template:template,primaryField:primary,totalItems:0,version:2,changes:const ['Структура направления обновлена; данные каталога остаются централизованными.']);
   }
 }
 
