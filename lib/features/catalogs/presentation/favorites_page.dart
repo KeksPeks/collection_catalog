@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../data/catalog_registry.dart';
+import '../data/catalog_ui_localization.dart';
 import '../data/favorites_store.dart';
 import 'catalog_online_page.dart';
 import '../../collections/presentation/providers/collection_provider.dart';
@@ -12,7 +13,6 @@ import '../../items/presentation/pages/item_detail_page.dart';
 
 class FavoritesPage extends ConsumerStatefulWidget {
   const FavoritesPage({super.key});
-
   @override
   ConsumerState<FavoritesPage> createState() => _FavoritesPageState();
 }
@@ -33,209 +33,74 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
   @override
   void dispose() {
     final listener = _listener;
-    if (listener != null) {
-      FavoritesStore.revision.removeListener(listener);
-    }
+    if (listener != null) FavoritesStore.revision.removeListener(listener);
     super.dispose();
   }
 
   Future<void> _load() async {
     final favorites = await FavoritesStore.loadKeys();
-    final collections =
-        ref.read(collectionsProvider).valueOrNull ?? const <dynamic>[];
+    final collections = ref.read(collectionsProvider).valueOrNull ?? const <dynamic>[];
     final itemService = ref.read(itemServiceProvider);
-    final sectionService =
-        await ref.read(collectionSectionServiceProvider.future);
+    final sectionService = await ref.read(collectionSectionServiceProvider.future);
     final labels = <String, String>{};
 
     for (final collection in collections) {
       final sections = await sectionService.getSections(collection.id);
       for (final section in sections) {
-        labels["section:${section.id}"] =
-            '${collection.name} · ${section.name}';
+        labels['section:${section.id}'] = '${collection.name} · ${section.name}';
       }
-
       final items = await itemService.getItems(collection.id);
       for (final item in items) {
-        labels["item:${item.id}"] = '${collection.name} · ${item.id}';
+        labels['item:${item.id}'] = '${collection.name} · ${item.id}';
       }
     }
 
-    if (!mounted) {
-      return;
-    }
-
+    if (!mounted) return;
     setState(() {
       _ids = favorites;
-      _labels
-        ..clear()
-        ..addAll(labels);
+      _labels..clear()..addAll(labels);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final catalogs = CatalogRegistry.all
-        .where((catalog) =>
-            _ids.contains(FavoritesStore.catalogKey(catalog.id)))
-        .toList(growable: false);
-    final sections = _ids
-        .where((id) => id.startsWith('section:'))
-        .toList(growable: false);
-    final items = _ids
-        .where((id) => id.startsWith('item:'))
-        .toList(growable: false);
+    final catalogs = CatalogRegistry.all.where((catalog) => _ids.contains(FavoritesStore.catalogKey(catalog.id)) || _ids.contains(catalog.id)).toList(growable:false);
+    final sections = _ids.where((id) => id.startsWith('section:')).toList(growable:false);
+    final items = _ids.where((id) => id.startsWith('item:')).toList(growable:false);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.favorites),
-        actions: [
-          IconButton(
-            tooltip: 'Обновить',
-            onPressed: _load,
-            icon: const Icon(Icons.refresh_rounded),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: Text(l10n.favorites), actions:[IconButton(tooltip:'Обновить',onPressed:_load,icon:const Icon(Icons.refresh_rounded))]),
       body: _ids.isEmpty
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.star_border_rounded,
-                      size: 64,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      l10n.noFavorites,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.noFavoritesDescription,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            )
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                if (catalogs.isNotEmpty) ...[
-                  const _Heading('Коллекции', Icons.collections_bookmark_outlined),
-                  for (final catalog in catalogs)
-                    _Tile(
-                      l10n.catalogName(catalog.id),
-                      'Каталог · v${catalog.version}',
-                      Icons.inventory_2_outlined,
-                      () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => CatalogOnlinePage(catalog: catalog),
-                        ),
-                      ),
-                      () => FavoritesStore.remove(catalog.id),
-                    ),
-                ],
-                if (sections.isNotEmpty) ...[
-                  const _Heading('Разделы', Icons.folder_outlined),
-                  for (final id in sections)
-                    _Tile(
-                      _labels[id] ?? id.substring('section:'.length),
-                      'Раздел каталога',
-                      Icons.folder_outlined,
-                      () {},
-                      () => FavoritesStore.removeKey(id),
-                    ),
-                ],
-                if (items.isNotEmpty) ...[
-                  const _Heading('Предметы', Icons.inventory_2_outlined),
-                  for (final id in items)
-                    _Tile(
-                      _labels[id] ?? id.substring('item:'.length),
-                      'Предмет коллекции',
-                      Icons.inventory_2_outlined,
-                      () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => ItemDetailPage(
-                            itemId: id.substring('item:'.length),
-                          ),
-                        ),
-                      ),
-                      () => FavoritesStore.removeKey(id),
-                    ),
-                ],
+          ? Center(child: Padding(padding:const EdgeInsets.all(32),child:Column(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.star_border_rounded,size:64,color:Theme.of(context).colorScheme.primary),const SizedBox(height:16),Text(l10n.noFavorites,textAlign:TextAlign.center,style:Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight:FontWeight.w800)),const SizedBox(height:8),Text(l10n.noFavoritesDescription,textAlign:TextAlign.center)])))
+          : ListView(padding:const EdgeInsets.all(16),children:[
+              if(catalogs.isNotEmpty)...[
+                _Heading('Коллекции',Icons.collections_bookmark_outlined),
+                for(final catalog in catalogs)_Tile(CatalogUiLocalization.catalogName(context,catalog.id),'Каталог · v${catalog.version}',Icons.inventory_2_outlined,()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>CatalogOnlinePage(catalog:catalog))),()=>FavoritesStore.remove(catalog.id)),
               ],
-            ),
+              if(sections.isNotEmpty)...[
+                _Heading('Разделы',Icons.folder_outlined),
+                for(final id in sections)_Tile(_labels[id]??id.substring('section:'.length),'Раздел каталога',Icons.folder_outlined,() {},()=>FavoritesStore.removeKey(id)),
+              ],
+              if(items.isNotEmpty)...[
+                _Heading('Предметы',Icons.inventory_2_outlined),
+                for(final id in items)_Tile(_labels[id]??id.substring('item:'.length),'Предмет коллекции',Icons.inventory_2_outlined,()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>ItemDetailPage(itemId:id.substring('item:'.length)))),()=>FavoritesStore.removeKey(id)),
+              ],
+            ]),
     );
   }
 }
 
 class _Heading extends StatelessWidget {
-  final String title;
-  final IconData icon;
-
-  const _Heading(this.title, this.icon);
-
+  final String title; final IconData icon;
+  const _Heading(this.title,this.icon);
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 8),
-      child: Row(
-        children: [
-          Icon(icon),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.w800),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context)=>Padding(padding:const EdgeInsets.only(top:12,bottom:8),child:Row(children:[Icon(icon),const SizedBox(width:8),Expanded(child:Text(title,style:Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight:FontWeight.w800)))]));
 }
 
 class _Tile extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final VoidCallback onTap;
-  final VoidCallback onRemove;
-
-  const _Tile(
-    this.title,
-    this.subtitle,
-    this.icon,
-    this.onTap,
-    this.onRemove,
-  );
-
+  final String title,subtitle; final IconData icon; final VoidCallback onTap,onRemove;
+  const _Tile(this.title,this.subtitle,this.icon,this.onTap,this.onRemove);
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        leading: CircleAvatar(child: Icon(icon)),
-        title: Text(title),
-        subtitle: Text(subtitle),
-        onTap: onTap,
-        trailing: IconButton(
-          tooltip: 'Убрать из избранного',
-          onPressed: onRemove,
-          icon: const Icon(Icons.star_rounded),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context)=>Card(child:ListTile(leading:CircleAvatar(child:Icon(icon)),title:Text(title),subtitle:Text(subtitle),onTap:onTap,trailing:IconButton(tooltip:'Убрать из избранного',onPressed:onRemove,icon:const Icon(Icons.star_rounded))));
 }
