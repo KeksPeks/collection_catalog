@@ -5,7 +5,6 @@ import '../data/catalog_version_store.dart';
 import '../data/favorites_store.dart';
 import '../domain/entities/catalog_definition.dart';
 import '../domain/entities/catalog_entry_definition.dart';
-import '../domain/entities/catalog_section_definition.dart';
 
 class CatalogOnlinePage extends StatefulWidget {
   final CatalogDefinition catalog;
