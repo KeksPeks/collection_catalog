@@ -30,6 +30,7 @@ class UiLayoutSettings {
     navigation = preferences.getString(navigationKey) ?? 'auto';
     cardHeight = (preferences.getDouble(cardHeightKey) ?? 150).clamp(110, 220).toDouble();
     _loaded = true;
+    revision.value++;
   }
 
   static Future<void> ensureLoaded() async {
