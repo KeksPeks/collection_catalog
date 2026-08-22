@@ -2,75 +2,50 @@ import '../domain/entities/template.dart';
 import '../../fields/domain/entities/field_definition.dart';
 import '../../fields/domain/types/field_type.dart';
 
-/// Универсальные шаблоны основных направлений коллекционирования.
+/// Централизованный реестр структуры всех основных направлений.
+/// Пользовательские данные в шаблонах не хранятся.
 class CatalogTemplateRegistry {
   static List<Template> get all => [
-        _template('constructors', 'Конструкторы', 'Универсальный каталог конструкторов.', [
-          _field('brand', 'Производитель', FieldType.text), _field('series', 'Серия', FieldType.text),
-          _field('model', 'Модель', FieldType.text), _field('year', 'Год', FieldType.integer),
-          _field('pieces', 'Количество деталей', FieldType.integer), _field('theme', 'Тематика', FieldType.text),
-          _field('condition', 'Состояние', FieldType.text), _field('quantity', 'Количество', FieldType.integer),
-          _field('owned', 'Есть в коллекции', FieldType.boolean),
-        ]),
-        _template('coins', 'Монеты', 'Нумизматический каталог', [
-          _field('country', 'Страна', FieldType.text), _field('category', 'Категория чеканки', FieldType.text),
-          _field('period', 'Период', FieldType.text), _field('denomination', 'Номинал', FieldType.text),
-          _field('year', 'Год', FieldType.integer), _field('series', 'Серия', FieldType.text),
-          _field('mint', 'Монетный двор', FieldType.text), _field('metal', 'Металл', FieldType.text),
-          _field('rarity', 'Редкость', FieldType.text), _field('variety', 'Разновидность', FieldType.text),
-          _field('condition', 'Состояние', FieldType.text), _field('quantity', 'Количество', FieldType.integer),
-          _field('owned', 'Есть в коллекции', FieldType.boolean),
-        ]),
-        _template('banknotes', 'Банкноты', 'Бонистический каталог', [
-          _field('country', 'Страна', FieldType.text), _field('currency', 'Валюта', FieldType.text),
-          _field('denomination', 'Номинал', FieldType.text), _field('year', 'Год', FieldType.integer),
-          _field('series', 'Серия', FieldType.text), _field('signature', 'Подпись', FieldType.text),
-          _field('condition', 'Состояние', FieldType.text), _field('quantity', 'Количество', FieldType.integer),
-          _field('owned', 'Есть в коллекции', FieldType.boolean),
-        ]),
-        _template('pokemon_tcg', 'Pokémon TCG', 'Коллекционные карточки', [
-          _field('series', 'Серия', FieldType.text), _field('set', 'Сет', FieldType.text),
-          _field('number', 'Номер', FieldType.text), _field('name', 'Название', FieldType.text),
-          _field('rarity', 'Редкость', FieldType.text), _field('language', 'Язык', FieldType.text),
-          _field('condition', 'Состояние', FieldType.text), _field('quantity', 'Количество', FieldType.integer),
-          _field('owned', 'Есть в коллекции', FieldType.boolean),
-        ]),
-        _template('games', 'Игры', 'Игры для различных платформ', [
-          _field('platform', 'Платформа', FieldType.text), _field('generation', 'Поколение', FieldType.text),
-          _field('title', 'Название', FieldType.text), _field('region', 'Регион', FieldType.text),
-          _field('publisher', 'Издатель', FieldType.text), _field('genre', 'Жанр', FieldType.text),
-          _field('releaseYear', 'Год выпуска', FieldType.integer), _field('condition', 'Состояние', FieldType.text),
-          _field('owned', 'Есть в коллекции', FieldType.boolean),
-        ]),
-        _template('discs', 'Диски', 'Игровые и музыкальные диски', [
-          _field('platform', 'Платформа', FieldType.text), _field('type', 'Тип диска', FieldType.text),
-          _field('title', 'Название', FieldType.text), _field('region', 'Регион', FieldType.text),
-          _field('publisher', 'Издатель', FieldType.text), _field('year', 'Год', FieldType.integer),
-          _field('condition', 'Состояние', FieldType.text), _field('owned', 'Есть в коллекции', FieldType.boolean),
-        ]),
-        _template('movies', 'Фильмы', 'Каталог фильмов', [
-          _field('title', 'Название', FieldType.text), _field('year', 'Год', FieldType.integer),
-          _field('country', 'Страна', FieldType.text), _field('director', 'Режиссёр', FieldType.text),
-          _field('genre', 'Жанр', FieldType.text), _field('language', 'Язык', FieldType.text),
-          _field('format', 'Формат', FieldType.text), _field('rating', 'Рейтинг', FieldType.decimal),
-          _field('owned', 'Есть в коллекции', FieldType.boolean),
-        ]),
-        _template('figurines', 'Фигурки', 'Каталог фигурок', [
-          _field('name', 'Название', FieldType.text), _field('series', 'Серия', FieldType.text),
-          _field('character', 'Персонаж', FieldType.text), _field('manufacturer', 'Производитель', FieldType.text),
-          _field('scale', 'Масштаб', FieldType.text), _field('material', 'Материал', FieldType.text),
-          _field('year', 'Год', FieldType.integer), _field('condition', 'Состояние', FieldType.text),
-          _field('owned', 'Есть в коллекции', FieldType.boolean),
-        ]),
+        _template('constructors', 'Конструкторы', [_f('brand','Производитель',FieldType.text),_f('series','Серия',FieldType.text),_f('model','Модель',FieldType.text),_f('year','Год',FieldType.integer),_f('pieces','Детали',FieldType.integer),_f('theme','Тематика',FieldType.text),_f('condition','Состояние',FieldType.text),_f('quantity','Количество',FieldType.integer),_f('owned','Есть',FieldType.boolean)]),
+        _template('coins', 'Монеты', [_f('country','Страна',FieldType.text),_f('minting','Категория чеканки',FieldType.text),_f('denomination','Номинал',FieldType.text),_f('year','Год',FieldType.integer),_f('series','Серия',FieldType.text),_f('rarity','Редкость',FieldType.text),_f('mint','Монетный двор',FieldType.text),_f('metal','Металл',FieldType.text),_f('condition','Состояние',FieldType.text),_f('quantity','Количество',FieldType.integer),_f('owned','Есть',FieldType.boolean)]),
+        _template('banknotes', 'Бонистика', [_f('country','Страна',FieldType.text),_f('currency','Валюта',FieldType.text),_f('denomination','Номинал',FieldType.text),_f('year','Год',FieldType.integer),_f('series','Серия',FieldType.text),_f('rarity','Редкость',FieldType.text),_f('condition','Состояние',FieldType.text),_f('quantity','Количество',FieldType.integer),_f('owned','Есть',FieldType.boolean)]),
+        _template('pokemon_tcg', 'Коллекционные карточки', [_f('series','Серия',FieldType.text),_f('set','Сет',FieldType.text),_f('number','Номер',FieldType.text),_f('name','Название',FieldType.text),_f('rarity','Редкость',FieldType.text),_f('language','Язык',FieldType.text),_f('condition','Состояние',FieldType.text),_f('quantity','Количество',FieldType.integer),_f('owned','Есть',FieldType.boolean)]),
+        _template('games', 'Видеоигры', [_f('platform','Платформа',FieldType.text),_f('generation','Поколение',FieldType.text),_f('title','Название',FieldType.text),_f('region','Регион',FieldType.text),_f('publisher','Издатель',FieldType.text),_f('genre','Жанр',FieldType.text),_f('year','Год',FieldType.integer),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('discs', 'Игровые диски', [_f('platform','Платформа',FieldType.text),_f('type','Тип',FieldType.text),_f('title','Название',FieldType.text),_f('region','Регион',FieldType.text),_f('publisher','Издатель',FieldType.text),_f('year','Год',FieldType.integer),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('movies', 'Фильмы и видео', [_f('title','Название',FieldType.text),_f('year','Год',FieldType.integer),_f('country','Страна',FieldType.text),_f('director','Режиссёр',FieldType.text),_f('genre','Жанр',FieldType.text),_f('format','Формат',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('figurines', 'Фигурки и игрушки', [_f('name','Название',FieldType.text),_f('series','Серия',FieldType.text),_f('character','Персонаж',FieldType.text),_f('manufacturer','Производитель',FieldType.text),_f('scale','Масштаб',FieldType.text),_f('material','Материал',FieldType.text),_f('year','Год',FieldType.integer),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('philately', 'Филателия', [_f('country','Страна',FieldType.text),_f('series','Серия',FieldType.text),_f('number','Номер',FieldType.text),_f('year','Год',FieldType.integer),_f('theme','Тема',FieldType.text),_f('rarity','Редкость',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('designer_toys', 'Art Toys / Designer Toys', [_f('brand','Бренд',FieldType.text),_f('series','Серия',FieldType.text),_f('artist','Художник',FieldType.text),_f('model','Модель',FieldType.text),_f('year','Год',FieldType.integer),_f('material','Материал',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('models', 'Модели', [_f('category','Категория',FieldType.text),_f('brand','Производитель',FieldType.text),_f('series','Серия',FieldType.text),_f('scale','Масштаб',FieldType.text),_f('model','Модель',FieldType.text),_f('year','Год',FieldType.integer),_f('material','Материал',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('consoles', 'Игровые консоли и оборудование', [_f('brand','Производитель',FieldType.text),_f('platform','Платформа',FieldType.text),_f('generation','Поколение',FieldType.text),_f('model','Модель',FieldType.text),_f('year','Год',FieldType.integer),_f('region','Регион',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('comics', 'Комиксы, манга и графические издания', [_f('title','Название',FieldType.text),_f('publisher','Издатель',FieldType.text),_f('series','Серия',FieldType.text),_f('issue','Выпуск',FieldType.text),_f('year','Год',FieldType.integer),_f('language','Язык',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('books', 'Книги', [_f('title','Название',FieldType.text),_f('author','Автор',FieldType.text),_f('publisher','Издатель',FieldType.text),_f('year','Год',FieldType.integer),_f('edition','Издание',FieldType.text),_f('language','Язык',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('music', 'Музыка и аудио', [_f('artist','Исполнитель',FieldType.text),_f('title','Название',FieldType.text),_f('release','Релиз',FieldType.text),_f('year','Год',FieldType.integer),_f('format','Формат',FieldType.text),_f('label','Лейбл',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('board_games', 'Настольные игры и миниатюры', [_f('title','Название',FieldType.text),_f('publisher','Издатель',FieldType.text),_f('series','Серия',FieldType.text),_f('year','Год',FieldType.integer),_f('players','Игроки',FieldType.text),_f('genre','Жанр',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('sports', 'Спортивные коллекции', [_f('sport','Вид спорта',FieldType.text),_f('athlete','Спортсмен',FieldType.text),_f('team','Команда',FieldType.text),_f('season','Сезон',FieldType.text),_f('year','Год',FieldType.integer),_f('rarity','Редкость',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('autographs', 'Автографы и Memorabilia', [_f('person','Персона',FieldType.text),_f('category','Категория',FieldType.text),_f('event','Событие',FieldType.text),_f('year','Год',FieldType.integer),_f('certificate','Сертификат',FieldType.boolean),_f('rarity','Редкость',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('pins', 'Значки, Pins и эмблемы', [_f('brand','Бренд',FieldType.text),_f('series','Серия',FieldType.text),_f('theme','Тема',FieldType.text),_f('year','Год',FieldType.integer),_f('material','Материал',FieldType.text),_f('rarity','Редкость',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('postcards', 'Открытки, фотографии и постеры', [_f('title','Название',FieldType.text),_f('country','Страна',FieldType.text),_f('theme','Тема',FieldType.text),_f('year','Год',FieldType.integer),_f('author','Автор',FieldType.text),_f('format','Формат',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('stickers', 'Стикеры и наклейки', [_f('brand','Бренд',FieldType.text),_f('series','Серия',FieldType.text),_f('theme','Тема',FieldType.text),_f('year','Год',FieldType.integer),_f('number','Номер',FieldType.text),_f('rarity','Редкость',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('playing_cards', 'Игральные карты', [_f('brand','Бренд',FieldType.text),_f('deck','Колода',FieldType.text),_f('series','Серия',FieldType.text),_f('year','Год',FieldType.integer),_f('country','Страна',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('beverages', 'Напитки и промо-коллекции', [_f('brand','Бренд',FieldType.text),_f('product','Продукт',FieldType.text),_f('series','Серия',FieldType.text),_f('year','Год',FieldType.integer),_f('promo','Промо',FieldType.text),_f('country','Страна',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('lighters_tobacco', 'Зажигалки и табачные предметы', [_f('brand','Бренд',FieldType.text),_f('series','Серия',FieldType.text),_f('type','Тип',FieldType.text),_f('year','Год',FieldType.integer),_f('country','Страна',FieldType.text),_f('material','Материал',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('watches_jewelry', 'Часы и ювелирные изделия', [_f('brand','Бренд',FieldType.text),_f('model','Модель',FieldType.text),_f('type','Тип',FieldType.text),_f('year','Год',FieldType.integer),_f('material','Материал',FieldType.text),_f('movement','Механизм',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('clothing', 'Одежда, обувь и аксессуары', [_f('brand','Бренд',FieldType.text),_f('category','Категория',FieldType.text),_f('model','Модель',FieldType.text),_f('size','Размер',FieldType.text),_f('year','Год',FieldType.integer),_f('material','Материал',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('instruments', 'Музыкальные инструменты', [_f('brand','Производитель',FieldType.text),_f('type','Тип',FieldType.text),_f('model','Модель',FieldType.text),_f('year','Год',FieldType.integer),_f('material','Материал',FieldType.text),_f('serial','Серийный номер',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('militaria', 'Военные, исторические и наградные предметы', [_f('country','Страна',FieldType.text),_f('period','Период',FieldType.text),_f('category','Категория',FieldType.text),_f('year','Год',FieldType.integer),_f('event','Событие',FieldType.text),_f('rarity','Редкость',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('antiques', 'Антиквариат', [_f('category','Категория',FieldType.text),_f('maker','Производитель',FieldType.text),_f('period','Период',FieldType.text),_f('year','Год',FieldType.integer),_f('origin','Происхождение',FieldType.text),_f('material','Материал',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('art', 'Искусство', [_f('artist','Художник',FieldType.text),_f('title','Название',FieldType.text),_f('medium','Техника',FieldType.text),_f('year','Год',FieldType.integer),_f('origin','Происхождение',FieldType.text),_f('provenance','История происхождения',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('advertising', 'Реклама и промо', [_f('brand','Бренд',FieldType.text),_f('campaign','Кампания',FieldType.text),_f('category','Категория',FieldType.text),_f('year','Год',FieldType.integer),_f('country','Страна',FieldType.text),_f('medium','Носитель',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
+        _template('holiday', 'Праздничные коллекции', [_f('holiday','Праздник',FieldType.text),_f('brand','Бренд',FieldType.text),_f('series','Серия',FieldType.text),_f('year','Год',FieldType.integer),_f('country','Страна',FieldType.text),_f('theme','Тема',FieldType.text),_f('condition','Состояние',FieldType.text),_f('owned','Есть',FieldType.boolean)]),
       ];
 
-  static Template? byId(String id) {
-    for (final template in all) {
-      if (template.id == id) return template;
-    }
-    return null;
-  }
+  static Template? byId(String id) => all.where((item) => item.id == id).firstOrNull;
 
-  static Template _template(String id, String name, String description, List<FieldDefinition> fields) => Template(id: id, name: name, description: description, fields: fields);
-  static FieldDefinition _field(String id, String label, FieldType type) => FieldDefinition(id: id, collectionId: '', label: label, type: type);
+  static Template _template(String id, String name, List<FieldDefinition> fields) => Template(id: id, name: name, description: 'Централизованный шаблон направления $name.', fields: fields);
+  static FieldDefinition _f(String id, String label, FieldType type) => FieldDefinition(id: id, collectionId: '', label: label, type: type);
+}
+
+extension _FirstOrNull<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }
