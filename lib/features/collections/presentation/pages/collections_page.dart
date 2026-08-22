@@ -51,36 +51,76 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
           final downloaded = items.where((item) => item.templateId != null).toList(growable: false);
           final filtered = downloaded.where((item) => item.name.toLowerCase().contains(_search.toLowerCase())).toList(growable: false);
 
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(collectionsProvider);
-              await ref.read(collectionsProvider.future);
-            },
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              children: [
-                TextField(
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search),
-                    hintText: 'Поиск загруженной коллекции',
-                    border: const OutlineInputBorder(),
-                    suffixIcon: _search.isEmpty
-                        ? null
-                        : IconButton(icon: const Icon(Icons.clear), onPressed: () => setState(() => _search = '')),
-                  ),
-                  onChanged: (value) => setState(() => _search = value),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = UiLayoutSettings.resolveColumns(constraints.maxWidth);
+              return RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(collectionsProvider);
+                  await ref.read(collectionsProvider.future);
+                },
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                      sliver: SliverToBoxAdapter(child: _buildSearchField()),
+                    ),
+                    if (filtered.isEmpty)
+                      SliverPadding(
+                        padding: const EdgeInsets.all(16),
+                        sliver: SliverToBoxAdapter(child: _EmptyCollectionsCard(hasCollections: downloaded.isNotEmpty)),
+                      )
+                    else if (columns == 1)
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _buildCollectionTile(filtered[index]),
+                            ),
+                            childCount: filtered.length,
+                          ),
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+                        sliver: SliverGrid(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) => _buildCollectionTile(filtered[index]),
+                            childCount: filtered.length,
+                          ),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: columns,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            mainAxisExtent: UiLayoutSettings.cardHeight,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                if (filtered.isEmpty)
-                  _EmptyCollectionsCard(hasCollections: downloaded.isNotEmpty)
-                else
-                  ...filtered.map(_buildCollectionTile),
-              ],
-            ),
+              );
+            },
           );
         },
       ),
+    );
+  }
+
+  Widget _buildSearchField() {
+    return TextField(
+      decoration: InputDecoration(
+        prefixIcon: const Icon(Icons.search),
+        hintText: 'Поиск загруженной коллекции',
+        border: const OutlineInputBorder(),
+        suffixIcon: _search.isEmpty
+            ? null
+            : IconButton(icon: const Icon(Icons.clear), onPressed: () => setState(() => _search = '')),
+      ),
+      onChanged: (value) => setState(() => _search = value),
     );
   }
 
@@ -88,7 +128,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     return SizedBox(
       height: UiLayoutSettings.cardHeight,
       child: Card(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: EdgeInsets.zero,
         child: ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           leading: const CircleAvatar(child: Icon(Icons.collections_bookmark)),
