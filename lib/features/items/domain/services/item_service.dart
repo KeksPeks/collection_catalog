@@ -3,126 +3,67 @@ import '../entities/item_attachment.dart';
 import '../entities/item_value.dart';
 import '../repositories/item_repository.dart';
 
-/// Сервис работы с предметами коллекции.
-///
-/// Содержит бизнес-логику работы с:
-/// - предметами;
-/// - значениями полей;
-/// - файлами предметов.
-///
-/// Не зависит от способа хранения данных.
+/// Сервис работы с физическими экземплярами коллекции.
 class ItemService {
   final ItemRepository repository;
 
-  ItemService(
-    this.repository,
-  );
+  ItemService(this.repository);
 
-  /// Получить предметы коллекции.
-  Future<List<Item>> getItems(
-    String collectionId,
-  ) {
-    return repository.getItems(
-      collectionId,
-    );
+  Future<List<Item>> getItems(String collectionId) {
+    return repository.getItems(collectionId);
   }
 
-  /// Получить предмет по идентификатору.
-  Future<Item?> getItem(
-    String id,
-  ) {
-    return repository.getItem(
-      id,
-    );
+  Future<Item?> getItem(String id) {
+    return repository.getItem(id);
   }
 
-  /// Сохранить предмет.
-  Future<void> saveItem(
-    Item item,
-  ) {
-    return repository.saveItem(
-      item,
-    );
+  /// Получить все физические экземпляры одной каталожной позиции.
+  Future<List<Item>> getItemsByCatalogItem(String catalogItemId) {
+    return repository.getItemsByCatalogItem(catalogItemId);
   }
 
-  /// Обновить предмет.
-  Future<void> updateItem(
-    Item item,
-  ) {
-    return repository.updateItem(
-      item,
-    );
+  /// Получить количество физических экземпляров одной каталожной позиции.
+  Future<int> getItemCountByCatalogItem(String catalogItemId) {
+    return repository.getItemCountByCatalogItem(catalogItemId);
   }
 
-  /// Удалить предмет.
-  Future<void> deleteItem(
-    String id,
-  ) {
-    return repository.deleteItem(
-      id,
-    );
+  Future<void> saveItem(Item item) {
+    return repository.saveItem(item);
   }
 
-  /// Получить значения полей предмета.
-  Future<List<ItemValue>> getValues(
-    String itemId,
-  ) {
-    return repository.getValues(
-      itemId,
-    );
+  Future<void> updateItem(Item item) {
+    return repository.updateItem(item);
   }
 
-  /// Сохранить значение поля.
-  Future<void> saveValue(
-    ItemValue value,
-  ) {
-    return repository.saveValue(
-      value,
-    );
+  Future<void> deleteItem(String id) {
+    return repository.deleteItem(id);
   }
 
-  /// Обновить значение поля.
-  Future<void> updateValue(
-    ItemValue value,
-  ) {
-    return repository.updateValue(
-      value,
-    );
+  Future<List<ItemValue>> getValues(String itemId) {
+    return repository.getValues(itemId);
   }
 
-  /// Удалить значение поля.
-  Future<void> deleteValue(
-    String id,
-  ) {
-    return repository.deleteValue(
-      id,
-    );
+  Future<void> saveValue(ItemValue value) {
+    return repository.saveValue(value);
   }
 
-  /// Получить файлы предмета.
-  Future<List<ItemAttachment>> getAttachments(
-    String itemId,
-  ) {
-    return repository.getAttachments(
-      itemId,
-    );
+  Future<void> updateValue(ItemValue value) {
+    return repository.updateValue(value);
   }
 
-  /// Сохранить файл предмета.
-  Future<void> saveAttachment(
-    ItemAttachment attachment,
-  ) {
-    return repository.saveAttachment(
-      attachment,
-    );
+  Future<void> deleteValue(String id) {
+    return repository.deleteValue(id);
   }
 
-  /// Удалить файл предмета.
-  Future<void> deleteAttachment(
-    String id,
-  ) {
-    return repository.deleteAttachment(
-      id,
-    );
+  Future<List<ItemAttachment>> getAttachments(String itemId) {
+    return repository.getAttachments(itemId);
+  }
+
+  Future<void> saveAttachment(ItemAttachment attachment) {
+    return repository.saveAttachment(attachment);
+  }
+
+  Future<void> deleteAttachment(String id) {
+    return repository.deleteAttachment(id);
   }
 }
