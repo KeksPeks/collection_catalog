@@ -5,32 +5,30 @@ import '../../domain/entities/item_value.dart';
 
 import 'item_service_provider.dart';
 
-/// Получение всех предметов коллекции.
+/// Получение всех физических экземпляров коллекции.
 final itemsProvider = FutureProvider.family<List<Item>, String>(
-  (ref, collectionId) {
-    return ref.watch(itemServiceProvider).getItems(collectionId);
-  },
+  (ref, collectionId) => ref.watch(itemServiceProvider).getItems(collectionId),
 );
 
-/// Получение одного предмета.
+/// Получение одного физического экземпляра.
 final itemProvider = FutureProvider.family<Item?, String>(
-  (ref, itemId) {
-    return ref.watch(itemServiceProvider).getItem(itemId);
-  },
+  (ref, itemId) => ref.watch(itemServiceProvider).getItem(itemId),
 );
 
-/// Получение значений полей предмета.
+/// Получение всех физических экземпляров одной каталожной позиции.
+final catalogItemInstancesProvider = FutureProvider.family<List<Item>, String>(
+  (ref, catalogItemId) =>
+      ref.watch(itemServiceProvider).getItemsByCatalogItem(catalogItemId),
+);
+
+/// Получение значений полей физического экземпляра.
 final itemValuesProvider = FutureProvider.family<List<ItemValue>, String>(
-  (ref, itemId) {
-    return ref.watch(itemServiceProvider).getValues(itemId);
-  },
+  (ref, itemId) => ref.watch(itemServiceProvider).getValues(itemId),
 );
 
 /// Все значения предметов коллекции в форме itemId -> fieldId -> value.
-/// Используется экраном списка для поиска, сортировки и группировки.
 final collectionItemValuesProvider = FutureProvider.family<
-    Map<String, Map<String, String>>,
-    String>(
+    Map<String, Map<String, String>>, String>(
   (ref, collectionId) async {
     final service = ref.watch(itemServiceProvider);
     final items = await service.getItems(collectionId);
