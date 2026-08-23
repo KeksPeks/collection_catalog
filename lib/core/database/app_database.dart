@@ -25,38 +25,63 @@ class AppDatabase extends _$AppDatabase {
   );
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (Migrator m) async {
           await m.createAll();
+          await customStatement('''
+            CREATE TABLE IF NOT EXISTS catalog_items (
+              id TEXT PRIMARY KEY NOT NULL,
+              collection_id TEXT NOT NULL,
+              name TEXT NOT NULL,
+              external_id TEXT,
+              source_url TEXT,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL
+            )
+          ''');
+          await customStatement('''
+            CREATE TABLE IF NOT EXISTS item_catalog_links (
+              item_id TEXT PRIMARY KEY NOT NULL,
+              catalog_item_id TEXT NOT NULL
+            )
+          ''');
         },
         onUpgrade: (Migrator m, int from, int to) async {
           if (from < 2) {
-            await m.createTable(
-              collectionTable,
-            );
+            await m.createTable(collectionTable);
           }
 
           if (from < 3) {
-            await m.createTable(
-              collectionSectionTable,
-            );
+            await m.createTable(collectionSectionTable);
           }
 
           if (from < 4) {
-            await m.createTable(
-              itemTable,
-            );
+            await m.createTable(itemTable);
+            await m.createTable(itemValueTable);
+            await m.createTable(itemAttachmentTable);
+          }
 
-            await m.createTable(
-              itemValueTable,
-            );
-
-            await m.createTable(
-              itemAttachmentTable,
-            );
+          if (from < 5) {
+            await customStatement('''
+              CREATE TABLE IF NOT EXISTS catalog_items (
+                id TEXT PRIMARY KEY NOT NULL,
+                collection_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                external_id TEXT,
+                source_url TEXT,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+              )
+            ''');
+            await customStatement('''
+              CREATE TABLE IF NOT EXISTS item_catalog_links (
+                item_id TEXT PRIMARY KEY NOT NULL,
+                catalog_item_id TEXT NOT NULL
+              )
+            ''');
           }
         },
       );
