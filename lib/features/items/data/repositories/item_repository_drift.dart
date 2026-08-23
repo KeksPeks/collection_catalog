@@ -45,7 +45,7 @@ class ItemRepositoryDrift implements ItemRepository {
       variables: [Variable.withString(catalogItemId)],
     ).get();
 
-    return rows.map((row) async {
+    return rows.map((row) {
       return Item(
         id: row.read<String>('id'),
         catalogItemId: catalogItemId,
@@ -59,7 +59,7 @@ class ItemRepositoryDrift implements ItemRepository {
           row.read<int>('updated_at'),
         ),
       );
-    }).toList().cast<Future<Item>>().then((values) => Future.wait(values));
+    }).toList();
   }
 
   @override
