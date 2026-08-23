@@ -2,70 +2,37 @@ import '../entities/item.dart';
 import '../entities/item_attachment.dart';
 import '../entities/item_value.dart';
 
-/// Репозиторий предметов коллекции.
-///
-/// Отвечает за хранение и получение:
-/// - самих предметов Item;
-/// - значений полей ItemValue;
-/// - прикреплённых файлов ItemAttachment.
+/// Репозиторий физических экземпляров предметов коллекции.
 abstract class ItemRepository {
-  /// Получить предметы коллекции.
-  Future<List<Item>> getItems(
-    String collectionId,
-  );
+  /// Получить все физические экземпляры коллекции.
+  Future<List<Item>> getItems(String collectionId);
 
-  /// Получить предмет по идентификатору.
-  Future<Item?> getItem(
-    String id,
-  );
+  /// Получить физический экземпляр по идентификатору.
+  Future<Item?> getItem(String id);
 
-  /// Сохранить предмет.
-  Future<void> saveItem(
-    Item item,
-  );
+  /// Получить все экземпляры конкретной каталожной позиции.
+  Future<List<Item>> getItemsByCatalogItem(String catalogItemId);
 
-  /// Обновить предмет.
-  Future<void> updateItem(
-    Item item,
-  );
+  /// Получить количество экземпляров конкретной каталожной позиции.
+  Future<int> getItemCountByCatalogItem(String catalogItemId);
 
-  /// Удалить предмет.
-  Future<void> deleteItem(
-    String id,
-  );
+  Future<void> saveItem(Item item);
 
-  /// Получить значения полей предмета.
-  Future<List<ItemValue>> getValues(
-    String itemId,
-  );
+  Future<void> updateItem(Item item);
 
-  /// Сохранить значение поля.
-  Future<void> saveValue(
-    ItemValue value,
-  );
+  Future<void> deleteItem(String id);
 
-  /// Обновить значение поля.
-  Future<void> updateValue(
-    ItemValue value,
-  );
+  Future<List<ItemValue>> getValues(String itemId);
 
-  /// Удалить значение поля.
-  Future<void> deleteValue(
-    String id,
-  );
+  Future<void> saveValue(ItemValue value);
 
-  /// Получить файлы предмета.
-  Future<List<ItemAttachment>> getAttachments(
-    String itemId,
-  );
+  Future<void> updateValue(ItemValue value);
 
-  /// Сохранить файл предмета.
-  Future<void> saveAttachment(
-    ItemAttachment attachment,
-  );
+  Future<void> deleteValue(String id);
 
-  /// Удалить файл предмета.
-  Future<void> deleteAttachment(
-    String id,
-  );
+  Future<List<ItemAttachment>> getAttachments(String itemId);
+
+  Future<void> saveAttachment(ItemAttachment attachment);
+
+  Future<void> deleteAttachment(String id);
 }
