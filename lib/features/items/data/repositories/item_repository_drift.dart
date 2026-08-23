@@ -8,159 +8,103 @@ import '../../domain/entities/item_value.dart';
 
 import '../../domain/repositories/item_repository.dart';
 
+/// Репозиторий физических экземпляров и их данных.
 class ItemRepositoryDrift implements ItemRepository {
   final AppDatabase database;
 
-  ItemRepositoryDrift(
-    this.database,
-  );
+  ItemRepositoryDrift(this.database);
 
   @override
-  Future<List<Item>> getItems(
-    String collectionId,
-  ) async {
-    final rows = await (database.select(
-      database.itemTable,
-    )
-          ..where(
-            (table) =>
-                table.collectionId.equals(
-              collectionId,
-            ),
-          )
+  Future<List<Item>> getItems(String collectionId) async {
+    final rows = await (database.select(database.itemTable)
+          ..where((table) => table.collectionId.equals(collectionId))
           ..orderBy([
-            (table) =>
-                OrderingTerm.asc(
-              table.sortOrder,
-            ),
+            (table) => OrderingTerm.asc(table.sortOrder),
           ]))
         .get();
 
-    return rows
-        .map(
-          (row) => Item(
-            id: row.id,
-            collectionId: row.collectionId,
-            sectionId: row.sectionId,
-            sortOrder: row.sortOrder,
-            createdAt: row.createdAt,
-            updatedAt: row.updatedAt,
-          ),
-        )
-        .toList();
+    final items = <Item>[];
+    for (final row in rows) {
+      items.add(await _fromRow(row));
+    }
+    return items;
   }
 
   @override
-  Future<Item?> getItem(
-    String id,
-  ) async {
-    final row = await (database.select(
-      database.itemTable,
-    )
-          ..where(
-            (table) =>
-                table.id.equals(id),
-          ))
+  Future<Item?> getItem(String id) async {
+    final row = await (database.select(database.itemTable)
+          ..where((table) => table.id.equals(id)))
         .getSingleOrNull();
 
     if (row == null) {
       return null;
     }
 
-    return Item(
-      id: row.id,
-      collectionId: row.collectionId,
-      sectionId: row.sectionId,
-      sortOrder: row.sortOrder,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    );
+    return _fromRow(row);
   }
 
   @override
-  Future<void> saveItem(
-    Item item,
-  ) async {
-    await database
-        .into(
-          database.itemTable,
-        )
-        .insertOnConflictUpdate(
-          ItemTableCompanion(
-            id: Value(
-              item.id,
+  Future<void> saveItem(Item item) async {
+    await database.transaction(() async {
+      await database.into(database.itemTable).insertOnConflictUpdate(
+            ItemTableCompanion(
+              id: Value(item.id),
+              collectionId: Value(item.collectionId),
+              sectionId: Value(item.sectionId),
+              sortOrder: Value(item.sortOrder),
+              createdAt: Value(item.createdAt),
+              updatedAt: Value(item.updatedAt),
             ),
-            collectionId: Value(
-              item.collectionId,
-            ),
-            sectionId: Value(
-              item.sectionId,
-            ),
-            sortOrder: Value(
-              item.sortOrder,
-            ),
-            createdAt: Value(
-              item.createdAt,
-            ),
-            updatedAt: Value(
-              item.updatedAt,
-            ),
-          ),
+          );
+
+      if (item.catalogItemId != null) {
+        await database.customStatement(
+          '''
+          INSERT INTO item_catalog_links (item_id, catalog_item_id)
+          VALUES (?, ?)
+          ON CONFLICT(item_id) DO UPDATE SET
+            catalog_item_id = excluded.catalog_item_id
+          ''',
+          [item.id, item.catalogItemId],
         );
+      } else {
+        await database.customStatement(
+          'DELETE FROM item_catalog_links WHERE item_id = ?',
+          [item.id],
+        );
+      }
+    });
   }
 
   @override
-  Future<void> updateItem(
-    Item item,
-  ) async {
-    await saveItem(
-      item,
-    );
+  Future<void> updateItem(Item item) => saveItem(item);
+
+  @override
+  Future<void> deleteItem(String id) async {
+    await database.transaction(() async {
+      await database.delete(database.itemValueTable)
+          .where((table) => table.itemId.equals(id))
+          .go();
+
+      await database.delete(database.itemAttachmentTable)
+          .where((table) => table.itemId.equals(id))
+          .go();
+
+      await database.customStatement(
+        'DELETE FROM item_catalog_links WHERE item_id = ?',
+        [id],
+      );
+
+      await database.delete(database.itemTable)
+          .where((table) => table.id.equals(id))
+          .go();
+    });
   }
 
   @override
-  Future<void> deleteItem(
-    String id,
-  ) async {
-    await (database.delete(
-      database.itemTable,
-    )
-          ..where(
-            (table) =>
-                table.id.equals(id),
-          ))
-        .go();
-
-    await (database.delete(
-      database.itemValueTable,
-    )
-          ..where(
-            (table) =>
-                table.itemId.equals(id),
-          ))
-        .go();
-
-    await (database.delete(
-      database.itemAttachmentTable,
-    )
-          ..where(
-            (table) =>
-                table.itemId.equals(id),
-          ))
-        .go();
-  }
-
-  @override
-  Future<List<ItemValue>> getValues(
-    String itemId,
-  ) async {
-    final rows = await (database.select(
-      database.itemValueTable,
-    )
-          ..where(
-            (table) =>
-                table.itemId.equals(itemId),
-          ))
+  Future<List<ItemValue>> getValues(String itemId) async {
+    final rows = await (database.select(database.itemValueTable)
+          ..where((table) => table.itemId.equals(itemId)))
         .get();
 
     return rows
@@ -176,65 +120,31 @@ class ItemRepositoryDrift implements ItemRepository {
   }
 
   @override
-  Future<void> saveValue(
-    ItemValue value,
-  ) async {
-    await database
-        .into(
-          database.itemValueTable,
-        )
-        .insertOnConflictUpdate(
+  Future<void> saveValue(ItemValue value) async {
+    await database.into(database.itemValueTable).insertOnConflictUpdate(
           ItemValueTableCompanion(
-            id: Value(
-              value.id,
-            ),
-            itemId: Value(
-              value.itemId,
-            ),
-            fieldId: Value(
-              value.fieldId,
-            ),
-            value: Value(
-              value.value,
-            ),
+            id: Value(value.id),
+            itemId: Value(value.itemId),
+            fieldId: Value(value.fieldId),
+            value: Value(value.value),
           ),
         );
   }
 
   @override
-  Future<void> updateValue(
-    ItemValue value,
-  ) async {
-    await saveValue(
-      value,
-    );
-  }
+  Future<void> updateValue(ItemValue value) => saveValue(value);
 
   @override
-  Future<void> deleteValue(
-    String id,
-  ) async {
-    await (database.delete(
-      database.itemValueTable,
-    )
-          ..where(
-            (table) =>
-                table.id.equals(id),
-          ))
+  Future<void> deleteValue(String id) async {
+    await database.delete(database.itemValueTable)
+        .where((table) => table.id.equals(id))
         .go();
   }
 
   @override
-  Future<List<ItemAttachment>> getAttachments(
-    String itemId,
-  ) async {
-    final rows = await (database.select(
-      database.itemAttachmentTable,
-    )
-          ..where(
-            (table) =>
-                table.itemId.equals(itemId),
-          ))
+  Future<List<ItemAttachment>> getAttachments(String itemId) async {
+    final rows = await (database.select(database.itemAttachmentTable)
+          ..where((table) => table.itemId.equals(itemId)))
         .get();
 
     return rows
@@ -250,42 +160,51 @@ class ItemRepositoryDrift implements ItemRepository {
   }
 
   @override
-  Future<void> saveAttachment(
-    ItemAttachment attachment,
-  ) async {
-    await database
-        .into(
-          database.itemAttachmentTable,
-        )
-        .insertOnConflictUpdate(
+  Future<void> saveAttachment(ItemAttachment attachment) async {
+    await database.into(database.itemAttachmentTable).insertOnConflictUpdate(
           ItemAttachmentTableCompanion(
-            id: Value(
-              attachment.id,
-            ),
-            itemId: Value(
-              attachment.itemId,
-            ),
-            path: Value(
-              attachment.path,
-            ),
-            type: Value(
-              attachment.type,
-            ),
+            id: Value(attachment.id),
+            itemId: Value(attachment.itemId),
+            path: Value(attachment.path),
+            type: Value(attachment.type),
           ),
         );
   }
 
   @override
-  Future<void> deleteAttachment(
-    String id,
-  ) async {
-    await (database.delete(
-      database.itemAttachmentTable,
-    )
-          ..where(
-            (table) =>
-                table.id.equals(id),
-          ))
+  Future<void> deleteAttachment(String id) async {
+    await database.delete(database.itemAttachmentTable)
+        .where((table) => table.id.equals(id))
         .go();
+  }
+
+  Future<Item> _fromRow(ItemTableData row) async {
+    final catalogItemId = await _getCatalogItemId(row.id);
+
+    return Item(
+      id: row.id,
+      catalogItemId: catalogItemId,
+      collectionId: row.collectionId,
+      sectionId: row.sectionId,
+      sortOrder: row.sortOrder,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    );
+  }
+
+  Future<String?> _getCatalogItemId(String itemId) async {
+    final rows = await database.customSelect(
+      '''
+      SELECT catalog_item_id
+      FROM item_catalog_links
+      WHERE item_id = ?
+      LIMIT 1
+      ''',
+      variables: [Variable.withString(itemId)],
+    ).get();
+
+    return rows.isEmpty
+        ? null
+        : rows.first.read<String>('catalog_item_id');
   }
 }
