@@ -390,8 +390,10 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
       if (!mounted) return;
       await _openLocalCollection(collection);
     } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+      rethrow;
     } finally {
       ref.read(downloadQueueProvider.notifier).remove(catalog.id);
     }
