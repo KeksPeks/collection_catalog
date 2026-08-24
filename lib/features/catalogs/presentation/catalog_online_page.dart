@@ -27,6 +27,7 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
   Set<String> _favoriteSections = <String>{};
   String? _sortField;
   bool _descending = false;
+  late final Map<String, int> _sectionCounts = _buildSectionCounts();
 
   bool get _regularCoins =>
       widget.catalog.id == 'coins' &&
@@ -61,6 +62,17 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
       }
       return true;
     }).toList(growable: false);
+  }
+
+  Map<String, int> _buildSectionCounts() {
+    final counts = <String, int>{};
+    for (final entry in widget.catalog.entries) {
+      for (var length = 1; length <= entry.sectionPath.length; length++) {
+        final key = entry.sectionPath.take(length).join('/');
+        counts[key] = (counts[key] ?? 0) + 1;
+      }
+    }
+    return counts;
   }
 
   @override
@@ -117,6 +129,7 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
     final title = _currentSection?.name ?? l10n.catalogName(widget.catalog.id);
     final entries = _sortedEntries();
     final showEntries = widget.sectionPath.isNotEmpty || widget.catalog.sections.isEmpty;
+    final totalItems = _sections.length + (showEntries ? entries.length : 0);
 
     return Scaffold(
       appBar: AppBar(
@@ -146,11 +159,13 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
             ),
         ],
       ),
-      body: ListView(
+      body: ListView.builder(
         padding: const EdgeInsets.all(16),
-        children: [
-          for (final section in _sections)
-            Card(
+        itemCount: totalItems + (entries.isEmpty && showEntries ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index < _sections.length) {
+            final section = _sections[index];
+            return Card(
               margin: const EdgeInsets.only(bottom: 10),
               child: ListTile(
                 leading: const CircleAvatar(child: Icon(Icons.folder_outlined)),
@@ -172,25 +187,27 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
                   );
                 },
               ),
-            ),
-          if (showEntries) ...[
-            const SizedBox(height: 8),
-            for (final entry in entries)
-              Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: const Icon(Icons.inventory_2_outlined),
-                  title: Text(entry.title),
-                  subtitle: Text('${entry.primaryValue} · ${entry.subtitle}'),
-                ),
+            );
+          }
+
+          final entryIndex = index - _sections.length;
+          if (entryIndex < entries.length) {
+            final entry = entries[entryIndex];
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                leading: const Icon(Icons.inventory_2_outlined),
+                title: Text(entry.title),
+                subtitle: Text('${entry.primaryValue} · ${entry.subtitle}'),
               ),
-            if (entries.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('Записи не найдены', textAlign: TextAlign.center),
-              ),
-          ],
-        ],
+            );
+          }
+
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Text('Записи не найдены', textAlign: TextAlign.center),
+          );
+        },
       ),
       bottomNavigationBar: widget.onDownload == null
           ? null
@@ -213,14 +230,8 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
   }
 
   int _count(CatalogSectionDefinition section) {
-    final path = [...widget.sectionPath, section.id];
-    return widget.catalog.entries.where((entry) {
-      if (entry.sectionPath.length < path.length) return false;
-      for (var index = 0; index < path.length; index++) {
-        if (entry.sectionPath[index] != path[index]) return false;
-      }
-      return true;
-    }).length;
+    final path = [...widget.sectionPath, section.id].join('/');
+    return _sectionCounts[path] ?? 0;
   }
 }
 
