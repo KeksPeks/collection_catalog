@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/localization/app_localizations.dart';
+import '../core/settings/ui_layout_settings.dart';
 import '../core/utils/responsive.dart';
 import '../features/catalogs/presentation/favorites_page.dart';
 import '../features/collections/presentation/pages/catalog_page.dart';
@@ -42,6 +43,7 @@ class _ResponsiveCollectionAppState extends State<ResponsiveCollectionApp> {
 
   Future<void> _load() async {
     final p = await SharedPreferences.getInstance();
+    await UiLayoutSettings.load();
     if (!mounted) return;
     setState(() {
       final theme = p.getString(_themeKey);
@@ -195,6 +197,14 @@ class _ResponsiveSettings extends StatelessWidget {
     return _text(context, 'Очень большой', 'Very large', 'Sehr groß', 'Très grand', 'Muy grande', 'Molto grande', 'Muito grande', '极大', '極大', '매우 크게', 'كبير جدًا');
   }
 
+  String _cardSize(BuildContext context, double value) {
+    if (value < 130) return _text(context, 'Очень маленькие', 'Very small', 'Sehr klein', 'Très petit', 'Muy pequeñas', 'Molto piccole', 'Muito pequenas', '极小', '極小', '매우 작게', 'صغيرة جدًا');
+    if (value < 150) return _text(context, 'Маленькие', 'Small', 'Klein', 'Petites', 'Pequeñas', 'Piccole', 'Pequenas', '小', '小', '작게', 'صغيرة');
+    if (value < 170) return _text(context, 'Средние', 'Medium', 'Mittel', 'Moyennes', 'Medianas', 'Medie', 'Médias', '中', '中', '중간', 'متوسطة');
+    if (value < 190) return _text(context, 'Большие', 'Large', 'Groß', 'Grandes', 'Grandes', 'Grandi', 'Grandes', '大', '大', '크게', 'كبيرة');
+    return _text(context, 'Очень большие', 'Very large', 'Sehr groß', 'Très grandes', 'Muy grandes', 'Molto grandi', 'Muito grandes', '极大', '極大', '매우 크게', 'كبيرة جدًا');
+  }
+
   String _themeName(BuildContext context, ThemeMode value) => switch (value) {
     ThemeMode.system => _text(context, 'Системная', 'System', 'System', 'Système', 'Sistema', 'Sistema', 'Sistema', '系统', 'システム', '시스템', 'النظام'),
     ThemeMode.light => _text(context, 'Светлая', 'Light', 'Hell', 'Clair', 'Claro', 'Chiaro', 'Claro', '浅色', 'ライト', '라이트', 'فاتح'),
@@ -224,8 +234,9 @@ class _ResponsiveSettings extends StatelessWidget {
     final colorLabel = _text(context, 'Цветовая схема', 'Color scheme', 'Farbschema', 'Couleurs', 'Esquema de color', 'Schema colori', 'Esquema de cores', '配色', '配色', '색상', 'نظام الألوان');
     final fontLabel = _text(context, 'Размер шрифта', 'Font size', 'Schriftgröße', 'Taille du texte', 'Tamaño de fuente', 'Dimensione carattere', 'Tamanho da fonte', '字体大小', 'フォントサイズ', '글자 크기', 'حجم الخط');
     final uiLabel = _text(context, 'Размер интерфейса', 'Interface size', 'Oberflächengröße', 'Taille de l’interface', 'Tamaño de interfaz', 'Dimensione interfaccia', 'Tamanho da interface', '界面大小', 'インターフェースサイズ', '인터페이스 크기', 'حجم الواجهة');
-    final feedback = _text(context, 'Обратная связь', 'Feedback', 'Feedback', 'Commentaires', 'Comentarios', 'Feedback', 'Feedback', '反馈', 'フィードバック', '피드백', 'ملاحظات');
-    final feedbackDescription = _text(context, 'Предложения по изменению каталогов', 'Suggest catalog changes', 'Katalogänderungen vorschlagen', 'Proposer des changements', 'Sugerir cambios', 'Proponi modifiche', 'Sugerir alterações', '建议修改目录', 'カタログ変更を提案', '카탈로그 변경 제안', 'اقتراح تغييرات الفهرس');
+    final cardSizeLabel = _text(context, 'Размер карточек', 'Card size', 'Kartengröße', 'Taille des cartes', 'Tamaño de tarjetas', 'Dimensione delle schede', 'Tamanho dos cartões', '卡片大小', 'カードサイズ', '카드 크기', 'حجم البطاقات');
+    final feedback = _text(context, 'Предложить изменения в названиях', 'Suggest name changes', 'Namensänderungen vorschlagen', 'Proposer des changements de noms', 'Sugerir cambios de nombres', 'Suggerisci modifiche ai nomi', 'Sugerir alterações nos nomes', '建议修改名称', '名前の変更を提案', '이름 변경 제안', 'اقتراح تغييرات الأسماء');
+    final feedbackDescription = _text(context, 'Предложить изменения в названиях каталогов', 'Suggest catalog name changes', 'Katalognamen ändern', 'Proposer des changements de noms de catalogues', 'Sugerir cambios de nombres de catálogos', 'Suggerisci modifiche ai nomi dei cataloghi', 'Sugerir alterações nos nomes dos catálogos', '建议修改目录名称', 'カタログ名の変更を提案', '카탈로그 이름 변경 제안', 'اقتراح تغييرات أسماء الفهارس');
     final about = _text(context, 'О приложении', 'About', 'Über', 'À propos', 'Acerca de', 'Informazioni', 'Sobre', '关于', 'アプリについて', '정보', 'حول التطبيق');
 
     return Scaffold(
@@ -241,9 +252,20 @@ class _ResponsiveSettings extends StatelessWidget {
           Card(child: ListTile(leading: const Icon(Icons.color_lens_outlined), title: Text(colorLabel), subtitle: Text(_colorName(context, colorIndex)), onTap: () => _colors(context))),
           Card(child: ListTile(leading: const Icon(Icons.text_fields_outlined), title: Text(fontLabel), subtitle: Text(_size(context, fontScale)), onTap: () => _scaleSheet(context, true))),
           Card(child: ListTile(leading: const Icon(Icons.view_agenda_outlined), title: Text(uiLabel), subtitle: Text(_size(context, uiScale)), onTap: () => _scaleSheet(context, false))),
+          ValueListenableBuilder<int>(
+            valueListenable: UiLayoutSettings.revision,
+            builder: (context, _, __) => Card(
+              child: ListTile(
+                leading: const Icon(Icons.view_module_outlined),
+                title: Text(cardSizeLabel),
+                subtitle: Text(_cardSize(context, UiLayoutSettings.cardHeight)),
+                onTap: () => _cardSizeSheet(context),
+              ),
+            ),
+          ),
           SizedBox(height: info.spacing(10)),
           Card(child: ListTile(leading: const Icon(Icons.feedback_outlined), title: Text(feedback), subtitle: Text(feedbackDescription), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FeedbackPage())))),
-          Card(child: ListTile(leading: const Icon(Icons.help_outline), title: Text(about), subtitle: Text(l10n.catalogDescription), onTap: () => showAboutDialog(context: context, applicationName: 'Collection Catalog', applicationVersion: '1.0.0'))),
+          Card(child: ListTile(leading: const Icon(Icons.help_outline), title: Text(about), subtitle: Text(l10n.catalogDescription), onTap: () => showAboutDialog(context: context, applicationName: 'Collection Catalog'))),
         ]),
       ),
     );
@@ -274,5 +296,29 @@ class _ResponsiveSettings extends StatelessWidget {
     final value = await showModalBottomSheet<double>(context: context, builder: (sheet) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: values.map((item) => ListTile(leading: Icon((item - current).abs() < .01 ? Icons.radio_button_checked : Icons.radio_button_unchecked), title: Text(_size(context, item)), subtitle: Text('${(item * 100).round()}%'), onTap: () => Navigator.pop(sheet, item))).toList())));
     if (value == null) return;
     if (font) onFontChanged(value); else onUiChanged(value);
+  }
+
+  Future<void> _cardSizeSheet(BuildContext context) async {
+    final values = const <double>[120, 140, 160, 180, 200];
+    final current = UiLayoutSettings.cardHeight;
+    final value = await showModalBottomSheet<double>(
+      context: context,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: values
+              .map(
+                (item) => ListTile(
+                  leading: Icon((item - current).abs() < 1 ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+                  title: Text(_cardSize(context, item)),
+                  subtitle: Text('${item.round()} px'),
+                  onTap: () => Navigator.pop(sheet, item),
+                ),
+              )
+              .toList(),
+        ),
+      ),
+    );
+    if (value != null) await UiLayoutSettings.save(cardHeight: value);
   }
 }
