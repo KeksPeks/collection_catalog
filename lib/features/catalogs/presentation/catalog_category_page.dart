@@ -4,7 +4,6 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/settings/ui_layout_settings.dart';
 import '../data/catalog_registry.dart';
 import '../data/catalog_ui_localization.dart';
-import '../domain/entities/catalog_category_definition.dart';
 import '../domain/entities/catalog_definition.dart';
 import 'catalog_online_page.dart';
 
