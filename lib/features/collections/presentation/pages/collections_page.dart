@@ -43,7 +43,10 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     final collections = ref.watch(collectionsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Мои коллекции')),
+      appBar: AppBar(
+        centerTitle: true,
+        title: const Text('Мои коллекции'),
+      ),
       body: collections.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('Ошибка: $error')),
