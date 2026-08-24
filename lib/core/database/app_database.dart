@@ -26,10 +26,6 @@ class AppDatabase extends _$AppDatabase {
   int get schemaVersion => 6;
 
   /// Создаёт дополнительные таблицы каталожных позиций и мест хранения.
-  ///
-  /// Эти таблицы намеренно создаются SQL-миграцией, а не регистрируются
-  /// в Drift, поэтому существующий сгенерированный app_database.g.dart
-  /// менять не требуется.
   Future<void> ensureStorageTables() async {
     await customStatement('''
       CREATE TABLE IF NOT EXISTS storage_location_table (
@@ -77,29 +73,20 @@ class AppDatabase extends _$AppDatabase {
           await ensureStorageTables();
         },
         onUpgrade: (Migrator m, int from, int to) async {
-          if (from < 2) {
-            await m.createTable(collectionTable);
-          }
-
-          if (from < 3) {
-            await m.createTable(collectionSectionTable);
-          }
-
+          if (from < 2) await m.createTable(collectionTable);
+          if (from < 3) await m.createTable(collectionSectionTable);
           if (from < 4) {
             await m.createTable(itemTable);
             await m.createTable(itemValueTable);
             await m.createTable(itemAttachmentTable);
           }
-
           if (from < 5) {
-            await m.addColumn(
-              collectionSectionTable,
-              collectionSectionTable.sortOrder,
-            );
-            await ensureCatalogItemTables();
+            await m.addColumn(collectionSectionTable, collectionSectionTable.sortOrder);
           }
-
           if (from < 6) {
+            // Важно: пользователи с уже существующей схемой 5 тоже должны
+            // получить таблицы каталожных позиций и мест хранения.
+            await ensureCatalogItemTables();
             await ensureStorageTables();
           }
         },
