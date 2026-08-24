@@ -4,68 +4,25 @@ import '../entities/item_value.dart';
 
 /// Репозиторий предметов коллекции.
 ///
-/// Отвечает за хранение и получение:
-/// - самих предметов Item;
-/// - значений полей ItemValue;
-/// - прикреплённых файлов ItemAttachment.
+/// Отвечает за хранение физических экземпляров, их значений и вложений.
 abstract class ItemRepository {
-  /// Получить предметы коллекции.
-  Future<List<Item>> getItems(
-    String collectionId,
-  );
+  Future<List<Item>> getItems(String collectionId);
+  Future<Item?> getItem(String id);
 
-  /// Получить предмет по идентификатору.
-  Future<Item?> getItem(
-    String id,
-  );
+  /// Получить все экземпляры конкретной каталожной позиции.
+  Future<List<Item>> getItemsByCatalogItem(String catalogItemId);
 
-  /// Сохранить предмет.
-  Future<void> saveItem(
-    Item item,
-  );
+  /// Получить количество экземпляров конкретной каталожной позиции.
+  Future<int> getItemCountByCatalogItem(String catalogItemId);
 
-  /// Обновить предмет.
-  Future<void> updateItem(
-    Item item,
-  );
-
-  /// Удалить предмет.
-  Future<void> deleteItem(
-    String id,
-  );
-
-  /// Получить значения полей предмета.
-  Future<List<ItemValue>> getValues(
-    String itemId,
-  );
-
-  /// Сохранить значение поля.
-  Future<void> saveValue(
-    ItemValue value,
-  );
-
-  /// Обновить значение поля.
-  Future<void> updateValue(
-    ItemValue value,
-  );
-
-  /// Удалить значение поля.
-  Future<void> deleteValue(
-    String id,
-  );
-
-  /// Получить файлы предмета.
-  Future<List<ItemAttachment>> getAttachments(
-    String itemId,
-  );
-
-  /// Сохранить файл предмета.
-  Future<void> saveAttachment(
-    ItemAttachment attachment,
-  );
-
-  /// Удалить файл предмета.
-  Future<void> deleteAttachment(
-    String id,
-  );
+  Future<void> saveItem(Item item);
+  Future<void> updateItem(Item item);
+  Future<void> deleteItem(String id);
+  Future<List<ItemValue>> getValues(String itemId);
+  Future<void> saveValue(ItemValue value);
+  Future<void> updateValue(ItemValue value);
+  Future<void> deleteValue(String id);
+  Future<List<ItemAttachment>> getAttachments(String itemId);
+  Future<void> saveAttachment(ItemAttachment attachment);
+  Future<void> deleteAttachment(String id);
 }
