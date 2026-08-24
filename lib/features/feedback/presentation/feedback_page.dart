@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../catalogs/data/catalog_registry.dart';
-import '../../../catalogs/data/catalog_ui_localization.dart';
+import '../../catalogs/data/catalog_registry.dart';
+import '../../catalogs/data/catalog_ui_localization.dart';
 
 /// Форма обратной связи для предложений по централизованным каталогам.
 ///
@@ -27,7 +27,9 @@ class _FeedbackPageState extends State<FeedbackPage> {
   void initState() {
     super.initState();
     final catalogs = CatalogRegistry.all;
-    if (catalogs.isNotEmpty) _catalogId = catalogs.first.id;
+    if (catalogs.isNotEmpty) {
+      _catalogId = catalogs.first.id;
+    }
   }
 
   @override
@@ -44,8 +46,13 @@ class _FeedbackPageState extends State<FeedbackPage> {
 
     setState(() => _sending = true);
     final locale = Localizations.localeOf(context);
-    final catalogName = CatalogUiLocalization.catalogNameForLocale(locale, catalog.id);
-    final title = Uri.encodeComponent('$_type: ${_subjectController.text.trim()}');
+    final catalogName = CatalogUiLocalization.catalogNameForLocale(
+      locale,
+      catalog.id,
+    );
+    final title = Uri.encodeComponent(
+      '$_type: ${_subjectController.text.trim()}',
+    );
     final body = Uri.encodeComponent(
       'Каталог: $catalogName\n'
       'Catalog ID: ${catalog.id}\n'
@@ -53,12 +60,18 @@ class _FeedbackPageState extends State<FeedbackPage> {
       'Тип заявки: $_type\n\n'
       '${_detailsController.text.trim()}',
     );
-    final uri = Uri.parse('https://github.com/KeksPeks/collection_catalog/issues/new?title=$title&body=$body');
+    final uri = Uri.parse(
+      'https://github.com/KeksPeks/collection_catalog/issues/new?title=$title&body=$body',
+    );
 
     try {
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Не удалось открыть форму отправки заявки.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Не удалось открыть форму отправки заявки.'),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -89,12 +102,27 @@ class _FeedbackPageState extends State<FeedbackPage> {
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               initialValue: _type,
-              decoration: const InputDecoration(labelText: 'Тип заявки', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Тип заявки',
+                border: OutlineInputBorder(),
+              ),
               items: const [
-                DropdownMenuItem(value: 'Добавить предмет', child: Text('Добавить предмет')),
-                DropdownMenuItem(value: 'Добавить каталог', child: Text('Добавить каталог')),
-                DropdownMenuItem(value: 'Исправить данные', child: Text('Исправить данные')),
-                DropdownMenuItem(value: 'Предложение', child: Text('Предложение')),
+                DropdownMenuItem(
+                  value: 'Добавить предмет',
+                  child: Text('Добавить предмет'),
+                ),
+                DropdownMenuItem(
+                  value: 'Добавить каталог',
+                  child: Text('Добавить каталог'),
+                ),
+                DropdownMenuItem(
+                  value: 'Исправить данные',
+                  child: Text('Исправить данные'),
+                ),
+                DropdownMenuItem(
+                  value: 'Предложение',
+                  child: Text('Предложение'),
+                ),
               ],
               onChanged: (value) {
                 if (value != null) setState(() => _type = value);
@@ -103,35 +131,60 @@ class _FeedbackPageState extends State<FeedbackPage> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _catalogId,
-              decoration: const InputDecoration(labelText: 'Каталог', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Каталог',
+                border: OutlineInputBorder(),
+              ),
               items: [
                 for (final catalog in catalogs)
                   DropdownMenuItem(
                     value: catalog.id,
-                    child: Text('${CatalogUiLocalization.catalogNameForLocale(locale, catalog.id)} · v${catalog.version}'),
+                    child: Text(
+                      '${CatalogUiLocalization.catalogNameForLocale(locale, catalog.id)} · v${catalog.version}',
+                    ),
                   ),
               ],
               onChanged: (value) => setState(() => _catalogId = value),
-              validator: (value) => value == null ? 'Выберите каталог' : null,
+              validator: (value) =>
+                  value == null ? 'Выберите каталог' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _subjectController,
-              decoration: const InputDecoration(labelText: 'Название или идентификатор', hintText: 'Например: 10 рублей 2020, Россия', border: OutlineInputBorder()),
-              validator: (value) => value == null || value.trim().isEmpty ? 'Укажите название или идентификатор' : null,
+              decoration: const InputDecoration(
+                labelText: 'Название или идентификатор',
+                hintText: 'Например: 10 рублей 2020, Россия',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) => value == null || value.trim().isEmpty
+                  ? 'Укажите название или идентификатор'
+                  : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _detailsController,
               minLines: 5,
               maxLines: 10,
-              decoration: const InputDecoration(labelText: 'Описание предложения', hintText: 'Что необходимо добавить или исправить?', border: OutlineInputBorder(), alignLabelWithHint: true),
-              validator: (value) => value == null || value.trim().isEmpty ? 'Опишите предложение' : null,
+              decoration: const InputDecoration(
+                labelText: 'Описание предложения',
+                hintText: 'Что необходимо добавить или исправить?',
+                border: OutlineInputBorder(),
+                alignLabelWithHint: true,
+              ),
+              validator: (value) => value == null || value.trim().isEmpty
+                  ? 'Опишите предложение'
+                  : null,
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: _sending ? null : _send,
-              icon: _sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send_outlined),
+              icon: _sending
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send_outlined),
               label: const Text('Отправить предложение'),
             ),
           ],
