@@ -4,22 +4,35 @@ import '../../../lib/features/items/data/item_state_store.dart';
 
 void main() {
   test('все статусы предмета имеют уникальные коды и восстанавливаются', () {
-    final values = CollectionItemStatus.values.map((item) => item.value).toList();
+    final values =
+        CollectionItemStatus.values.map((item) => item.value).toList();
 
     expect(values.toSet().length, values.length);
-    expect(CollectionItemStatusX.fromValue('inTransit'), CollectionItemStatus.inTransit);
-    expect(CollectionItemStatusX.fromValue('forSale'), CollectionItemStatus.forSale);
-    expect(CollectionItemStatusX.fromValue('repair'), CollectionItemStatus.repair);
-    expect(CollectionItemStatusX.fromValue('unknown'), CollectionItemStatus.missing);
+    expect(
+      CollectionItemStatusX.fromValue('inTransit'),
+      CollectionItemStatus.inTransit,
+    );
+    expect(
+      CollectionItemStatusX.fromValue('forSale'),
+      CollectionItemStatus.forSale,
+    );
+    expect(
+      CollectionItemStatusX.fromValue('repair'),
+      CollectionItemStatus.repair,
+    );
+    expect(
+      CollectionItemStatusX.fromValue('unknown'),
+      CollectionItemStatus.missing,
+    );
   });
 
   test('состояния предмета локализуются и восстанавливаются', () {
     expect(
-      CollectionItemConditionX.newItem.localizedTitle('ru'),
+      CollectionItemCondition.newItem.localizedTitle('ru'),
       'Новый',
     );
     expect(
-      CollectionItemConditionX.damaged.localizedTitle('en'),
+      CollectionItemCondition.damaged.localizedTitle('en'),
       'Damaged',
     );
     expect(
