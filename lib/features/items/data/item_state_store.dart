@@ -453,6 +453,13 @@ class ItemStateStore {
     }
   }
 
+  static Future<void> remove(String itemId) async {
+    final states = await loadAll();
+    if (!states.containsKey(itemId)) return;
+    states.remove(itemId);
+    await replaceAll(states);
+  }
+
   static Future<void> replaceAll(Map<String, ItemState> states) async {
     final preferences = await SharedPreferences.getInstance();
     final encoded = jsonEncode(

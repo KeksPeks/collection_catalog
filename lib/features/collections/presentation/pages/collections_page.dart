@@ -43,7 +43,10 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     final collections = ref.watch(collectionsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Мои коллекции')),
+      appBar: AppBar(
+        centerTitle: true,
+        title: const Text('Мои коллекции'),
+      ),
       body: collections.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('Ошибка: $error')),
@@ -78,7 +81,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
                           delegate: SliverChildBuilderDelegate(
                             (context, index) => Padding(
                               padding: const EdgeInsets.only(bottom: 10),
-                              child: _buildCollectionTile(filtered[index]),
+                              child: _buildCollectionTile(filtered[index], compact: false),
                             ),
                             childCount: filtered.length,
                           ),
@@ -89,7 +92,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
                         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
                         sliver: SliverGrid(
                           delegate: SliverChildBuilderDelegate(
-                            (context, index) => _buildCollectionTile(filtered[index]),
+                            (context, index) => _buildCollectionTile(filtered[index], compact: true),
                             childCount: filtered.length,
                           ),
                           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -124,18 +127,51 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     );
   }
 
-  Widget _buildCollectionTile(Collection collection) {
-    return SizedBox(
-      height: UiLayoutSettings.cardHeight,
-      child: Card(
+  Widget _buildCollectionTile(Collection collection, {required bool compact}) {
+    if (!compact) {
+      return Card(
         margin: EdgeInsets.zero,
         child: ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           leading: const CircleAvatar(child: Icon(Icons.collections_bookmark)),
-          title: Text(collection.name),
-          subtitle: const Text('Каталог сохранён на устройстве'),
+          title: Text(collection.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+          subtitle: const Text('Каталог сохранён на устройстве', maxLines: 1, overflow: TextOverflow.ellipsis),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => _openCollection(collection),
+        ),
+      );
+    }
+
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _openCollection(collection),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircleAvatar(child: Icon(Icons.collections_bookmark)),
+              const SizedBox(height: 8),
+              Flexible(
+                child: Text(
+                  collection.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'На устройстве',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );

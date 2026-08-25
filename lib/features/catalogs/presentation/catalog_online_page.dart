@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/settings/ui_layout_settings.dart';
 import '../data/catalog_version_store.dart';
 import '../data/favorites_store.dart';
 import '../domain/entities/catalog_definition.dart';
@@ -27,6 +28,8 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
   Set<String> _favoriteSections = <String>{};
   String? _sortField;
   bool _descending = false;
+  late final Map<String, int> _sectionCounts = _buildSectionCounts();
+  VoidCallback? _layoutListener;
 
   bool get _regularCoins =>
       widget.catalog.id == 'coins' &&
@@ -63,11 +66,34 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
     }).toList(growable: false);
   }
 
+  Map<String, int> _buildSectionCounts() {
+    final counts = <String, int>{};
+    for (final entry in widget.catalog.entries) {
+      for (var length = 1; length <= entry.sectionPath.length; length++) {
+        final key = entry.sectionPath.take(length).join('/');
+        counts[key] = (counts[key] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }
+
   @override
   void initState() {
     super.initState();
     if (_regularCoins) _sortField = 'year';
+    _layoutListener = () {
+      if (mounted) setState(() {});
+    };
+    UiLayoutSettings.revision.addListener(_layoutListener!);
+    UiLayoutSettings.ensureLoaded();
     _loadFavorites();
+  }
+
+  @override
+  void dispose() {
+    final listener = _layoutListener;
+    if (listener != null) UiLayoutSettings.revision.removeListener(listener);
+    super.dispose();
   }
 
   Future<void> _loadFavorites() async {
@@ -117,6 +143,8 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
     final title = _currentSection?.name ?? l10n.catalogName(widget.catalog.id);
     final entries = _sortedEntries();
     final showEntries = widget.sectionPath.isNotEmpty || widget.catalog.sections.isEmpty;
+    final totalItems = _sections.length + (showEntries ? entries.length : 0);
+    final cardHeight = UiLayoutSettings.cardHeight;
 
     return Scaffold(
       appBar: AppBar(
@@ -146,51 +174,63 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
             ),
         ],
       ),
-      body: ListView(
+      body: ListView.builder(
         padding: const EdgeInsets.all(16),
-        children: [
-          for (final section in _sections)
-            Card(
-              margin: const EdgeInsets.only(bottom: 10),
-              child: ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.folder_outlined)),
-                title: Text(section.name),
-                subtitle: Text(section.children.isEmpty ? '${_count(section)} записей' : '${section.children.length} подразделов'),
-                trailing: IconButton(
-                  onPressed: () => _toggleSectionFavorite(section.id),
-                  icon: Icon(_favoriteSections.contains(section.id) ? Icons.star_rounded : Icons.star_border_rounded),
-                ),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => CatalogOnlinePage(
-                        catalog: widget.catalog,
-                        onDownload: widget.onDownload,
-                        sectionPath: [...widget.sectionPath, section.id],
+        itemCount: totalItems + (entries.isEmpty && showEntries ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index < _sections.length) {
+            final section = _sections[index];
+            return SizedBox(
+              height: cardHeight,
+              child: Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: const CircleAvatar(child: Icon(Icons.folder_outlined)),
+                  title: Text(section.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  subtitle: Text(section.children.isEmpty ? '${_count(section)} записей' : '${section.children.length} подразделов', maxLines: 1, overflow: TextOverflow.ellipsis),
+                  trailing: IconButton(
+                    onPressed: () => _toggleSectionFavorite(section.id),
+                    icon: Icon(_favoriteSections.contains(section.id) ? Icons.star_rounded : Icons.star_border_rounded),
+                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => CatalogOnlinePage(
+                          catalog: widget.catalog,
+                          onDownload: widget.onDownload,
+                          sectionPath: [...widget.sectionPath, section.id],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
-          if (showEntries) ...[
-            const SizedBox(height: 8),
-            for (final entry in entries)
-              Card(
+            );
+          }
+
+          final entryIndex = index - _sections.length;
+          if (entryIndex < entries.length) {
+            final entry = entries[entryIndex];
+            return SizedBox(
+              height: cardHeight,
+              child: Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   leading: const Icon(Icons.inventory_2_outlined),
-                  title: Text(entry.title),
-                  subtitle: Text('${entry.primaryValue} · ${entry.subtitle}'),
+                  title: Text(entry.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  subtitle: Text('${entry.primaryValue} · ${entry.subtitle}', maxLines: 2, overflow: TextOverflow.ellipsis),
                 ),
               ),
-            if (entries.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('Записи не найдены', textAlign: TextAlign.center),
-              ),
-          ],
-        ],
+            );
+          }
+
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Text('Записи не найдены', textAlign: TextAlign.center),
+          );
+        },
       ),
       bottomNavigationBar: widget.onDownload == null
           ? null
@@ -213,14 +253,8 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
   }
 
   int _count(CatalogSectionDefinition section) {
-    final path = [...widget.sectionPath, section.id];
-    return widget.catalog.entries.where((entry) {
-      if (entry.sectionPath.length < path.length) return false;
-      for (var index = 0; index < path.length; index++) {
-        if (entry.sectionPath[index] != path[index]) return false;
-      }
-      return true;
-    }).length;
+    final path = [...widget.sectionPath, section.id].join('/');
+    return _sectionCounts[path] ?? 0;
   }
 }
 

@@ -47,6 +47,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
   }
 
   Future<void> _load() async {
+    await UiLayoutSettings.ensureLoaded();
     final favorites = await FavoritesStore.loadKeys();
     final sectionIds = favorites
         .where((id) => id.startsWith('section:'))
@@ -126,7 +127,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                       height: UiLayoutSettings.cardHeight,
                       child: _Tile(
                         CatalogUiLocalization.catalogName(context, catalog.id),
-                        'Каталог · v${catalog.version}',
+                        'Каталог',
                         Icons.inventory_2_outlined,
                         () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: catalog))),
                         () => FavoritesStore.remove(catalog.id),
@@ -136,12 +137,30 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                 if (sections.isNotEmpty) ...[
                   _Heading('Разделы', Icons.folder_outlined),
                   for (final id in sections)
-                    _Tile(_labels[id] ?? id.substring('section:'.length), 'Раздел каталога', Icons.folder_outlined, () {}, () => FavoritesStore.removeKey(id)),
+                    SizedBox(
+                      height: UiLayoutSettings.cardHeight,
+                      child: _Tile(
+                        _labels[id] ?? id.substring('section:'.length),
+                        'Раздел каталога',
+                        Icons.folder_outlined,
+                        () {},
+                        () => FavoritesStore.removeKey(id),
+                      ),
+                    ),
                 ],
                 if (items.isNotEmpty) ...[
                   _Heading('Предметы', Icons.inventory_2_outlined),
                   for (final id in items)
-                    _Tile(_labels[id] ?? id.substring('item:'.length), 'Предмет коллекции', Icons.inventory_2_outlined, () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ItemDetailPage(itemId: id.substring('item:'.length)))), () => FavoritesStore.removeKey(id)),
+                    SizedBox(
+                      height: UiLayoutSettings.cardHeight,
+                      child: _Tile(
+                        _labels[id] ?? id.substring('item:'.length),
+                        'Предмет коллекции',
+                        Icons.inventory_2_outlined,
+                        () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ItemDetailPage(itemId: id.substring('item:'.length)))),
+                        () => FavoritesStore.removeKey(id),
+                      ),
+                    ),
                 ],
               ],
             ),
@@ -154,7 +173,7 @@ class _Heading extends StatelessWidget {
   final IconData icon;
   const _Heading(this.title, this.icon);
   @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(top: 12, bottom: 8), child: Center(child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon), const SizedBox(width: 8), Text(title, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800))])));
+  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(top: 12, bottom: 8), child: Center(child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon), const SizedBox(width: 8), Flexible(child: Text(title, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)))])));
 }
 
 class _Tile extends StatelessWidget {
@@ -163,5 +182,5 @@ class _Tile extends StatelessWidget {
   final VoidCallback onTap, onRemove;
   const _Tile(this.title, this.subtitle, this.icon, this.onTap, this.onRemove);
   @override
-  Widget build(BuildContext context) => Card(child: ListTile(leading: CircleAvatar(child: Icon(icon)), title: Text(title), subtitle: Text(subtitle), onTap: onTap, trailing: IconButton(tooltip: 'Убрать из избранного', onPressed: onRemove, icon: const Icon(Icons.star_rounded))));
+  Widget build(BuildContext context) => Card(margin: const EdgeInsets.only(bottom: 8), child: ListTile(leading: CircleAvatar(child: Icon(icon)), title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis), subtitle: Text(subtitle), onTap: onTap, trailing: IconButton(tooltip: 'Убрать из избранного', onPressed: onRemove, icon: const Icon(Icons.star_rounded))));
 }

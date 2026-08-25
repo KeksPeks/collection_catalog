@@ -28,7 +28,7 @@ class UiLayoutSettings {
     columns = (preferences.getInt(columnsKey) ?? 0).clamp(0, 4).toInt();
     density = preferences.getString(densityKey) ?? 'auto';
     navigation = preferences.getString(navigationKey) ?? 'auto';
-    cardHeight = (preferences.getDouble(cardHeightKey) ?? 150).clamp(110, 220).toDouble();
+    cardHeight = (preferences.getDouble(cardHeightKey) ?? 150).clamp(140, 220).toDouble();
     _loaded = true;
     revision.value++;
   }
@@ -57,7 +57,7 @@ class UiLayoutSettings {
       await preferences.setString(navigationKey, navigation);
     }
     if (cardHeight != null) {
-      UiLayoutSettings.cardHeight = cardHeight.clamp(110, 220).toDouble();
+      UiLayoutSettings.cardHeight = cardHeight.clamp(140, 220).toDouble();
       await preferences.setDouble(cardHeightKey, UiLayoutSettings.cardHeight);
     }
     _loaded = true;

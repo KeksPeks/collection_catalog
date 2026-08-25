@@ -2,23 +2,17 @@ import '../../../../shared/domain/entities/auditable_entity.dart';
 
 /// Предмет коллекции.
 ///
-/// Представляет собой экземпляр объекта коллекции.
+/// Представляет собой физический экземпляр объекта коллекции.
 /// Сам предмет не хранит значения пользовательских полей.
 /// Они находятся в сущностях ItemValue.
-///
-/// Примеры:
-/// - монета;
-/// - банкнота;
-/// - карточка Pokémon;
-/// - книга;
-/// - фигурка.
 class Item extends AuditableEntity {
+  /// Каталожная позиция, которой соответствует физический экземпляр.
+  final String? catalogItemId;
+
   /// Коллекция, которой принадлежит предмет.
   final String collectionId;
 
-  /// Раздел коллекции.
-  ///
-  /// Может быть null, если предмет находится в корне.
+  /// Раздел коллекции. Может быть null, если предмет находится в корне.
   final String? sectionId;
 
   /// Порядок отображения внутри раздела.
@@ -29,11 +23,13 @@ class Item extends AuditableEntity {
     required super.createdAt,
     required super.updatedAt,
     required this.collectionId,
+    this.catalogItemId,
     this.sectionId,
     this.sortOrder = 0,
   });
 
   Item copyWith({
+    String? catalogItemId,
     String? collectionId,
     String? sectionId,
     int? sortOrder,
@@ -42,6 +38,7 @@ class Item extends AuditableEntity {
   }) {
     return Item(
       id: id,
+      catalogItemId: catalogItemId ?? this.catalogItemId,
       collectionId: collectionId ?? this.collectionId,
       sectionId: sectionId ?? this.sectionId,
       sortOrder: sortOrder ?? this.sortOrder,
