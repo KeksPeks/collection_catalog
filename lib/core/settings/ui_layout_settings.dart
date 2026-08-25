@@ -71,13 +71,14 @@ class UiLayoutSettings {
     required int columns,
     required double textScale,
   }) {
-    final columnWidth = (width - ((columns - 1) * 12)) / columns;
+    final safeColumns = columns.clamp(1, 4).toDouble();
+    final columnWidth = (width - ((safeColumns - 1) * 12)) / safeColumns;
     final base = columnWidth < 150
         ? 122.0
         : columnWidth < 220
             ? 128.0
             : 136.0;
     final scaleAdjustment = (textScale - 1.0).clamp(-0.3, 0.8) * 32;
-    return (base + scaleAdjustment).clamp(112.0, 170.0);
+    return (base + scaleAdjustment).clamp(112.0, 170.0).toDouble();
   }
 }
