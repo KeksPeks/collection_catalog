@@ -80,47 +80,37 @@ class _CollectionCatalogAppState extends State<CollectionCatalogApp> {
   ThemeData _themeData(Brightness brightness) => ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: _colors[_colorIndex], brightness: brightness),
         useMaterial3: true,
+        visualDensity: VisualDensity.standard,
+        listTileTheme: const ListTileThemeData(contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 2), minVerticalPadding: 8),
+        cardTheme: const CardThemeData(margin: EdgeInsets.all(4)),
+        inputDecorationTheme: const InputDecorationTheme(contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
       );
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Collection Catalog',
-      theme: _themeData(Brightness.light),
-      darkTheme: _themeData(Brightness.dark),
-      themeMode: _theme,
-      locale: _locale,
-      localizationsDelegates: const [AppLocalizations.delegate, GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
-      supportedLocales: AppLocalizations.supportedLocales,
-      builder: (context, child) => MediaQuery(data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(_fontScale)), child: child ?? const SizedBox.shrink()),
-      home: _HomeShell(
-        theme: _theme,
-        colorIndex: _colorIndex,
-        fontScale: _fontScale,
+  Widget build(BuildContext context) => MaterialApp(
+        debugShowCheckedModeBanner: false,
         locale: _locale,
-        onThemeChanged: (value) {
-          setState(() => _theme = value);
-          _saveSettings();
-        },
-        onColorChanged: (value) {
-          setState(() => _colorIndex = value);
-          _saveSettings();
-        },
-        onFontChanged: (value) {
-          setState(() => _fontScale = _scale(value));
-          _saveSettings();
-        },
-        onLocaleChanged: (value) {
-          setState(() => _locale = value);
-          _saveSettings();
-        },
-      ),
-    );
-  }
+        onGenerateTitle: (context) => AppLocalizations.of(context).catalog,
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [AppLocalizations.delegate, GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
+        theme: _themeData(Brightness.light),
+        darkTheme: _themeData(Brightness.dark),
+        themeMode: _theme,
+        builder: (context, child) => MediaQuery(data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(_fontScale)), child: child ?? const SizedBox.shrink()),
+        home: _CollectionShell(
+          theme: _theme,
+          colorIndex: _colorIndex,
+          fontScale: _fontScale,
+          locale: _locale,
+          onThemeChanged: (value) { setState(() => _theme = value); _saveSettings(); },
+          onColorChanged: (value) { setState(() => _colorIndex = value); _saveSettings(); },
+          onFontChanged: (value) { setState(() => _fontScale = _scale(value)); _saveSettings(); },
+          onLocaleChanged: (value) { setState(() => _locale = value); _saveSettings(); },
+        ),
+      );
 }
 
-class _HomeShell extends StatefulWidget {
+class _CollectionShell extends StatefulWidget {
   final ThemeMode theme;
   final int colorIndex;
   final double fontScale;
@@ -129,29 +119,66 @@ class _HomeShell extends StatefulWidget {
   final ValueChanged<int> onColorChanged;
   final ValueChanged<double> onFontChanged;
   final ValueChanged<Locale?> onLocaleChanged;
-  const _HomeShell({required this.theme, required this.colorIndex, required this.fontScale, required this.locale, required this.onThemeChanged, required this.onColorChanged, required this.onFontChanged, required this.onLocaleChanged});
-
+  const _CollectionShell({required this.theme, required this.colorIndex, required this.fontScale, required this.locale, required this.onThemeChanged, required this.onColorChanged, required this.onFontChanged, required this.onLocaleChanged});
   @override
-  State<_HomeShell> createState() => _HomeShellState();
+  State<_CollectionShell> createState() => _CollectionShellState();
 }
 
-class _HomeShellState extends State<_HomeShell> {
+class _CollectionShellState extends State<_CollectionShell> {
   int _index = 0;
-
+  VoidCallback? _layoutListener;
+  @override
+  void initState() {
+    super.initState();
+    _layoutListener = () { if (mounted) setState(() {}); };
+    UiLayoutSettings.revision.addListener(_layoutListener!);
+    UiLayoutSettings.ensureLoaded();
+  }
+  @override
+  void dispose() {
+    final listener = _layoutListener;
+    if (listener != null) UiLayoutSettings.revision.removeListener(listener);
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final info = ResponsiveInfo.of(context);
+    final navigation = UiLayoutSettings.navigation;
+    final useRail = navigation == 'side' || (navigation == 'auto' && info.useRail);
     final pages = <Widget>[
       const CatalogPage(),
-      const CollectionsPage(),
       const FavoritesPage(),
+      const CollectionsPage(),
       const OverviewPage(),
       _SettingsPage(theme: widget.theme, colorIndex: widget.colorIndex, fontScale: widget.fontScale, locale: widget.locale, onThemeChanged: widget.onThemeChanged, onColorChanged: widget.onColorChanged, onFontChanged: widget.onFontChanged, onLocaleChanged: widget.onLocaleChanged),
     ];
+    final destinations = <_Destination>[
+      _Destination(Icons.menu_book_outlined, Icons.menu_book, l10n.catalog),
+      _Destination(Icons.star_border_rounded, Icons.star_rounded, l10n.favorites),
+      _Destination(Icons.collections_bookmark_outlined, Icons.collections_bookmark, l10n.myCollections),
+      _Destination(Icons.insights_outlined, Icons.insights_rounded, l10n.overview),
+      _Destination(Icons.settings_outlined, Icons.settings, l10n.settings),
+    ];
+    if (useRail) {
+      return Scaffold(body: Row(children: [
+        NavigationRail(selectedIndex: _index, onDestinationSelected: (value) => setState(() => _index = value), labelType: NavigationRailLabelType.all, groupAlignment: -0.85, destinations: [for (final d in destinations) NavigationRailDestination(icon: Icon(d.icon), selectedIcon: Icon(d.selectedIcon), label: Text(d.label))]),
+        const VerticalDivider(width: 1),
+        Expanded(child: IndexedStack(index: _index, children: pages)),
+      ]));
+    }
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),
-      bottomNavigationBar: NavigationBar(selectedIndex: _index, onDestinationSelected: (value) => setState(() => _index = value), destinations: const [NavigationDestination(icon: Icon(Icons.menu_book_outlined), selectedIcon: Icon(Icons.menu_book), label: 'Каталог'), NavigationDestination(icon: Icon(Icons.collections_bookmark_outlined), selectedIcon: Icon(Icons.collections_bookmark), label: 'Мои коллекции'), NavigationDestination(icon: Icon(Icons.star_border), selectedIcon: Icon(Icons.star), label: 'Избранное'), NavigationDestination(icon: Icon(Icons.insights_outlined), selectedIcon: Icon(Icons.insights), label: 'Обзор'), NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Настройки')]),
+      bottomNavigationBar: NavigationBar(selectedIndex: _index, onDestinationSelected: (value) => setState(() => _index = value), destinations: [for (final d in destinations) NavigationDestination(icon: Icon(d.icon), selectedIcon: Icon(d.selectedIcon), label: d.label)]),
     );
   }
+}
+
+class _Destination {
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  const _Destination(this.icon, this.selectedIcon, this.label);
 }
 
 class _SettingsPage extends StatelessWidget {
@@ -209,7 +236,10 @@ class _SettingsPage extends StatelessWidget {
   }
 
   Future<void> _showColumns(BuildContext context) async {
-    final result = await showModalBottomSheet<int>(context: context, builder: (sheetContext) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [for (final value in [0, 1, 2, 3, 4]) ListTile(leading: Icon(UiLayoutSettings.columns == value ? Icons.radio_button_checked : Icons.radio_button_unchecked), title: Text(value == 0 ? _text(context, 'Автоматически', 'Automatic') : '${_text(context, 'Колонки', 'Columns')}: $value'), onTap: () => Navigator.pop(sheetContext, value)), const SizedBox(height: 8)])));
+    final result = await showModalBottomSheet<int>(context: context, builder: (sheetContext) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      for (final value in [0, 1, 2, 3, 4]) ListTile(leading: Icon(UiLayoutSettings.columns == value ? Icons.radio_button_checked : Icons.radio_button_unchecked), title: Text(value == 0 ? _text(context, 'Автоматически', 'Automatic') : '${_text(context, 'Колонки', 'Columns')}: $value'), onTap: () => Navigator.pop(sheetContext, value)),
+      const SizedBox(height: 8),
+    ])));
     if (result != null) await UiLayoutSettings.save(columns: result);
   }
 
@@ -238,7 +268,15 @@ class _SettingsPage extends StatelessWidget {
   }
 
   Future<void> _showBackup(BuildContext context) async {
-    await showModalBottomSheet<void>(context: context, builder: (sheetContext) => SafeArea(child: ListView(shrinkWrap: true, padding: const EdgeInsets.all(16), children: [const Text('Резервная копия', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)), const SizedBox(height: 12), const Text('Сохраните данные коллекций и состояния предметов или восстановите их из ранее созданной копии.'), const SizedBox(height: 16), Row(children: [Expanded(child: OutlinedButton.icon(onPressed: () async { await _exportBackup(context, false); if (sheetContext.mounted) Navigator.pop(sheetContext); }, icon: const Icon(Icons.data_object), label: const Text('JSON'))), const SizedBox(width: 8), Expanded(child: FilledButton.icon(onPressed: () async { await _exportBackup(context, true); if (sheetContext.mounted) Navigator.pop(sheetContext); }, icon: const Icon(Icons.archive_outlined), label: const Text('ZIP')))]), const Divider(height: 28), ListTile(leading: const Icon(Icons.restore_outlined), title: const Text('Восстановить данные'), subtitle: const Text('Импорт резервной копии'), trailing: const Icon(Icons.chevron_right), onTap: () async { Navigator.pop(sheetContext); await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BackupImportPage())); })])));
+    await showModalBottomSheet<void>(context: context, builder: (sheetContext) => SafeArea(child: ListView(shrinkWrap: true, padding: const EdgeInsets.all(16), children: [
+      const Text('Резервная копия', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+      const SizedBox(height: 12),
+      const Text('Сохраните данные коллекций и состояния предметов или восстановите их из ранее созданной копии.'),
+      const SizedBox(height: 16),
+      Row(children: [Expanded(child: OutlinedButton.icon(onPressed: () async { await _exportBackup(context, false); if (sheetContext.mounted) Navigator.pop(sheetContext); }, icon: const Icon(Icons.data_object), label: const Text('JSON'))), const SizedBox(width: 8), Expanded(child: FilledButton.icon(onPressed: () async { await _exportBackup(context, true); if (sheetContext.mounted) Navigator.pop(sheetContext); }, icon: const Icon(Icons.archive_outlined), label: const Text('ZIP')))]),
+      const Divider(height: 28),
+      ListTile(leading: const Icon(Icons.restore_outlined), title: const Text('Восстановить данные'), subtitle: const Text('Импорт резервной копии'), trailing: const Icon(Icons.chevron_right), onTap: () async { Navigator.pop(sheetContext); await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BackupImportPage())); }),
+    ])));
   }
 
   Future<void> _exportBackup(BuildContext context, bool zip) async {
@@ -252,7 +290,10 @@ class _SettingsPage extends StatelessWidget {
   }
 
   Future<void> _showLanguage(BuildContext context) async {
-    final result = await showModalBottomSheet<String>(context: context, builder: (sheetContext) => SafeArea(child: ListView(shrinkWrap: true, children: [ListTile(leading: Icon(locale == null ? Icons.radio_button_checked : Icons.radio_button_unchecked), title: Text(AppLocalizations.of(context).languageSystem), onTap: () => Navigator.pop(sheetContext, '__system__')), ...AppLocalizations.supportedLocales.map((item) => ListTile(leading: Icon(locale?.languageCode == item.languageCode ? Icons.radio_button_checked : Icons.radio_button_unchecked), title: Text(AppLocalizations(item).languageName), onTap: () => Navigator.pop(sheetContext, item.languageCode)))])));
+    final result = await showModalBottomSheet<String>(context: context, builder: (sheetContext) => SafeArea(child: ListView(shrinkWrap: true, children: [
+      ListTile(leading: Icon(locale == null ? Icons.radio_button_checked : Icons.radio_button_unchecked), title: Text(AppLocalizations.of(context).languageSystem), onTap: () => Navigator.pop(sheetContext, '__system__')),
+      ...AppLocalizations.supportedLocales.map((item) => ListTile(leading: Icon(locale?.languageCode == item.languageCode ? Icons.radio_button_checked : Icons.radio_button_unchecked), title: Text(AppLocalizations(item).languageName), onTap: () => Navigator.pop(sheetContext, item.languageCode))),
+    ])));
     if (!context.mounted || result == null) return;
     onLocaleChanged(result == '__system__' ? null : Locale(result));
   }
