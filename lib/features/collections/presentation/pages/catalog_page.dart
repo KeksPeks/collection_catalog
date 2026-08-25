@@ -7,6 +7,7 @@ import '../../../../core/settings/currency_settings.dart';
 import '../../../../core/settings/ui_layout_settings.dart';
 import '../../../catalogs/data/catalog_registry.dart';
 import '../../../catalogs/data/catalog_ui_localization.dart';
+import '../../../catalogs/data/catalog_version_store.dart';
 import '../../../catalogs/data/favorites_store.dart';
 import '../../../catalogs/domain/entities/catalog_category_definition.dart';
 import '../../../catalogs/domain/entities/catalog_definition.dart';
@@ -174,11 +175,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
     );
   }
 
-  Widget _buildCategories(
-    BuildContext context,
-    List<CatalogCategoryDefinition> categories,
-    AppLocalizations l10n,
-  ) {
+  Widget _buildCategories(BuildContext context, List<CatalogCategoryDefinition> categories, AppLocalizations l10n) {
     if (!_grid) {
       return Column(
         children: categories
@@ -191,10 +188,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
                   subtitle: '${category.catalogIds.length} ${l10n.chooseCatalog.toLowerCase()}',
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => CatalogCategoryPage(
-                        categoryId: category.id,
-                        onDownload: _downloadCatalog,
-                      ),
+                      builder: (_) => CatalogCategoryPage(categoryId: category.id, onDownload: _downloadCatalog),
                     ),
                   ),
                 ),
@@ -208,11 +202,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
       builder: (context, constraints) {
         final columns = UiLayoutSettings.resolveColumns(constraints.maxWidth);
         final textScale = MediaQuery.textScalerOf(context).scale(1.0);
-        final height = UiLayoutSettings.resolveCardHeight(
-          width: constraints.maxWidth,
-          columns: columns,
-          textScale: textScale,
-        );
+        final height = UiLayoutSettings.resolveCardHeight(width: constraints.maxWidth, columns: columns, textScale: textScale);
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -230,12 +220,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
               title: CatalogUiLocalization.categoryName(context, category.id),
               subtitle: '${category.catalogIds.length} ${l10n.chooseCatalog.toLowerCase()}',
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => CatalogCategoryPage(
-                    categoryId: category.id,
-                    onDownload: _downloadCatalog,
-                  ),
-                ),
+                MaterialPageRoute(builder: (_) => CatalogCategoryPage(categoryId: category.id, onDownload: _downloadCatalog)),
               ),
             );
           },
@@ -285,8 +270,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
     if (query.isEmpty) return CatalogRegistry.categories;
     return CatalogRegistry.categories.where((category) {
       final name = CatalogUiLocalization.categoryName(context, category.id).toLowerCase();
-      return name.contains(query) ||
-          category.catalogIds.any((id) => CatalogUiLocalization.catalogName(context, id).toLowerCase().contains(query));
+      return name.contains(query) || category.catalogIds.any((id) => CatalogUiLocalization.catalogName(context, id).toLowerCase().contains(query));
     }).toList(growable: false);
   }
 
@@ -303,10 +287,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
           onChanged: (value) => setState(() => _search = value),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(AppLocalizations.of(context).back),
-          ),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(AppLocalizations.of(context).back)),
         ],
       ),
     );
@@ -314,14 +295,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
   }
 
   Future<void> _openCatalog(CatalogDefinition catalog) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => CatalogOnlinePage(
-          catalog: catalog,
-          onDownload: () => _downloadCatalog(catalog),
-        ),
-      ),
-    );
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: catalog, onDownload: () => _downloadCatalog(catalog))));
   }
 
   Future<void> _downloadCatalog(CatalogDefinition catalog) async {
@@ -333,15 +307,14 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
     }
 
     ref.read(downloadQueueProvider.notifier).add(catalog.id, catalog.name);
-    var createdCollectionId = '';
     try {
-      createdCollectionId = 'catalog_${catalog.id}_${DateTime.now().microsecondsSinceEpoch}';
+      final collectionId = 'catalog_${catalog.id}_${DateTime.now().microsecondsSinceEpoch}';
       final now = DateTime.now();
       final fields = catalog.template.fields
-          .map((field) => field.copyWith(id: '${createdCollectionId}_${field.id}', collectionId: createdCollectionId))
+          .map((field) => field.copyWith(id: '${collectionId}_${field.id}', collectionId: collectionId))
           .toList(growable: false);
       final collection = Collection(
-        id: createdCollectionId,
+        id: collectionId,
         name: catalog.name,
         templateId: catalog.templateId,
         fields: fields,
@@ -352,33 +325,24 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
 
       final sectionService = await ref.read(collectionSectionServiceProvider.future);
       final sectionIds = <String, String>{};
-      await _createSections(sectionService, catalog.sections, createdCollectionId, null, const [], sectionIds);
+      await _createSections(sectionService, catalog.sections, collectionId, null, const [], sectionIds);
 
       final itemService = ref.read(itemServiceProvider);
       for (var index = 0; index < catalog.entries.length; index++) {
         final entry = catalog.entries[index];
-        final itemId = '${createdCollectionId}_item_${entry.id}';
-        await itemService.saveItem(
-          Item(
-            id: itemId,
-            collectionId: createdCollectionId,
-            sectionId: _sectionIdForPath(entry.sectionPath, sectionIds),
-            sortOrder: index,
-            createdAt: now,
-            updatedAt: now,
-          ),
-        );
+        final itemId = '${collectionId}_item_${entry.id}';
+        await itemService.saveItem(Item(
+          id: itemId,
+          collectionId: collectionId,
+          sectionId: _sectionIdForPath(entry.sectionPath, sectionIds),
+          sortOrder: index,
+          createdAt: now,
+          updatedAt: now,
+        ));
         for (final field in fields) {
           final value = _entryValue(entry, field.id, field.label);
           if (value == null || value.isEmpty) continue;
-          await itemService.saveValue(
-            ItemValue(
-              id: '${itemId}_${field.id}',
-              itemId: itemId,
-              fieldId: field.id,
-              value: value,
-            ),
-          );
+          await itemService.saveValue(ItemValue(id: '${itemId}_${field.id}', itemId: itemId, fieldId: field.id, value: value));
         }
       }
 
@@ -387,12 +351,9 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
       if (mounted) await _openLocalCollection(collection);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки «${catalog.name}»: $error')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка загрузки «${catalog.name}»: $error')));
       }
-      // Не пробрасываем ошибку дальше: иначе пользователь получает второй
-      // общий экран ошибки поверх уже понятного сообщения.
+      // Не пробрасываем исключение повторно: пользователь уже получил понятное сообщение.
     } finally {
       ref.read(downloadQueueProvider.notifier).remove(catalog.id);
     }
@@ -406,31 +367,22 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
 
   String? _sectionIdForPath(List<String> path, Map<String, String> sectionIds) => path.isEmpty ? null : sectionIds[path.join('/')];
 
-  Future<void> _createSections(
-    CollectionSectionService service,
-    List<CatalogSectionDefinition> definitions,
-    String collectionId,
-    String? parentId,
-    List<String> path,
-    Map<String, String> sectionIds,
-  ) async {
+  Future<void> _createSections(CollectionSectionService service, List<CatalogSectionDefinition> definitions, String collectionId, String? parentId, List<String> path, Map<String, String> sectionIds) async {
     for (var index = 0; index < definitions.length; index++) {
       final definition = definitions[index];
       final currentPath = [...path, definition.id];
       final id = '${collectionId}_section_${currentPath.join('_')}';
       final now = DateTime.now();
       sectionIds[currentPath.join('/')] = id;
-      await service.createSection(
-        CollectionSection(
-          id: id,
-          collectionId: collectionId,
-          parentId: parentId,
-          name: definition.name,
-          sortOrder: index,
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
+      await service.createSection(CollectionSection(
+        id: id,
+        collectionId: collectionId,
+        parentId: parentId,
+        name: definition.name,
+        sortOrder: index,
+        createdAt: now,
+        updatedAt: now,
+      ));
       await _createSections(service, definition.children, collectionId, id, currentPath, sectionIds);
     }
   }
@@ -455,15 +407,7 @@ class _SectionTitle extends StatelessWidget {
         children: [
           Icon(icon, size: 21),
           const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-            ),
-          ),
+          Flexible(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800))),
         ],
       ),
     );
