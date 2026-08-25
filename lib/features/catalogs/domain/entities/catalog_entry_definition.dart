@@ -12,6 +12,13 @@ class CatalogEntryDefinition {
   /// Например: countries -> russia -> regular.
   final List<String> sectionPath;
 
+  /// URL изображения карточки. Если его нет, интерфейс показывает NO IMAGES.
+  final String? imageUrl;
+
+  /// Код страны ISO 3166-1 alpha-2 для отображения флага.
+  /// Если не задан, код определяется по полю «Страна».
+  final String? countryCode;
+
   const CatalogEntryDefinition({
     required this.id,
     required this.title,
@@ -19,5 +26,7 @@ class CatalogEntryDefinition {
     required this.subtitle,
     this.attributes = const {},
     this.sectionPath = const [],
+    this.imageUrl,
+    this.countryCode,
   });
 }
