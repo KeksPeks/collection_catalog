@@ -7,9 +7,6 @@ import '../providers/collection_provider.dart';
 import 'collection_detail_page.dart';
 
 /// Экран загруженных каталогов.
-///
-/// Каталоги и их структура поставляются приложением. Пользователь не может
-/// менять каталог, удалять его содержимое или добавлять новые записи.
 class CollectionsPage extends ConsumerStatefulWidget {
   const CollectionsPage({super.key});
 
@@ -43,20 +40,20 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     final collections = ref.watch(collectionsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: const Text('Мои коллекции'),
-      ),
+      appBar: AppBar(centerTitle: true, title: const Text('Мои коллекции')),
       body: collections.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('Ошибка: $error')),
+        error: (error, _) => _DatabaseError(error: error, onRetry: () => ref.invalidate(collectionsProvider)),
         data: (items) {
           final downloaded = items.where((item) => item.templateId != null).toList(growable: false);
-          final filtered = downloaded.where((item) => item.name.toLowerCase().contains(_search.toLowerCase())).toList(growable: false);
+          final query = _search.trim().toLowerCase();
+          final filtered = downloaded.where((item) => item.name.toLowerCase().contains(query)).toList(growable: false);
 
           return LayoutBuilder(
             builder: (context, constraints) {
               final columns = UiLayoutSettings.resolveColumns(constraints.maxWidth);
+              final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+              final cardHeight = UiLayoutSettings.resolveCardHeight(width: constraints.maxWidth, columns: columns, textScale: textScale);
               return RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(collectionsProvider);
@@ -92,14 +89,14 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
                         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
                         sliver: SliverGrid(
                           delegate: SliverChildBuilderDelegate(
-                            (context, index) => _buildCollectionTile(filtered[index], compact: true),
+                            (context, index) => SizedBox(height: cardHeight, child: _buildCollectionTile(filtered[index], compact: true)),
                             childCount: filtered.length,
                           ),
                           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: columns,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            mainAxisExtent: UiLayoutSettings.cardHeight,
+                            mainAxisExtent: cardHeight,
                           ),
                         ),
                       ),
@@ -119,9 +116,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
         prefixIcon: const Icon(Icons.search),
         hintText: 'Поиск загруженной коллекции',
         border: const OutlineInputBorder(),
-        suffixIcon: _search.isEmpty
-            ? null
-            : IconButton(icon: const Icon(Icons.clear), onPressed: () => setState(() => _search = '')),
+        suffixIcon: _search.isEmpty ? null : IconButton(icon: const Icon(Icons.clear), onPressed: () => setState(() => _search = '')),
       ),
       onChanged: (value) => setState(() => _search = value),
     );
@@ -132,7 +127,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
       return Card(
         margin: EdgeInsets.zero,
         child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           leading: const CircleAvatar(child: Icon(Icons.collections_bookmark)),
           title: Text(collection.name, maxLines: 2, overflow: TextOverflow.ellipsis),
           subtitle: const Text('Каталог сохранён на устройстве', maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -148,12 +143,12 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
       child: InkWell(
         onTap: () => _openCollection(collection),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const CircleAvatar(child: Icon(Icons.collections_bookmark)),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Flexible(
                 child: Text(
                   collection.name,
@@ -163,13 +158,8 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
-              const SizedBox(height: 4),
-              const Text(
-                'На устройстве',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-              ),
+              const SizedBox(height: 3),
+              const Text('На устройстве', maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
             ],
           ),
         ),
@@ -178,13 +168,36 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
   }
 
   Future<void> _openCollection(Collection collection) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => CollectionDetailPage(collectionId: collection.id, collectionName: collection.name),
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => CollectionDetailPage(collectionId: collection.id, collectionName: collection.name)));
+    if (mounted) ref.invalidate(collectionsProvider);
+  }
+}
+
+class _DatabaseError extends StatelessWidget {
+  final Object error;
+  final VoidCallback onRetry;
+
+  const _DatabaseError({required this.error, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.storage_outlined, size: 48),
+            const SizedBox(height: 12),
+            const Text('Не удалось открыть локальную базу данных', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Text('$error', textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Повторить')),
+          ],
+        ),
       ),
     );
-    if (!mounted) return;
-    ref.invalidate(collectionsProvider);
   }
 }
 
@@ -202,16 +215,9 @@ class _EmptyCollectionsCard extends StatelessWidget {
           children: [
             const Icon(Icons.download_outlined, size: 52),
             const SizedBox(height: 12),
-            Text(
-              hasCollections ? 'Ничего не найдено' : 'Загруженных коллекций пока нет',
-              style: Theme.of(context).textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
+            Text(hasCollections ? 'Ничего не найдено' : 'Загруженных коллекций пока нет', style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
             const SizedBox(height: 8),
-            const Text(
-              'Откройте вкладку «Каталог», выберите нужный сборник и нажмите кнопку загрузки.',
-              textAlign: TextAlign.center,
-            ),
+            const Text('Откройте вкладку «Каталог», выберите нужный сборник и нажмите кнопку загрузки.', textAlign: TextAlign.center),
           ],
         ),
       ),
