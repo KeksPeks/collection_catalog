@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/notifications/notification_service.dart';
 import '../../../catalogs/presentation/barcode_scanner_page.dart';
 import '../../../catalogs/presentation/global_search_page.dart';
+import '../../../gamification/presentation/gamification_page.dart';
 import '../../data/collection_history_store.dart';
 import '../../domain/entities/collection.dart';
 import '../providers/collection_provider.dart';
@@ -36,8 +37,7 @@ class _CollectionToolsPageState extends ConsumerState<CollectionToolsPage> {
       final service = ref.read(itemServiceProvider);
       final states = await ItemStateStore.loadAll();
 
-      // Коллекции читаются параллельно: обзор больше не ждёт завершения
-      // каждого каталога по очереди.
+      // Коллекции читаются параллельно: обзор больше не ждёт завершения каждого каталога по очереди.
       final summaries = await Future.wait(
         collections.map((collection) async {
           final items = await service.getItems(collection.id);
@@ -144,6 +144,7 @@ class _CollectionToolsPageState extends ConsumerState<CollectionToolsPage> {
             const SizedBox(height: 8),
             Row(children: [Expanded(child: _Metric('Хочу', '$wanted', Icons.shopping_cart_outlined)), const SizedBox(width: 8), Expanded(child: _Metric('Заказано', '$ordered', Icons.local_shipping_outlined)), const SizedBox(width: 8), Expanded(child: _Metric('Расходы', '€${cost.toStringAsFixed(2)}', Icons.euro_outlined))]),
             const SizedBox(height: 12),
+            _Tool('Достижения', 'XP, уровни и прогресс коллекционера', Icons.emoji_events_outlined, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GamificationPage()))),
             _Tool('Глобальный поиск', 'По каталогам, сериям и предметам', Icons.search, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GlobalSearchPage()))),
             _Tool('QR / штрихкод', 'Сканировать код предмета', Icons.qr_code_scanner, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BarcodeScannerPage()))),
             _Tool('Уведомления', 'Новости каталогов и прогресса', Icons.notifications_active_outlined, _notify),
