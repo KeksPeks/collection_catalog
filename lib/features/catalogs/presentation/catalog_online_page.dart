@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/settings/ui_layout_settings.dart';
-import '../data/catalog_version_store.dart';
 import '../data/favorites_store.dart';
 import '../domain/entities/catalog_definition.dart';
 import '../domain/entities/catalog_entry_definition.dart';
@@ -50,10 +49,8 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
     return current;
   }
 
-  List<CatalogSectionDefinition> get _sections {
-    if (widget.sectionPath.isEmpty) return widget.catalog.sections;
-    return _currentSection?.children ?? const <CatalogSectionDefinition>[];
-  }
+  List<CatalogSectionDefinition> get _sections =>
+      widget.sectionPath.isEmpty ? widget.catalog.sections : _currentSection?.children ?? const <CatalogSectionDefinition>[];
 
   List<CatalogEntryDefinition> get _entries {
     if (widget.sectionPath.isEmpty) return widget.catalog.entries;
@@ -98,27 +95,23 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
 
   Future<void> _loadFavorites() async {
     final keys = await FavoritesStore.loadKeys();
-    final catalogFavorite = keys.contains(FavoritesStore.catalogKey(widget.catalog.id));
-    final sectionFavorites = keys.where((key) => key.startsWith('section:')).map((key) => key.substring('section:'.length)).toSet();
     if (!mounted) return;
     setState(() {
-      _favorite = catalogFavorite;
-      _favoriteSections = sectionFavorites;
+      _favorite = keys.contains(FavoritesStore.catalogKey(widget.catalog.id));
+      _favoriteSections = keys.where((key) => key.startsWith('section:')).map((key) => key.substring('section:'.length)).toSet();
     });
   }
 
   Future<void> _toggleCatalogFavorite() async {
     final keys = await FavoritesStore.toggle(widget.catalog.id);
-    if (!mounted) return;
-    setState(() => _favorite = keys.contains(FavoritesStore.catalogKey(widget.catalog.id)));
+    if (mounted) setState(() => _favorite = keys.contains(FavoritesStore.catalogKey(widget.catalog.id)));
   }
 
   Future<void> _toggleSectionFavorite(String id) async {
     final keys = await FavoritesStore.toggleKey(FavoritesStore.sectionKey(id));
-    if (!mounted) return;
-    setState(() {
-      _favoriteSections = keys.where((key) => key.startsWith('section:')).map((key) => key.substring('section:'.length)).toSet();
-    });
+    if (mounted) {
+      setState(() => _favoriteSections = keys.where((key) => key.startsWith('section:')).map((key) => key.substring('section:'.length)).toSet());
+    }
   }
 
   List<CatalogEntryDefinition> _sortedEntries() {
@@ -129,9 +122,7 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
       final bValue = b.attributes[_sortField!] ?? b.primaryValue;
       final aNumber = double.tryParse(aValue.replaceAll(',', '.'));
       final bNumber = double.tryParse(bValue.replaceAll(',', '.'));
-      final comparison = aNumber != null && bNumber != null
-          ? aNumber.compareTo(bNumber)
-          : aValue.toLowerCase().compareTo(bValue.toLowerCase());
+      final comparison = aNumber != null && bNumber != null ? aNumber.compareTo(bNumber) : aValue.toLowerCase().compareTo(bValue.toLowerCase());
       return _descending ? -comparison : comparison;
     });
     return result;
@@ -144,7 +135,6 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
     final entries = _sortedEntries();
     final showEntries = widget.sectionPath.isNotEmpty || widget.catalog.sections.isEmpty;
     final totalItems = _sections.length + (showEntries ? entries.length : 0);
-    final cardHeight = UiLayoutSettings.cardHeight;
 
     return Scaffold(
       appBar: AppBar(
@@ -180,30 +170,21 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
         itemBuilder: (context, index) {
           if (index < _sections.length) {
             final section = _sections[index];
-            return SizedBox(
-              height: cardHeight,
-              child: Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  leading: const CircleAvatar(child: Icon(Icons.folder_outlined)),
-                  title: Text(section.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(section.children.isEmpty ? '${_count(section)} записей' : '${section.children.length} подразделов', maxLines: 1, overflow: TextOverflow.ellipsis),
-                  trailing: IconButton(
-                    onPressed: () => _toggleSectionFavorite(section.id),
-                    icon: Icon(_favoriteSections.contains(section.id) ? Icons.star_rounded : Icons.star_border_rounded),
+            return Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                leading: const CircleAvatar(child: Icon(Icons.folder_outlined)),
+                title: Text(section.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+                subtitle: Text(section.children.isEmpty ? '${_count(section)} записей' : '${section.children.length} подразделов', maxLines: 1, overflow: TextOverflow.ellipsis),
+                trailing: IconButton(
+                  onPressed: () => _toggleSectionFavorite(section.id),
+                  icon: Icon(_favoriteSections.contains(section.id) ? Icons.star_rounded : Icons.star_border_rounded),
+                ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => CatalogOnlinePage(catalog: widget.catalog, onDownload: widget.onDownload, sectionPath: [...widget.sectionPath, section.id]),
                   ),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => CatalogOnlinePage(
-                          catalog: widget.catalog,
-                          onDownload: widget.onDownload,
-                          sectionPath: [...widget.sectionPath, section.id],
-                        ),
-                      ),
-                    );
-                  },
                 ),
               ),
             );
@@ -212,16 +193,13 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
           final entryIndex = index - _sections.length;
           if (entryIndex < entries.length) {
             final entry = entries[entryIndex];
-            return SizedBox(
-              height: cardHeight,
-              child: Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  leading: const Icon(Icons.inventory_2_outlined),
-                  title: Text(entry.title, maxLines: 2, overflow: TextOverflow.ellipsis),
-                  subtitle: Text('${entry.primaryValue} · ${entry.subtitle}', maxLines: 2, overflow: TextOverflow.ellipsis),
-                ),
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                leading: const Icon(Icons.inventory_2_outlined),
+                title: Text(entry.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+                subtitle: Text('${entry.primaryValue} · ${entry.subtitle}', maxLines: 2, overflow: TextOverflow.ellipsis),
               ),
             );
           }
@@ -240,7 +218,6 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
                 child: FilledButton.icon(
                   onPressed: () async {
                     await widget.onDownload!.call();
-                    await CatalogVersionStore.markInstalled(widget.catalog.id, widget.catalog.version);
                     if (!mounted) return;
                     Navigator.of(context).pop();
                   },
