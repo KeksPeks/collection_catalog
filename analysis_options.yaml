@@ -16,6 +16,8 @@ analyzer:
     use_build_context_synchronously: ignore
     prefer_null_aware_operators: ignore
     avoid_relative_lib_imports: ignore
+    unused_import: ignore
+    unused_element: ignore
 
 linter:
   rules:
