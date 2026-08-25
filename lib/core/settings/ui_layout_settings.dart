@@ -37,6 +37,7 @@ class UiLayoutSettings {
     int? columns,
     String? density,
     String? navigation,
+    @Deprecated('Фиксированная высота карточек больше не поддерживается') double? cardHeight,
   }) async {
     final preferences = await SharedPreferences.getInstance();
     if (columns != null) {
@@ -51,6 +52,7 @@ class UiLayoutSettings {
       UiLayoutSettings.navigation = navigation;
       await preferences.setString(navigationKey, navigation);
     }
+    // Старый параметр cardHeight намеренно игнорируется: высота теперь адаптивная.
     _loaded = true;
     revision.value++;
   }
