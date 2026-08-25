@@ -136,16 +136,7 @@ class _CollectionShell extends StatefulWidget {
   final ValueChanged<double> onFontChanged;
   final ValueChanged<Locale?> onLocaleChanged;
 
-  const _CollectionShell({
-    required this.theme,
-    required this.colorIndex,
-    required this.fontScale,
-    required this.locale,
-    required this.onThemeChanged,
-    required this.onColorChanged,
-    required this.onFontChanged,
-    required this.onLocaleChanged,
-  });
+  const _CollectionShell({required this.theme, required this.colorIndex, required this.fontScale, required this.locale, required this.onThemeChanged, required this.onColorChanged, required this.onFontChanged, required this.onLocaleChanged});
 
   @override
   State<_CollectionShell> createState() => _CollectionShellState();
@@ -183,22 +174,13 @@ class _CollectionShellState extends State<_CollectionShell> {
       const FavoritesPage(),
       const CollectionsPage(),
       const OverviewPage(),
-      _SettingsPage(
-        theme: widget.theme,
-        colorIndex: widget.colorIndex,
-        fontScale: widget.fontScale,
-        locale: widget.locale,
-        onThemeChanged: widget.onThemeChanged,
-        onColorChanged: widget.onColorChanged,
-        onFontChanged: widget.onFontChanged,
-        onLocaleChanged: widget.onLocaleChanged,
-      ),
+      _SettingsPage(theme: widget.theme, colorIndex: widget.colorIndex, fontScale: widget.fontScale, locale: widget.locale, onThemeChanged: widget.onThemeChanged, onColorChanged: widget.onColorChanged, onFontChanged: widget.onFontChanged, onLocaleChanged: widget.onLocaleChanged),
     ];
     final destinations = <_Destination>[
       _Destination(Icons.menu_book_outlined, Icons.menu_book, l10n.catalog),
       _Destination(Icons.star_border_rounded, Icons.star_rounded, l10n.favorites),
       _Destination(Icons.collections_bookmark_outlined, Icons.collections_bookmark, l10n.myCollections),
-      _Destination(Icons.insights_outlined, Icons.insights_rounded, 'Обзор'),
+      _Destination(Icons.insights_outlined, Icons.insights_rounded, l10n.overview),
       _Destination(Icons.settings_outlined, Icons.settings, l10n.settings),
     ];
 
@@ -212,8 +194,7 @@ class _CollectionShellState extends State<_CollectionShell> {
               labelType: NavigationRailLabelType.all,
               groupAlignment: -0.85,
               destinations: [
-                for (final d in destinations)
-                  NavigationRailDestination(icon: Icon(d.icon), selectedIcon: Icon(d.selectedIcon), label: Text(d.label)),
+                for (final d in destinations) NavigationRailDestination(icon: Icon(d.icon), selectedIcon: Icon(d.selectedIcon), label: Text(d.label)),
               ],
             ),
             const VerticalDivider(width: 1),
@@ -228,9 +209,7 @@ class _CollectionShellState extends State<_CollectionShell> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (value) => setState(() => _index = value),
-        destinations: [
-          for (final d in destinations) NavigationDestination(icon: Icon(d.icon), selectedIcon: Icon(d.selectedIcon), label: d.label),
-        ],
+        destinations: [for (final d in destinations) NavigationDestination(icon: Icon(d.icon), selectedIcon: Icon(d.selectedIcon), label: d.label)],
       ),
     );
   }
@@ -240,7 +219,6 @@ class _Destination {
   final IconData icon;
   final IconData selectedIcon;
   final String label;
-
   const _Destination(this.icon, this.selectedIcon, this.label);
 }
 
@@ -254,16 +232,7 @@ class _SettingsPage extends StatelessWidget {
   final ValueChanged<double> onFontChanged;
   final ValueChanged<Locale?> onLocaleChanged;
 
-  const _SettingsPage({
-    required this.theme,
-    required this.colorIndex,
-    required this.fontScale,
-    required this.locale,
-    required this.onThemeChanged,
-    required this.onColorChanged,
-    required this.onFontChanged,
-    required this.onLocaleChanged,
-  });
+  const _SettingsPage({required this.theme, required this.colorIndex, required this.fontScale, required this.locale, required this.onThemeChanged, required this.onColorChanged, required this.onFontChanged, required this.onLocaleChanged});
 
   String _text(BuildContext context, String ru, String en) => Localizations.localeOf(context).languageCode == 'ru' ? ru : en;
 
@@ -273,13 +242,7 @@ class _SettingsPage extends StatelessWidget {
         ThemeMode.dark => _text(context, 'Тёмная', 'Dark'),
       };
 
-  String _sizeName(BuildContext context, double value) {
-    if (value < .8125) return _text(context, 'Очень маленький', 'Very small');
-    if (value < .9375) return _text(context, 'Маленький', 'Small');
-    if (value < 1.0625) return _text(context, 'Средний', 'Medium');
-    if (value < 1.1875) return _text(context, 'Большой', 'Large');
-    return _text(context, 'Очень большой', 'Very large');
-  }
+  String _columnsName(BuildContext context, int value) => value == 0 ? _text(context, 'Автоматически', 'Automatic') : '$value';
 
   static const _colors = <Color>[Colors.indigo, Colors.teal, Colors.deepPurple, Colors.orange, Colors.green];
   static const _colorNames = ['Индиго', 'Бирюзовый', 'Фиолетовый', 'Оранжевый', 'Зелёный'];
@@ -294,12 +257,12 @@ class _SettingsPage extends StatelessWidget {
         padding: EdgeInsets.all(info.pagePadding),
         children: [
           _SettingsGroup(
-            title: 'Интерфейс',
+            title: l10n.appearance,
             children: [
-              ListTile(leading: const Icon(Icons.devices_outlined), title: const Text('Адаптивный режим'), subtitle: Text(info.useRail ? 'Боковая панель' : 'Нижняя панель')),
-              ListTile(leading: const Icon(Icons.text_fields_outlined), title: const Text('Размер текста'), subtitle: Text(_sizeName(context, fontScale)), onTap: () => _showScale(context)),
-              ListTile(leading: const Icon(Icons.palette_outlined), title: const Text('Тема'), subtitle: Text(_themeName(context, theme)), onTap: () => _showTheme(context)),
-              ListTile(leading: const Icon(Icons.color_lens_outlined), title: const Text('Цветовая схема'), subtitle: Text(_colorNames[colorIndex]), onTap: () => _showColor(context)),
+              ListTile(leading: const Icon(Icons.grid_view_rounded), title: Text(l10n.columns), subtitle: Text(_columnsName(context, UiLayoutSettings.columns)), trailing: const Icon(Icons.chevron_right), onTap: () => _showColumns(context)),
+              ListTile(leading: const Icon(Icons.palette_outlined), title: Text(l10n.theme), subtitle: Text(_themeName(context, theme)), onTap: () => _showTheme(context)),
+              ListTile(leading: const Icon(Icons.color_lens_outlined), title: Text(l10n.colorScheme), subtitle: Text(_colorNames[colorIndex]), onTap: () => _showColor(context)),
+              ListTile(leading: const Icon(Icons.translate_rounded), title: Text(l10n.language), subtitle: Text(locale == null ? l10n.languageSystem : AppLocalizations(locale!).languageName), trailing: const Icon(Icons.chevron_right), onTap: () => _showLanguage(context)),
             ],
           ),
           const SizedBox(height: 12),
@@ -321,15 +284,35 @@ class _SettingsPage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _SettingsGroup(
-            title: l10n.settings,
+            title: 'О приложении',
             children: [
-              ListTile(leading: const Icon(Icons.translate_rounded), title: Text(l10n.language), subtitle: Text(locale == null ? l10n.languageSystem : AppLocalizations(locale!).languageName), trailing: const Icon(Icons.chevron_right), onTap: () => _showLanguage(context)),
-              ListTile(leading: const Icon(Icons.help_outline), title: const Text('О приложении'), subtitle: Text(l10n.catalogDescription), onTap: () => showAboutDialog(context: context, applicationName: 'Collection Catalog')),
+              ListTile(leading: const Icon(Icons.info_outline), title: const Text('О приложении'), subtitle: const Text('Collection Catalog'), trailing: const Icon(Icons.chevron_right), onTap: () => showAboutDialog(context: context, applicationName: 'Collection Catalog', applicationVersion: '1.1.0+2', applicationLegalese: 'Universal collection engine application.')),
             ],
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _showColumns(BuildContext context) async {
+    final result = await showModalBottomSheet<int>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final value in [0, 1, 2, 3, 4])
+              ListTile(
+                leading: Icon(UiLayoutSettings.columns == value ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+                title: Text(value == 0 ? _text(context, 'Автоматически', 'Automatic') : '${_text(context, 'Колонки', 'Columns')}: $value'),
+                onTap: () => Navigator.pop(sheetContext, value),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (result != null) await UiLayoutSettings.save(columns: result);
   }
 
   Future<void> _showCatalogVersions(BuildContext context) async {
@@ -417,18 +400,11 @@ class _SettingsPage extends StatelessWidget {
     final result = await showModalBottomSheet<int>(context: context, builder: (sheetContext) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: List.generate(_colors.length, (index) => ListTile(leading: CircleAvatar(backgroundColor: _colors[index]), title: Text(_colorNames[index]), selected: index == colorIndex, onTap: () => Navigator.pop(sheetContext, index))))));
     if (result != null) onColorChanged(result);
   }
-
-  Future<void> _showScale(BuildContext context) async {
-    const values = [0.75, 0.875, 1.0, 1.125, 1.25];
-    final result = await showModalBottomSheet<double>(context: context, builder: (sheetContext) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: values.map((value) => ListTile(leading: Icon((value - fontScale).abs() < .01 ? Icons.radio_button_checked : Icons.radio_button_unchecked), title: Text(_sizeName(context, value)), subtitle: Text('${(value * 100).round()}%'), onTap: () => Navigator.pop(sheetContext, value))).toList())));
-    if (result != null) onFontChanged(result);
-  }
 }
 
 class _SettingsGroup extends StatelessWidget {
   final String title;
   final List<Widget> children;
-
   const _SettingsGroup({required this.title, required this.children});
 
   @override
