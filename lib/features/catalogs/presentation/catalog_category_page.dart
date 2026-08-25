@@ -1,100 +1,96 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/settings/ui_layout_settings.dart';
 import '../data/catalog_registry.dart';
 import '../data/catalog_ui_localization.dart';
 import '../domain/entities/catalog_definition.dart';
 import 'catalog_online_page.dart';
 
-class CatalogCategoryPage extends StatefulWidget {
+class CatalogCategoryPage extends StatelessWidget {
   final String categoryId;
   final Future<void> Function(CatalogDefinition catalog)? onDownload;
 
   const CatalogCategoryPage({super.key, required this.categoryId, this.onDownload});
 
   @override
-  State<CatalogCategoryPage> createState() => _CatalogCategoryPageState();
-}
-
-class _CatalogCategoryPageState extends State<CatalogCategoryPage> {
-  VoidCallback? _layoutListener;
-
-  @override
-  void initState() {
-    super.initState();
-    _layoutListener = () { if (mounted) setState(() {}); };
-    UiLayoutSettings.revision.addListener(_layoutListener!);
-    UiLayoutSettings.ensureLoaded();
-  }
-
-  @override
-  void dispose() {
-    final listener = _layoutListener;
-    if (listener != null) UiLayoutSettings.revision.removeListener(listener);
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final category = CatalogRegistry.categoryById(widget.categoryId);
-    final catalogs = CatalogRegistry.catalogsForCategory(widget.categoryId);
-    if (category == null) return Scaffold(appBar: AppBar(title: Text(l10n.catalog)), body: Center(child: Text(l10n.noResults)));
+    final category = CatalogRegistry.categoryById(categoryId);
+    final catalogs = CatalogRegistry.catalogsForCategory(categoryId);
+    if (category == null) {
+      return Scaffold(appBar: AppBar(title: Text(l10n.catalog)), body: Center(child: Text(l10n.noResults)));
+    }
 
     return Scaffold(
       appBar: AppBar(title: Text(CatalogUiLocalization.categoryName(context, category.id))),
-      body: LayoutBuilder(builder: (context, constraints) {
-        final columns = UiLayoutSettings.resolveColumns(constraints.maxWidth);
-        final textScale = MediaQuery.textScalerOf(context).scale(1.0);
-        final columnWidth = (constraints.maxWidth - (columns - 1) * 12) / columns;
-        final canShowTitles = columns == 1 || catalogs.every((catalog) {
-          final title = CatalogUiLocalization.catalogName(context, catalog.id);
-          final style = Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800);
-          final painter = TextPainter(text: TextSpan(text: title, style: style), maxLines: 2, textDirection: Directionality.of(context))..layout(maxWidth: columnWidth - 28);
-          return !painter.didExceedMaxLines;
-        });
-        final cardHeight = canShowTitles ? (118 * textScale).clamp(104.0, 170.0).toDouble() : 82.0;
-        return GridView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-          itemCount: catalogs.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: columns, crossAxisSpacing: 12, mainAxisSpacing: 12, mainAxisExtent: cardHeight),
-          itemBuilder: (context, index) => _CatalogTile(catalog: catalogs[index], showTitle: canShowTitles, onDownload: widget.onDownload),
-        );
-      }),
+      body: catalogs.isEmpty
+          ? Center(child: Text(l10n.noResults))
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+              itemCount: catalogs.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final catalog = catalogs[index];
+                return _CatalogRow(
+                  catalog: catalog,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CatalogOnlinePage(
+                        catalog: catalog,
+                        onDownload: onDownload == null ? null : () => onDownload!(catalog),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }
 
-class _CatalogTile extends StatelessWidget {
+class _CatalogRow extends StatelessWidget {
   final CatalogDefinition catalog;
-  final bool showTitle;
-  final Future<void> Function(CatalogDefinition catalog)? onDownload;
+  final VoidCallback onTap;
 
-  const _CatalogTile({required this.catalog, required this.showTitle, this.onDownload});
+  const _CatalogRow({required this.catalog, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final title = CatalogUiLocalization.catalogName(context, catalog.id);
+    final count = catalog.totalItems ?? catalog.entries.length;
     return Card(
       clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
       child: InkWell(
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: catalog, onDownload: onDownload == null ? null : () => onDownload!(catalog)))),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(width: 48, height: 48, decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(15)), child: Icon(Icons.inventory_2_outlined, color: colors.primary, size: 27)),
-                if (showTitle) ...[
-                  const SizedBox(height: 6),
-                  Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
-                ],
-              ],
-            ),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(16)),
+                child: Icon(Icons.inventory_2_outlined, color: colors.primary),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 3),
+                    Text(catalog.description, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 3),
+                    Text('$count записей', maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelMedium),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right_rounded),
+            ],
           ),
         ),
       ),
