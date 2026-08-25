@@ -52,14 +52,14 @@ class _CatalogCategoryPageState extends State<CatalogCategoryPage> {
           final title = CatalogUiLocalization.catalogName(context, catalog.id);
           final style = Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800);
           final painter = TextPainter(text: TextSpan(text: title, style: style), maxLines: 2, textDirection: Directionality.of(context))..layout(maxWidth: columnWidth - 28);
-          return painter.didExceedMaxLines == false;
+          return !painter.didExceedMaxLines;
         });
-        final cardHeight = canShowTitles ? (118 * textScale).clamp(104.0, 170.0) : 82.0;
+        final cardHeight = canShowTitles ? (118 * textScale).clamp(104.0, 170.0).toDouble() : 82.0;
         return GridView.builder(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           itemCount: catalogs.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: columns, crossAxisSpacing: 12, mainAxisSpacing: 12, mainAxisExtent: cardHeight),
-          itemBuilder: (context, index) => _CatalogTile(catalog: catalogs[index], columns: columns, showTitle: canShowTitles, onDownload: widget.onDownload),
+          itemBuilder: (context, index) => _CatalogTile(catalog: catalogs[index], showTitle: canShowTitles, onDownload: widget.onDownload),
         );
       }),
     );
@@ -68,11 +68,10 @@ class _CatalogCategoryPageState extends State<CatalogCategoryPage> {
 
 class _CatalogTile extends StatelessWidget {
   final CatalogDefinition catalog;
-  final int columns;
   final bool showTitle;
   final Future<void> Function(CatalogDefinition catalog)? onDownload;
 
-  const _CatalogTile({required this.catalog, required this.columns, required this.showTitle, this.onDownload});
+  const _CatalogTile({required this.catalog, required this.showTitle, this.onDownload});
 
   @override
   Widget build(BuildContext context) {
