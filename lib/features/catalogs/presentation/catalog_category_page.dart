@@ -51,6 +51,7 @@ class _CatalogCategoryPageState extends State<CatalogCategoryPage> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final columns = UiLayoutSettings.resolveColumns(constraints.maxWidth);
+          final cardHeight = UiLayoutSettings.resolveCardHeight(width: constraints.maxWidth, columns: columns, textScale: MediaQuery.textScalerOf(context).scale(1.0));
           return GridView.builder(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             itemCount: catalogs.length,
@@ -58,7 +59,7 @@ class _CatalogCategoryPageState extends State<CatalogCategoryPage> {
               crossAxisCount: columns,
               crossAxisSpacing: 14,
               mainAxisSpacing: 14,
-              mainAxisExtent: UiLayoutSettings.cardHeight,
+              mainAxisExtent: cardHeight,
             ),
             itemBuilder: (context, index) => _CatalogTile(
               catalog: catalogs[index],
