@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/settings/ui_layout_settings.dart';
 import '../data/catalog_version_store.dart';
 import '../data/favorites_store.dart';
 import '../domain/entities/catalog_definition.dart';
@@ -28,6 +29,7 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
   String? _sortField;
   bool _descending = false;
   late final Map<String, int> _sectionCounts = _buildSectionCounts();
+  VoidCallback? _layoutListener;
 
   bool get _regularCoins =>
       widget.catalog.id == 'coins' &&
@@ -79,7 +81,19 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
   void initState() {
     super.initState();
     if (_regularCoins) _sortField = 'year';
+    _layoutListener = () {
+      if (mounted) setState(() {});
+    };
+    UiLayoutSettings.revision.addListener(_layoutListener!);
+    UiLayoutSettings.ensureLoaded();
     _loadFavorites();
+  }
+
+  @override
+  void dispose() {
+    final listener = _layoutListener;
+    if (listener != null) UiLayoutSettings.revision.removeListener(listener);
+    super.dispose();
   }
 
   Future<void> _loadFavorites() async {
@@ -130,6 +144,7 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
     final entries = _sortedEntries();
     final showEntries = widget.sectionPath.isNotEmpty || widget.catalog.sections.isEmpty;
     final totalItems = _sections.length + (showEntries ? entries.length : 0);
+    final cardHeight = UiLayoutSettings.cardHeight;
 
     return Scaffold(
       appBar: AppBar(
@@ -165,27 +180,31 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
         itemBuilder: (context, index) {
           if (index < _sections.length) {
             final section = _sections[index];
-            return Card(
-              margin: const EdgeInsets.only(bottom: 10),
-              child: ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.folder_outlined)),
-                title: Text(section.name),
-                subtitle: Text(section.children.isEmpty ? '${_count(section)} записей' : '${section.children.length} подразделов'),
-                trailing: IconButton(
-                  onPressed: () => _toggleSectionFavorite(section.id),
-                  icon: Icon(_favoriteSections.contains(section.id) ? Icons.star_rounded : Icons.star_border_rounded),
-                ),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => CatalogOnlinePage(
-                        catalog: widget.catalog,
-                        onDownload: widget.onDownload,
-                        sectionPath: [...widget.sectionPath, section.id],
+            return SizedBox(
+              height: cardHeight,
+              child: Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: const CircleAvatar(child: Icon(Icons.folder_outlined)),
+                  title: Text(section.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  subtitle: Text(section.children.isEmpty ? '${_count(section)} записей' : '${section.children.length} подразделов', maxLines: 1, overflow: TextOverflow.ellipsis),
+                  trailing: IconButton(
+                    onPressed: () => _toggleSectionFavorite(section.id),
+                    icon: Icon(_favoriteSections.contains(section.id) ? Icons.star_rounded : Icons.star_border_rounded),
+                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => CatalogOnlinePage(
+                          catalog: widget.catalog,
+                          onDownload: widget.onDownload,
+                          sectionPath: [...widget.sectionPath, section.id],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             );
           }
@@ -193,12 +212,16 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
           final entryIndex = index - _sections.length;
           if (entryIndex < entries.length) {
             final entry = entries[entryIndex];
-            return Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                leading: const Icon(Icons.inventory_2_outlined),
-                title: Text(entry.title),
-                subtitle: Text('${entry.primaryValue} · ${entry.subtitle}'),
+            return SizedBox(
+              height: cardHeight,
+              child: Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: const Icon(Icons.inventory_2_outlined),
+                  title: Text(entry.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  subtitle: Text('${entry.primaryValue} · ${entry.subtitle}', maxLines: 2, overflow: TextOverflow.ellipsis),
+                ),
               ),
             );
           }
