@@ -64,6 +64,11 @@ class AppDatabase extends _$AppDatabase {
     ''');
   }
 
+  Future<bool> _hasColumn(String tableName, String columnName) async {
+    final rows = await customSelect('PRAGMA table_info("$tableName")').get();
+    return rows.any((row) => row.data['name'] == columnName);
+  }
+
   Future<void> _ensureCurrentSchema() async {
     // Восстанавливаем отсутствующие таблицы в старых локальных базах.
     await customStatement('CREATE TABLE IF NOT EXISTS collection_table (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, template_id TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)');
@@ -91,7 +96,9 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(itemValueTable);
             await m.createTable(itemAttachmentTable);
           }
-          if (from < 5) await m.addColumn(collectionSectionTable, collectionSectionTable.sortOrder);
+          if (from < 5 && !await _hasColumn('collection_section_table', 'sort_order')) {
+            await m.addColumn(collectionSectionTable, collectionSectionTable.sortOrder);
+          }
           if (from < 6) {
             await ensureCatalogItemTables();
             await ensureStorageTables();
