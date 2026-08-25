@@ -7,6 +7,7 @@ import '../../../catalogs/data/catalog_version_store.dart';
 import '../../../collections/data/backup_export_service.dart';
 import '../../../collections/data/collection_history_store.dart';
 import '../../../collections/domain/entities/collection.dart';
+import '../../../collections/presentation/pages/backup_import_page.dart';
 import '../../../collections/presentation/providers/collection_provider.dart';
 import '../../../items/data/item_state_store.dart';
 import '../../../items/presentation/providers/item_service_provider.dart';
@@ -123,6 +124,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
   }
 
+  Future<void> _openBackupImport() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const BackupImportPage()),
+    );
+    if (!mounted) return;
+    ref.invalidate(collectionsProvider);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -191,6 +200,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       ),
                     ],
                   ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.restore_outlined),
+                  title: const Text('Восстановить данные'),
+                  subtitle: const Text('Импорт резервной копии без изменения структуры каталогов'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _openBackupImport,
                 ),
               ],
             ),
