@@ -1,25 +1,23 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Единые настройки сетки и высоты карточек для экранов каталога.
+/// Единые настройки сетки для экранов каталога и избранного.
 ///
-/// Настройки хранятся локально и сразу сообщают всем открытым экранам
-/// об изменении через [revision]. Это важно для IndexedStack: экран может
-/// оставаться смонтированным, пока пользователь меняет настройки в другом.
+/// Высота карточек не хранится: интерфейс рассчитывает её адаптивно
+/// от размера текста и доступной ширины.
 class UiLayoutSettings {
   UiLayoutSettings._();
 
   static const columnsKey = 'ui.columns';
   static const densityKey = 'ui.density';
   static const navigationKey = 'ui.navigation';
-  static const cardHeightKey = 'ui.cardHeight';
 
   static final ValueNotifier<int> revision = ValueNotifier<int>(0);
 
+  /// 0 — автоматически, 1..4 — принудительное число колонок.
   static int columns = 0;
   static String density = 'auto';
   static String navigation = 'auto';
-  static double cardHeight = 150;
   static bool _loaded = false;
 
   static Future<void> load() async {
@@ -28,7 +26,6 @@ class UiLayoutSettings {
     columns = (preferences.getInt(columnsKey) ?? 0).clamp(0, 4).toInt();
     density = preferences.getString(densityKey) ?? 'auto';
     navigation = preferences.getString(navigationKey) ?? 'auto';
-    cardHeight = (preferences.getDouble(cardHeightKey) ?? 150).clamp(140, 220).toDouble();
     _loaded = true;
     revision.value++;
   }
@@ -41,7 +38,6 @@ class UiLayoutSettings {
     int? columns,
     String? density,
     String? navigation,
-    double? cardHeight,
   }) async {
     final preferences = await SharedPreferences.getInstance();
     if (columns != null) {
@@ -56,10 +52,6 @@ class UiLayoutSettings {
       UiLayoutSettings.navigation = navigation;
       await preferences.setString(navigationKey, navigation);
     }
-    if (cardHeight != null) {
-      UiLayoutSettings.cardHeight = cardHeight.clamp(140, 220).toDouble();
-      await preferences.setDouble(cardHeightKey, UiLayoutSettings.cardHeight);
-    }
     _loaded = true;
     revision.value++;
   }
@@ -71,5 +63,21 @@ class UiLayoutSettings {
     if (width < 700) return 2;
     if (width < 1050) return 3;
     return 4;
+  }
+
+  /// Высота карточки адаптируется к ширине колонки и масштабу текста.
+  static double resolveCardHeight({
+    required double width,
+    required int columns,
+    required double textScale,
+  }) {
+    final columnWidth = (width - ((columns - 1) * 12)) / columns;
+    final base = columnWidth < 150
+        ? 122.0
+        : columnWidth < 220
+            ? 128.0
+            : 136.0;
+    final scaleAdjustment = (textScale - 1.0).clamp(-0.3, 0.8) * 32;
+    return (base + scaleAdjustment).clamp(112.0, 170.0);
   }
 }
