@@ -170,20 +170,17 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
         itemBuilder: (context, index) {
           if (index < _sections.length) {
             final section = _sections[index];
-            return Card(
-              margin: const EdgeInsets.only(bottom: 10),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                leading: const CircleAvatar(child: Icon(Icons.folder_outlined)),
-                title: Text(section.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-                subtitle: Text(section.children.isEmpty ? '${_count(section)} записей' : '${section.children.length} подразделов', maxLines: 1, overflow: TextOverflow.ellipsis),
-                trailing: IconButton(
-                  onPressed: () => _toggleSectionFavorite(section.id),
-                  icon: Icon(_favoriteSections.contains(section.id) ? Icons.star_rounded : Icons.star_border_rounded),
-                ),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => CatalogOnlinePage(catalog: widget.catalog, onDownload: widget.onDownload, sectionPath: [...widget.sectionPath, section.id]),
+            return _SectionCard(
+              section: section,
+              count: _count(section),
+              favorite: _favoriteSections.contains(section.id),
+              onFavorite: () => _toggleSectionFavorite(section.id),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => CatalogOnlinePage(
+                    catalog: widget.catalog,
+                    onDownload: widget.onDownload,
+                    sectionPath: [...widget.sectionPath, section.id],
                   ),
                 ),
               ),
@@ -192,16 +189,7 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
 
           final entryIndex = index - _sections.length;
           if (entryIndex < entries.length) {
-            final entry = entries[entryIndex];
-            return Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                leading: const Icon(Icons.inventory_2_outlined),
-                title: Text(entry.title, maxLines: 2, overflow: TextOverflow.ellipsis),
-                subtitle: Text('${entry.primaryValue} · ${entry.subtitle}', maxLines: 2, overflow: TextOverflow.ellipsis),
-              ),
-            );
+            return _CatalogEntryCard(entry: entries[entryIndex]);
           }
 
           return const Padding(
@@ -233,6 +221,201 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
     final path = [...widget.sectionPath, section.id].join('/');
     return _sectionCounts[path] ?? 0;
   }
+}
+
+class _SectionCard extends StatelessWidget {
+  final CatalogSectionDefinition section;
+  final int count;
+  final bool favorite;
+  final VoidCallback onFavorite;
+  final VoidCallback onTap;
+
+  const _SectionCard({
+    required this.section,
+    required this.count,
+    required this.favorite,
+    required this.onFavorite,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              _CatalogVisual(label: section.name),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(section.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 3),
+                    Text(section.children.isEmpty ? '$count записей' : '${section.children.length} подразделов', maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: onFavorite,
+                tooltip: 'Избранное',
+                icon: Icon(favorite ? Icons.star_rounded : Icons.star_border_rounded),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CatalogEntryCard extends StatelessWidget {
+  final CatalogEntryDefinition entry;
+
+  const _CatalogEntryCard({required this.entry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _CatalogVisual(label: entry.attributes['Страна'] ?? entry.primaryValue, imageUrl: entry.imageUrl, countryCode: entry.countryCode),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(entry.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 4),
+                  Text('${entry.primaryValue} · ${entry.subtitle}', maxLines: 2, overflow: TextOverflow.ellipsis),
+                  if (entry.attributes.isNotEmpty) ...[
+                    const SizedBox(height: 7),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: entry.attributes.entries.take(4).map((item) => Chip(label: Text('${item.key}: ${item.value}', maxLines: 1, overflow: TextOverflow.ellipsis))).toList(growable: false),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CatalogVisual extends StatelessWidget {
+  final String label;
+  final String? imageUrl;
+  final String? countryCode;
+
+  const _CatalogVisual({required this.label, this.imageUrl, this.countryCode});
+
+  @override
+  Widget build(BuildContext context) {
+    final flag = countryCodeToFlag(countryCode) ?? countryNameToFlag(label);
+    final theme = Theme.of(context);
+    return SizedBox(
+      width: 86,
+      height: 86,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: flag != null
+            ? ColoredBox(
+                color: theme.colorScheme.surfaceContainerHighest,
+                child: Center(child: Text(flag, style: const TextStyle(fontSize: 42))),
+              )
+            : imageUrl != null && imageUrl!.trim().isNotEmpty
+                ? Image.network(
+                    imageUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const _NoImage(),
+                  )
+                : const _NoImage(),
+      ),
+    );
+  }
+}
+
+class _NoImage extends StatelessWidget {
+  const _NoImage();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ColoredBox(
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Center(
+        child: Text(
+          'NO IMAGES',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w800),
+        ),
+      ),
+    );
+  }
+}
+
+String? countryCodeToFlag(String? code) {
+  if (code == null || code.trim().length != 2) return null;
+  final normalized = code.trim().toUpperCase();
+  final first = normalized.codeUnitAt(0);
+  final second = normalized.codeUnitAt(1);
+  if (first < 65 || first > 90 || second < 65 || second > 90) return null;
+  return String.fromCharCodes([0x1F1E6 + first - 65, 0x1F1E6 + second - 65]);
+}
+
+String? countryNameToFlag(String name) {
+  const flags = <String, String>{
+    'Россия': '🇷🇺',
+    'Германия': '🇩🇪',
+    'Италия': '🇮🇹',
+    'Франция': '🇫🇷',
+    'Испания': '🇪🇸',
+    'Португалия': '🇵🇹',
+    'Великобритания': '🇬🇧',
+    'США': '🇺🇸',
+    'Соединенные Штаты': '🇺🇸',
+    'Канада': '🇨🇦',
+    'Япония': '🇯🇵',
+    'Китай': '🇨🇳',
+    'Южная Корея': '🇰🇷',
+    'Корея': '🇰🇷',
+    'Польша': '🇵🇱',
+    'Чехия': '🇨🇿',
+    'Швейцария': '🇨🇭',
+    'Австрия': '🇦🇹',
+    'Бельгия': '🇧🇪',
+    'Нидерланды': '🇳🇱',
+    'Швеция': '🇸🇪',
+    'Норвегия': '🇳🇴',
+    'Дания': '🇩🇰',
+    'Финляндия': '🇫🇮',
+    'Эстония': '🇪🇪',
+    'Латвия': '🇱🇻',
+    'Литва': '🇱🇹',
+    'Украина': '🇺🇦',
+    'Беларусь': '🇧🇾',
+    'Бразилия': '🇧🇷',
+    'Мексика': '🇲🇽',
+    'Индия': '🇮🇳',
+    'Австралия': '🇦🇺',
+  };
+  return flags[name.trim()];
 }
 
 extension _FirstOrNull<T> on Iterable<T> {
