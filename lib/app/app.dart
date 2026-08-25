@@ -6,8 +6,10 @@ import '../core/localization/app_localizations.dart';
 import '../features/catalogs/presentation/favorites_page.dart';
 import '../features/collections/presentation/pages/catalog_page.dart';
 import '../features/collections/presentation/pages/collections_page.dart';
+import '../features/collections/presentation/pages/collection_tools_page.dart';
 import '../features/downloads/presentation/downloads_page.dart';
 import '../features/feedback/presentation/feedback_page.dart';
+import '../features/overview/presentation/overview_page.dart';
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -247,6 +249,11 @@ class _MainNavigationState extends State<MainNavigation> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final destinations = [
+      const _NavigationDestinationData(
+        label: 'Обзор',
+        icon: Icons.insights_outlined,
+        selectedIcon: Icons.insights,
+      ),
       _NavigationDestinationData(
         label: l10n.catalog,
         icon: Icons.menu_book_outlined,
@@ -262,6 +269,11 @@ class _MainNavigationState extends State<MainNavigation> {
         icon: Icons.collections_bookmark_outlined,
         selectedIcon: Icons.collections_bookmark,
       ),
+      const _NavigationDestinationData(
+        label: 'Инструменты',
+        icon: Icons.build_outlined,
+        selectedIcon: Icons.build,
+      ),
       _NavigationDestinationData(
         label: l10n.settings,
         icon: Icons.settings_outlined,
@@ -273,9 +285,11 @@ class _MainNavigationState extends State<MainNavigation> {
       body: IndexedStack(
         index: currentIndex,
         children: [
+          const OverviewPage(),
           const CatalogPage(),
           const FavoritesPage(),
           const CollectionsPage(),
+          const CollectionToolsPage(),
           _SettingsPage(
             themeMode: widget.themeMode,
             colorIndex: widget.colorIndex,
@@ -371,14 +385,14 @@ class _BottomNavigationItem extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: selected ? colors.secondaryContainer : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
@@ -390,8 +404,7 @@ class _BottomNavigationItem extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 3),
-              SizedBox(
-                width: double.infinity,
+              Flexible(
                 child: Text(
                   data.label,
                   maxLines: 1,
