@@ -25,7 +25,6 @@ import '../features/templates/presentation/pages/catalog_admin_page.dart';
 
 class CollectionCatalogApp extends StatefulWidget {
   const CollectionCatalogApp({super.key});
-
   @override
   State<CollectionCatalogApp> createState() => _CollectionCatalogAppState();
 }
@@ -36,7 +35,6 @@ class _CollectionCatalogAppState extends State<CollectionCatalogApp> {
   static const _fontKey = 'settings.fontScale';
   static const _localeKey = 'settings.locale';
   static const _colors = <Color>[Colors.indigo, Colors.teal, Colors.deepPurple, Colors.orange, Colors.green];
-
   ThemeMode _theme = ThemeMode.system;
   Locale? _locale;
   int _colorIndex = 0;
@@ -97,31 +95,16 @@ class _CollectionCatalogAppState extends State<CollectionCatalogApp> {
         theme: _themeData(Brightness.light),
         darkTheme: _themeData(Brightness.dark),
         themeMode: _theme,
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(_fontScale)),
-          child: child ?? const SizedBox.shrink(),
-        ),
+        builder: (context, child) => MediaQuery(data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(_fontScale)), child: child ?? const SizedBox.shrink()),
         home: _CollectionShell(
           theme: _theme,
           colorIndex: _colorIndex,
           fontScale: _fontScale,
           locale: _locale,
-          onThemeChanged: (value) {
-            setState(() => _theme = value);
-            _saveSettings();
-          },
-          onColorChanged: (value) {
-            setState(() => _colorIndex = value);
-            _saveSettings();
-          },
-          onFontChanged: (value) {
-            setState(() => _fontScale = _scale(value));
-            _saveSettings();
-          },
-          onLocaleChanged: (value) {
-            setState(() => _locale = value);
-            _saveSettings();
-          },
+          onThemeChanged: (value) { setState(() => _theme = value); _saveSettings(); },
+          onColorChanged: (value) { setState(() => _colorIndex = value); _saveSettings(); },
+          onFontChanged: (value) { setState(() => _fontScale = _scale(value)); _saveSettings(); },
+          onLocaleChanged: (value) { setState(() => _locale = value); _saveSettings(); },
         ),
       );
 }
@@ -135,9 +118,7 @@ class _CollectionShell extends StatefulWidget {
   final ValueChanged<int> onColorChanged;
   final ValueChanged<double> onFontChanged;
   final ValueChanged<Locale?> onLocaleChanged;
-
   const _CollectionShell({required this.theme, required this.colorIndex, required this.fontScale, required this.locale, required this.onThemeChanged, required this.onColorChanged, required this.onFontChanged, required this.onLocaleChanged});
-
   @override
   State<_CollectionShell> createState() => _CollectionShellState();
 }
@@ -145,24 +126,19 @@ class _CollectionShell extends StatefulWidget {
 class _CollectionShellState extends State<_CollectionShell> {
   int _index = 0;
   VoidCallback? _layoutListener;
-
   @override
   void initState() {
     super.initState();
-    _layoutListener = () {
-      if (mounted) setState(() {});
-    };
+    _layoutListener = () { if (mounted) setState(() {}); };
     UiLayoutSettings.revision.addListener(_layoutListener!);
     UiLayoutSettings.ensureLoaded();
   }
-
   @override
   void dispose() {
     final listener = _layoutListener;
     if (listener != null) UiLayoutSettings.revision.removeListener(listener);
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -183,34 +159,16 @@ class _CollectionShellState extends State<_CollectionShell> {
       _Destination(Icons.insights_outlined, Icons.insights_rounded, l10n.overview),
       _Destination(Icons.settings_outlined, Icons.settings, l10n.settings),
     ];
-
     if (useRail) {
-      return Scaffold(
-        body: Row(
-          children: [
-            NavigationRail(
-              selectedIndex: _index,
-              onDestinationSelected: (value) => setState(() => _index = value),
-              labelType: NavigationRailLabelType.all,
-              groupAlignment: -0.85,
-              destinations: [
-                for (final d in destinations) NavigationRailDestination(icon: Icon(d.icon), selectedIcon: Icon(d.selectedIcon), label: Text(d.label)),
-              ],
-            ),
-            const VerticalDivider(width: 1),
-            Expanded(child: IndexedStack(index: _index, children: pages)),
-          ],
-        ),
-      );
+      return Scaffold(body: Row(children: [
+        NavigationRail(selectedIndex: _index, onDestinationSelected: (value) => setState(() => _index = value), labelType: NavigationRailLabelType.all, groupAlignment: -0.85, destinations: [for (final d in destinations) NavigationRailDestination(icon: Icon(d.icon), selectedIcon: Icon(d.selectedIcon), label: Text(d.label))]),
+        const VerticalDivider(width: 1),
+        Expanded(child: IndexedStack(index: _index, children: pages)),
+      ]));
     }
-
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (value) => setState(() => _index = value),
-        destinations: [for (final d in destinations) NavigationDestination(icon: Icon(d.icon), selectedIcon: Icon(d.selectedIcon), label: d.label)],
-      ),
+      bottomNavigationBar: NavigationBar(selectedIndex: _index, onDestinationSelected: (value) => setState(() => _index = value), destinations: [for (final d in destinations) NavigationDestination(icon: Icon(d.icon), selectedIcon: Icon(d.selectedIcon), label: d.label)]),
     );
   }
 }
@@ -231,19 +189,15 @@ class _SettingsPage extends StatelessWidget {
   final ValueChanged<int> onColorChanged;
   final ValueChanged<double> onFontChanged;
   final ValueChanged<Locale?> onLocaleChanged;
-
   const _SettingsPage({required this.theme, required this.colorIndex, required this.fontScale, required this.locale, required this.onThemeChanged, required this.onColorChanged, required this.onFontChanged, required this.onLocaleChanged});
 
   String _text(BuildContext context, String ru, String en) => Localizations.localeOf(context).languageCode == 'ru' ? ru : en;
-
   String _themeName(BuildContext context, ThemeMode value) => switch (value) {
-        ThemeMode.system => _text(context, 'Системная', 'System'),
-        ThemeMode.light => _text(context, 'Светлая', 'Light'),
-        ThemeMode.dark => _text(context, 'Тёмная', 'Dark'),
-      };
-
+    ThemeMode.system => _text(context, 'Системная', 'System'),
+    ThemeMode.light => _text(context, 'Светлая', 'Light'),
+    ThemeMode.dark => _text(context, 'Тёмная', 'Dark'),
+  };
   String _columnsName(BuildContext context, int value) => value == 0 ? _text(context, 'Автоматически', 'Automatic') : '$value';
-
   static const _colors = <Color>[Colors.indigo, Colors.teal, Colors.deepPurple, Colors.orange, Colors.green];
   static const _colorNames = ['Индиго', 'Бирюзовый', 'Фиолетовый', 'Оранжевый', 'Зелёный'];
 
@@ -253,65 +207,37 @@ class _SettingsPage extends StatelessWidget {
     final info = ResponsiveInfo.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settings)),
-      body: ListView(
-        padding: EdgeInsets.all(info.pagePadding),
-        children: [
-          _SettingsGroup(
-            title: l10n.appearance,
-            children: [
-              ListTile(leading: const Icon(Icons.grid_view_rounded), title: Text(l10n.columns), subtitle: Text(_columnsName(context, UiLayoutSettings.columns)), trailing: const Icon(Icons.chevron_right), onTap: () => _showColumns(context)),
-              ListTile(leading: const Icon(Icons.palette_outlined), title: Text(l10n.theme), subtitle: Text(_themeName(context, theme)), onTap: () => _showTheme(context)),
-              ListTile(leading: const Icon(Icons.color_lens_outlined), title: Text(l10n.colorScheme), subtitle: Text(_colorNames[colorIndex]), onTap: () => _showColor(context)),
-              ListTile(leading: const Icon(Icons.translate_rounded), title: Text(l10n.language), subtitle: Text(locale == null ? l10n.languageSystem : AppLocalizations(locale!).languageName), trailing: const Icon(Icons.chevron_right), onTap: () => _showLanguage(context)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _SettingsGroup(
-            title: 'Данные и каталоги',
-            children: [
-              ListTile(leading: const Icon(Icons.new_releases_outlined), title: const Text('Версии каталогов'), subtitle: const Text('Опубликованные и установленные версии'), trailing: const Icon(Icons.chevron_right), onTap: () => _showCatalogVersions(context)),
-              ListTile(leading: const Icon(Icons.backup_outlined), title: const Text('Резервная копия'), subtitle: const Text('Сохранение и восстановление данных'), trailing: const Icon(Icons.chevron_right), onTap: () => _showBackup(context)),
-              ListTile(leading: const Icon(Icons.download_outlined), title: const Text('Загрузки'), subtitle: const Text('Очередь загрузки каталогов'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DownloadsPage()))),
-              ListTile(leading: const Icon(Icons.lock_outline), title: const Text('Структура каталогов'), subtitle: const Text('Централизованный каталог доступен только для чтения'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CatalogAdminPage()))),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _SettingsGroup(
-            title: 'Обратная связь',
-            children: [
-              ListTile(leading: const Icon(Icons.feedback_outlined), title: const Text('Предложить изменение каталога'), subtitle: const Text('Предложения передаются разработчику'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FeedbackPage()))),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _SettingsGroup(
-            title: 'О приложении',
-            children: [
-              ListTile(leading: const Icon(Icons.info_outline), title: const Text('О приложении'), subtitle: const Text('Collection Catalog'), trailing: const Icon(Icons.chevron_right), onTap: () => showAboutDialog(context: context, applicationName: 'Collection Catalog', applicationVersion: '1.1.0+2', applicationLegalese: 'Universal collection engine application.')),
-            ],
-          ),
-        ],
-      ),
+      body: ListView(padding: EdgeInsets.all(info.pagePadding), children: [
+        _SettingsGroup(title: l10n.appearance, children: [
+          ListTile(leading: const Icon(Icons.grid_view_rounded), title: Text(l10n.columns), subtitle: Text(_columnsName(context, UiLayoutSettings.columns)), trailing: const Icon(Icons.chevron_right), onTap: () => _showColumns(context)),
+          ListTile(leading: const Icon(Icons.palette_outlined), title: Text(l10n.theme), subtitle: Text(_themeName(context, theme)), onTap: () => _showTheme(context)),
+          ListTile(leading: const Icon(Icons.color_lens_outlined), title: Text(l10n.colorScheme), subtitle: Text(_colorNames[colorIndex]), onTap: () => _showColor(context)),
+          ListTile(leading: const Icon(Icons.translate_rounded), title: Text(l10n.language), subtitle: Text(locale == null ? l10n.languageSystem : AppLocalizations(locale!).languageName), trailing: const Icon(Icons.chevron_right), onTap: () => _showLanguage(context)),
+        ]),
+        const SizedBox(height: 12),
+        _SettingsGroup(title: 'Данные и каталоги', children: [
+          ListTile(leading: const Icon(Icons.new_releases_outlined), title: const Text('Версии каталогов'), subtitle: const Text('Опубликованные и установленные версии'), trailing: const Icon(Icons.chevron_right), onTap: () => _showCatalogVersions(context)),
+          ListTile(leading: const Icon(Icons.backup_outlined), title: const Text('Резервная копия'), subtitle: const Text('Сохранение и восстановление данных'), trailing: const Icon(Icons.chevron_right), onTap: () => _showBackup(context)),
+          ListTile(leading: const Icon(Icons.download_outlined), title: const Text('Загрузки'), subtitle: const Text('Очередь загрузки каталогов'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DownloadsPage()))),
+          ListTile(leading: const Icon(Icons.lock_outline), title: const Text('Структура каталогов'), subtitle: const Text('Централизованный каталог доступен только для чтения'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CatalogAdminPage()))),
+        ]),
+        const SizedBox(height: 12),
+        _SettingsGroup(title: 'Обратная связь', children: [
+          ListTile(leading: const Icon(Icons.feedback_outlined), title: const Text('Предложить изменение каталога'), subtitle: const Text('Предложения передаются разработчику'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FeedbackPage()))),
+        ]),
+        const SizedBox(height: 12),
+        _SettingsGroup(title: 'О приложении', children: [
+          ListTile(leading: const Icon(Icons.info_outline), title: const Text('О приложении'), subtitle: const Text('Collection Catalog'), trailing: const Icon(Icons.chevron_right), onTap: () => showAboutDialog(context: context, applicationName: 'Collection Catalog', applicationVersion: '1.1.0+2', applicationLegalese: 'Universal collection engine application.')),
+        ]),
+      ]),
     );
   }
 
   Future<void> _showColumns(BuildContext context) async {
-    final result = await showModalBottomSheet<int>(
-      context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final value in [0, 1, 2, 3, 4])
-              ListTile(
-                leading: Icon(UiLayoutSettings.columns == value ? Icons.radio_button_checked : Icons.radio_button_unchecked),
-                title: Text(value == 0 ? _text(context, 'Автоматически', 'Automatic') : '${_text(context, 'Колонки', 'Columns')}: $value'),
-                onTap: () => Navigator.pop(sheetContext, value),
-              ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
+    final result = await showModalBottomSheet<int>(context: context, builder: (sheetContext) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      for (final value in [0, 1, 2, 3, 4]) ListTile(leading: Icon(UiLayoutSettings.columns == value ? Icons.radio_button_checked : Icons.radio_button_unchecked), title: Text(value == 0 ? _text(context, 'Автоматически', 'Automatic') : '${_text(context, 'Колонки', 'Columns')}: $value'), onTap: () => Navigator.pop(sheetContext, value)),
+      const SizedBox(height: 8),
+    ])));
     if (result != null) await UiLayoutSettings.save(columns: result);
   }
 
@@ -340,34 +266,21 @@ class _SettingsPage extends StatelessWidget {
   }
 
   Future<void> _showBackup(BuildContext context) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      builder: (sheetContext) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.all(16),
-          children: [
-            const Text('Резервная копия', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 12),
-            const Text('Сохраните данные коллекций и состояния предметов или восстановите их из ранее созданной копии.'),
-            const SizedBox(height: 16),
-            Row(children: [Expanded(child: OutlinedButton.icon(onPressed: () async { await _exportBackup(context, false); if (sheetContext.mounted) Navigator.pop(sheetContext); }, icon: const Icon(Icons.data_object), label: const Text('JSON'))), const SizedBox(width: 8), Expanded(child: FilledButton.icon(onPressed: () async { await _exportBackup(context, true); if (sheetContext.mounted) Navigator.pop(sheetContext); }, icon: const Icon(Icons.archive_outlined), label: const Text('ZIP')))]),
-            const Divider(height: 28),
-            ListTile(leading: const Icon(Icons.restore_outlined), title: const Text('Восстановить данные'), subtitle: const Text('Импорт резервной копии'), trailing: const Icon(Icons.chevron_right), onTap: () async { Navigator.pop(sheetContext); await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BackupImportPage())); }),
-          ],
-        ),
-      ),
-    );
+    await showModalBottomSheet<void>(context: context, builder: (sheetContext) => SafeArea(child: ListView(shrinkWrap: true, padding: const EdgeInsets.all(16), children: [
+      const Text('Резервная копия', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+      const SizedBox(height: 12),
+      const Text('Сохраните данные коллекций и состояния предметов или восстановите их из ранее созданной копии.'),
+      const SizedBox(height: 16),
+      Row(children: [Expanded(child: OutlinedButton.icon(onPressed: () async { await _exportBackup(context, false); if (sheetContext.mounted) Navigator.pop(sheetContext); }, icon: const Icon(Icons.data_object), label: const Text('JSON'))), const SizedBox(width: 8), Expanded(child: FilledButton.icon(onPressed: () async { await _exportBackup(context, true); if (sheetContext.mounted) Navigator.pop(sheetContext); }, icon: const Icon(Icons.archive_outlined), label: const Text('ZIP')))]),
+      const Divider(height: 28),
+      ListTile(leading: const Icon(Icons.restore_outlined), title: const Text('Восстановить данные'), subtitle: const Text('Импорт резервной копии'), trailing: const Icon(Icons.chevron_right), onTap: () async { Navigator.pop(sheetContext); await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BackupImportPage())); }),
+    ])));
   }
 
   Future<void> _exportBackup(BuildContext context, bool zip) async {
     try {
       final snapshot = await _buildBackup(context);
-      if (zip) {
-        await BackupExportService.exportZip(snapshot);
-      } else {
-        await BackupExportService.exportJson(snapshot);
-      }
+      if (zip) await BackupExportService.exportZip(snapshot); else await BackupExportService.exportJson(snapshot);
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Резервная копия сформирована.')));
     } catch (error) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка резервного копирования: $error')));
@@ -375,18 +288,10 @@ class _SettingsPage extends StatelessWidget {
   }
 
   Future<void> _showLanguage(BuildContext context) async {
-    final result = await showModalBottomSheet<String>(
-      context: context,
-      builder: (sheetContext) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            ListTile(leading: Icon(locale == null ? Icons.radio_button_checked : Icons.radio_button_unchecked), title: Text(AppLocalizations.of(context).languageSystem), onTap: () => Navigator.pop(sheetContext, '__system__')),
-            ...AppLocalizations.supportedLocales.map((item) => ListTile(leading: Icon(locale?.languageCode == item.languageCode ? Icons.radio_button_checked : Icons.radio_button_unchecked), title: Text(AppLocalizations(item).languageName), onTap: () => Navigator.pop(sheetContext, item.languageCode))),
-          ],
-        ),
-      ),
-    );
+    final result = await showModalBottomSheet<String>(context: context, builder: (sheetContext) => SafeArea(child: ListView(shrinkWrap: true, children: [
+      ListTile(leading: Icon(locale == null ? Icons.radio_button_checked : Icons.radio_button_unchecked), title: Text(AppLocalizations.of(context).languageSystem), onTap: () => Navigator.pop(sheetContext, '__system__')),
+      ...AppLocalizations.supportedLocales.map((item) => ListTile(leading: Icon(locale?.languageCode == item.languageCode ? Icons.radio_button_checked : Icons.radio_button_unchecked), title: Text(AppLocalizations(item).languageName), onTap: () => Navigator.pop(sheetContext, item.languageCode))),
+    ])));
     if (!context.mounted || result == null) return;
     onLocaleChanged(result == '__system__' ? null : Locale(result));
   }
@@ -406,13 +311,14 @@ class _SettingsGroup extends StatelessWidget {
   final String title;
   final List<Widget> children;
   const _SettingsGroup({required this.title, required this.children});
-
   @override
-  Widget build(BuildContext context) => Card(
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 4), child: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))), ...children]),
-        ),
-      );
+  Widget build(BuildContext context) => Card(clipBehavior: Clip.antiAlias, child: Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 4), child: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))), ...children])));
+}
+
+extension AppLocalizationsUiExtension on AppLocalizations {
+  String get overview => _value(locale.languageCode == 'ru' ? 'Обзор' : 'Overview');
+  String get columns => _value(locale.languageCode == 'ru' ? 'Количество колонок' : 'Columns');
+  String get theme => _value(locale.languageCode == 'ru' ? 'Тема' : 'Theme');
+  String get colorScheme => _value(locale.languageCode == 'ru' ? 'Цветовая схема' : 'Color scheme');
+  String _value(String value) => value;
 }
