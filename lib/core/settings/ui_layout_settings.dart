@@ -1,10 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Единые настройки сетки для каталогов, избранного и моих коллекций.
-///
-/// Фиксированная высота строк больше не хранится: высота рассчитывается
-/// от размера текста и доступной ширины конкретного экрана.
+/// Единые настройки навигации и адаптивной сетки.
+/// Фиксированный размер интерфейса и пользовательское число колонок не используются.
 class UiLayoutSettings {
   UiLayoutSettings._();
 
@@ -22,7 +20,8 @@ class UiLayoutSettings {
   static Future<void> load() async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.reload();
-    columns = (preferences.getInt(columnsKey) ?? 0).clamp(0, 4).toInt();
+    // Старое значение columns читаем только для совместимости с сохранёнными данными.
+    columns = 0;
     density = preferences.getString(densityKey) ?? 'auto';
     navigation = preferences.getString(navigationKey) ?? 'auto';
     _loaded = true;
@@ -40,10 +39,8 @@ class UiLayoutSettings {
     @Deprecated('Фиксированная высота карточек больше не поддерживается') double? cardHeight,
   }) async {
     final preferences = await SharedPreferences.getInstance();
-    if (columns != null) {
-      UiLayoutSettings.columns = columns.clamp(0, 4).toInt();
-      await preferences.setInt(columnsKey, UiLayoutSettings.columns);
-    }
+    // Параметр columns оставлен в сигнатуре для совместимости со старыми вызовами.
+    if (columns != null) await preferences.remove(columnsKey);
     if (density != null) {
       UiLayoutSettings.density = density;
       await preferences.setString(densityKey, density);
@@ -52,39 +49,30 @@ class UiLayoutSettings {
       UiLayoutSettings.navigation = navigation;
       await preferences.setString(navigationKey, navigation);
     }
-    // Старый параметр cardHeight намеренно игнорируется: высота теперь адаптивная.
     _loaded = true;
     revision.value++;
   }
 
+  /// Количество колонок всегда определяется доступной шириной.
+  /// Пользовательское значение из старых версий намеренно игнорируется.
   static int resolveColumns(double width, {int? requested}) {
-    final configured = requested ?? columns;
-    if (configured >= 1 && configured <= 4) return configured;
     if (width < 420) return 1;
     if (width < 700) return 2;
     if (width < 1050) return 3;
     return 4;
   }
 
-  /// Совместимое значение для старого adaptive_app.dart.
-  /// Новые экраны не используют фиксированную высоту.
+  /// Совместимое значение для старого кода. Новые экраны его не используют.
   static double get cardHeight => 148.0;
 
-  /// Адаптивная высота карточки для сеток.
-  ///
-  /// Чем меньше ширина колонки и чем больше шрифт, тем больше места
-  /// выделяется карточке. Это предотвращает Bottom overflow при 3–4 колонках.
-  static double resolveCardHeight({
-    required double width,
-    required int columns,
-    double textScale = 1.0,
-  }) {
+  /// Адаптивная высота для старых экранов, где ещё используется этот метод.
+  static double resolveCardHeight({required double width, required int columns, double textScale = 1.0}) {
     final safeColumns = columns.clamp(1, 4);
     final spacing = (safeColumns - 1) * 12.0;
     final columnWidth = ((width - spacing) / safeColumns).clamp(80.0, 1000.0);
     final compact = columnWidth < 150;
     final base = compact ? 132.0 : columnWidth < 220 ? 140.0 : 148.0;
-    final scale = textScale.clamp(0.75, 1.40);
-    return (base * scale).clamp(108.0, 210.0);
+    final scale = textScale.clamp(0.75, 1.40).toDouble();
+    return (base * scale).clamp(108.0, 210.0).toDouble();
   }
 }
