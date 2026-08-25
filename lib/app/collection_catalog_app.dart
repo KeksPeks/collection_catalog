@@ -127,6 +127,7 @@ class _CollectionShell extends StatefulWidget {
 class _CollectionShellState extends State<_CollectionShell> {
   int _index = 0;
   VoidCallback? _layoutListener;
+
   @override
   void initState() {
     super.initState();
@@ -134,12 +135,14 @@ class _CollectionShellState extends State<_CollectionShell> {
     UiLayoutSettings.revision.addListener(_layoutListener!);
     UiLayoutSettings.ensureLoaded();
   }
+
   @override
   void dispose() {
     final listener = _layoutListener;
     if (listener != null) UiLayoutSettings.revision.removeListener(listener);
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -199,6 +202,13 @@ class _SettingsPage extends StatelessWidget {
     ThemeMode.dark => _text(context, 'Тёмная', 'Dark'),
   };
   String _columnsName(BuildContext context, int value) => value == 0 ? _text(context, 'Автоматически', 'Automatic') : '$value';
+  String _fontName(BuildContext context, double value) {
+    if (value < 0.8125) return _text(context, 'Очень маленький', 'Very small');
+    if (value < 0.9375) return _text(context, 'Маленький', 'Small');
+    if (value < 1.0625) return _text(context, 'Средний', 'Medium');
+    if (value < 1.1875) return _text(context, 'Большой', 'Large');
+    return _text(context, 'Очень большой', 'Very large');
+  }
   static const _colors = <Color>[Colors.indigo, Colors.teal, Colors.deepPurple, Colors.orange, Colors.green];
   static const _colorNames = ['Индиго', 'Бирюзовый', 'Фиолетовый', 'Оранжевый', 'Зелёный'];
 
@@ -213,11 +223,11 @@ class _SettingsPage extends StatelessWidget {
           ListTile(leading: const Icon(Icons.grid_view_rounded), title: Text(l10n.columns), subtitle: Text(_columnsName(context, UiLayoutSettings.columns)), trailing: const Icon(Icons.chevron_right), onTap: () => _showColumns(context)),
           ListTile(leading: const Icon(Icons.palette_outlined), title: Text(l10n.theme), subtitle: Text(_themeName(context, theme)), onTap: () => _showTheme(context)),
           ListTile(leading: const Icon(Icons.color_lens_outlined), title: Text(l10n.colorScheme), subtitle: Text(_colorNames[colorIndex]), onTap: () => _showColor(context)),
+          ListTile(leading: const Icon(Icons.text_fields_outlined), title: const Text('Размер текста'), subtitle: Text(_fontName(context, fontScale)), trailing: const Icon(Icons.chevron_right), onTap: () => _showFontSize(context)),
           ListTile(leading: const Icon(Icons.translate_rounded), title: Text(l10n.language), subtitle: Text(locale == null ? l10n.languageSystem : AppLocalizations(locale!).languageName), trailing: const Icon(Icons.chevron_right), onTap: () => _showLanguage(context)),
         ]),
         const SizedBox(height: 12),
         _SettingsGroup(title: 'Данные и каталоги', children: [
-          ListTile(leading: const Icon(Icons.new_releases_outlined), title: const Text('Версии каталогов'), subtitle: const Text('Опубликованные и установленные версии'), trailing: const Icon(Icons.chevron_right), onTap: () => _showCatalogVersions(context)),
           ListTile(leading: const Icon(Icons.backup_outlined), title: const Text('Резервная копия'), subtitle: const Text('Сохранение и восстановление данных'), trailing: const Icon(Icons.chevron_right), onTap: () => _showBackup(context)),
           ListTile(leading: const Icon(Icons.download_outlined), title: const Text('Загрузки'), subtitle: const Text('Очередь загрузки каталогов'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DownloadsPage()))),
           ListTile(leading: const Icon(Icons.lock_outline), title: const Text('Структура каталогов'), subtitle: const Text('Централизованный каталог доступен только для чтения'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CatalogAdminPage()))),
@@ -228,10 +238,19 @@ class _SettingsPage extends StatelessWidget {
         ]),
         const SizedBox(height: 12),
         _SettingsGroup(title: 'О приложении', children: [
-          ListTile(leading: const Icon(Icons.info_outline), title: const Text('О приложении'), subtitle: const Text('Collection Catalog'), trailing: const Icon(Icons.chevron_right), onTap: () => showAboutDialog(context: context, applicationName: 'Collection Catalog', applicationVersion: '1.1.0+2', applicationLegalese: 'Universal collection engine application.')),
+          ListTile(leading: const Icon(Icons.info_outline), title: const Text('О приложении'), subtitle: const Text('Collection Catalog'), trailing: const Icon(Icons.chevron_right), onTap: () => _showAbout(context)),
+          ListTile(leading: const Icon(Icons.new_releases_outlined), title: const Text('Версии каталогов'), subtitle: const Text('Опубликованные и установленные версии'), trailing: const Icon(Icons.chevron_right), onTap: () => _showCatalogVersions(context)),
           ListTile(leading: const Icon(Icons.history_rounded), title: const Text('История версий'), subtitle: const Text('Что изменялось в каждой версии приложения'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VersionHistoryPage()))),
         ]),
       ]),
+    );
+  }
+
+  Future<void> _showAbout(BuildContext context) async {
+    await showAboutDialog(
+      context: context,
+      applicationName: 'Collection Catalog',
+      applicationLegalese: 'Universal collection engine application.',
     );
   }
 
@@ -251,6 +270,14 @@ class _SettingsPage extends StatelessWidget {
     }
     if (!context.mounted) return;
     await showModalBottomSheet<void>(context: context, isScrollControlled: true, builder: (_) => SafeArea(child: ListView(shrinkWrap: true, padding: const EdgeInsets.only(bottom: 24), children: [const Padding(padding: EdgeInsets.fromLTRB(20, 20, 20, 8), child: Text('Версии каталогов', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800))), ...rows])));
+  }
+
+  Future<void> _showFontSize(BuildContext context) async {
+    const values = [0.75, 0.875, 1.0, 1.125, 1.25];
+    final result = await showModalBottomSheet<double>(context: context, builder: (sheetContext) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      for (final value in values) ListTile(leading: Icon((value - fontScale).abs() < 0.01 ? Icons.radio_button_checked : Icons.radio_button_unchecked), title: Text(_fontName(context, value)), subtitle: Text('${(value * 100).round()}%'), onTap: () => Navigator.pop(sheetContext, value)),
+    ])));
+    if (result != null) onFontChanged(result);
   }
 
   Future<Map<String, dynamic>> _buildBackup(BuildContext context) async {
