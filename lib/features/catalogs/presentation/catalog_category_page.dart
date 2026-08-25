@@ -21,6 +21,15 @@ class CatalogCategoryPage extends StatelessWidget {
       return Scaffold(appBar: AppBar(title: Text(l10n.catalog)), body: Center(child: Text(l10n.noResults)));
     }
 
+    // В большинстве направлений сейчас один конкретный каталог.
+    // Не заставляем пользователя проходить лишний экран: сразу открываем его содержимое.
+    if (catalogs.length == 1) {
+      return CatalogOnlinePage(
+        catalog: catalogs.first,
+        onDownload: onDownload == null ? null : () => onDownload!(catalogs.first),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(CatalogUiLocalization.categoryName(context, category.id))),
       body: catalogs.isEmpty
