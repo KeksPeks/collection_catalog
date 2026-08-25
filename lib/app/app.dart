@@ -10,6 +10,7 @@ import '../features/collections/presentation/pages/collection_tools_page.dart';
 import '../features/downloads/presentation/downloads_page.dart';
 import '../features/feedback/presentation/feedback_page.dart';
 import '../features/overview/presentation/overview_page.dart';
+import '../features/settings/presentation/pages/version_history_page.dart';
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -22,14 +23,12 @@ class _MyAppState extends State<MyApp> {
   static const _themeKey = 'settings.themeMode';
   static const _colorKey = 'settings.colorIndex';
   static const _fontScaleKey = 'settings.fontScale';
-  static const _uiScaleKey = 'settings.uiScale';
   static const _localeKey = 'settings.locale';
 
   ThemeMode themeMode = ThemeMode.system;
   Locale? locale;
   int colorIndex = 0;
   double fontScale = 1.0;
-  double uiScale = 1.0;
 
   static const colors = [
     Colors.indigo,
@@ -57,23 +56,17 @@ class _MyAppState extends State<MyApp> {
 
   ThemeMode _themeModeFromString(String? value) {
     switch (value) {
-      case 'light':
-        return ThemeMode.light;
-      case 'dark':
-        return ThemeMode.dark;
-      default:
-        return ThemeMode.system;
+      case 'light': return ThemeMode.light;
+      case 'dark': return ThemeMode.dark;
+      default: return ThemeMode.system;
     }
   }
 
   String _themeModeToString(ThemeMode value) {
     switch (value) {
-      case ThemeMode.light:
-        return 'light';
-      case ThemeMode.dark:
-        return 'dark';
-      case ThemeMode.system:
-        return 'system';
+      case ThemeMode.light: return 'light';
+      case ThemeMode.dark: return 'dark';
+      case ThemeMode.system: return 'system';
     }
   }
 
@@ -86,7 +79,6 @@ class _MyAppState extends State<MyApp> {
         themeMode = _themeModeFromString(preferences.getString(_themeKey));
         colorIndex = _validColorIndex(preferences.getInt(_colorKey));
         fontScale = _validScale(preferences.getDouble(_fontScaleKey));
-        uiScale = _validScale(preferences.getDouble(_uiScaleKey));
         locale = language == null || language.isEmpty ? null : Locale(language);
       });
     } catch (_) {
@@ -101,7 +93,6 @@ class _MyAppState extends State<MyApp> {
         preferences.setString(_themeKey, _themeModeToString(themeMode)),
         preferences.setInt(_colorKey, colorIndex),
         preferences.setDouble(_fontScaleKey, fontScale),
-        preferences.setDouble(_uiScaleKey, uiScale),
         if (locale == null)
           preferences.remove(_localeKey)
         else
@@ -127,11 +118,6 @@ class _MyAppState extends State<MyApp> {
     _saveSettings();
   }
 
-  void _changeUiScale(double value) {
-    setState(() => uiScale = _validScale(value));
-    _saveSettings();
-  }
-
   void _changeLocale(Locale? value) {
     setState(() => locale = value);
     _saveSettings();
@@ -140,12 +126,6 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     final seed = colors[colorIndex];
-    final densityValue = (uiScale - 1.0) * 4.0;
-    final density = VisualDensity(
-      horizontal: densityValue,
-      vertical: densityValue,
-    );
-
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       locale: locale,
@@ -157,8 +137,8 @@ class _MyAppState extends State<MyApp> {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      theme: _buildTheme(seed, Brightness.light, density),
-      darkTheme: _buildTheme(seed, Brightness.dark, density),
+      theme: _buildTheme(seed, Brightness.light),
+      darkTheme: _buildTheme(seed, Brightness.dark),
       themeMode: themeMode,
       builder: (context, child) {
         final media = MediaQuery.of(context);
@@ -171,42 +151,26 @@ class _MyAppState extends State<MyApp> {
         themeMode: themeMode,
         colorIndex: colorIndex,
         fontScale: fontScale,
-        uiScale: uiScale,
         locale: locale,
         onThemeChanged: _changeTheme,
         onColorChanged: _changeColor,
         onFontScaleChanged: _changeFontScale,
-        onUiScaleChanged: _changeUiScale,
         onLocaleChanged: _changeLocale,
       ),
     );
   }
 
-  ThemeData _buildTheme(
-    Color seed,
-    Brightness brightness,
-    VisualDensity density,
-  ) {
+  ThemeData _buildTheme(Color seed, Brightness brightness) {
     return ThemeData(
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: seed,
-        brightness: brightness,
-      ),
+      colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: brightness),
       useMaterial3: true,
-      visualDensity: density,
-      listTileTheme: ListTileThemeData(
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 16 * uiScale,
-          vertical: 2 * uiScale,
-        ),
-        minVerticalPadding: 8 * uiScale,
+      listTileTheme: const ListTileThemeData(
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        minVerticalPadding: 8,
       ),
-      cardTheme: CardThemeData(margin: EdgeInsets.all(4 * uiScale)),
-      inputDecorationTheme: InputDecorationTheme(
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 16 * uiScale,
-          vertical: 14 * uiScale,
-        ),
+      cardTheme: const CardThemeData(margin: EdgeInsets.all(4)),
+      inputDecorationTheme: const InputDecorationTheme(
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
   }
@@ -216,12 +180,10 @@ class MainNavigation extends StatefulWidget {
   final ThemeMode themeMode;
   final int colorIndex;
   final double fontScale;
-  final double uiScale;
   final Locale? locale;
   final ValueChanged<ThemeMode> onThemeChanged;
   final ValueChanged<int> onColorChanged;
   final ValueChanged<double> onFontScaleChanged;
-  final ValueChanged<double> onUiScaleChanged;
   final ValueChanged<Locale?> onLocaleChanged;
 
   const MainNavigation({
@@ -229,12 +191,10 @@ class MainNavigation extends StatefulWidget {
     required this.themeMode,
     required this.colorIndex,
     required this.fontScale,
-    required this.uiScale,
     required this.locale,
     required this.onThemeChanged,
     required this.onColorChanged,
     required this.onFontScaleChanged,
-    required this.onUiScaleChanged,
     required this.onLocaleChanged,
   });
 
@@ -249,36 +209,12 @@ class _MainNavigationState extends State<MainNavigation> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final destinations = [
-      const _NavigationDestinationData(
-        label: 'Обзор',
-        icon: Icons.insights_outlined,
-        selectedIcon: Icons.insights,
-      ),
-      _NavigationDestinationData(
-        label: l10n.catalog,
-        icon: Icons.menu_book_outlined,
-        selectedIcon: Icons.menu_book,
-      ),
-      _NavigationDestinationData(
-        label: l10n.favorites,
-        icon: Icons.star_border_rounded,
-        selectedIcon: Icons.star_rounded,
-      ),
-      _NavigationDestinationData(
-        label: l10n.myCollections,
-        icon: Icons.collections_bookmark_outlined,
-        selectedIcon: Icons.collections_bookmark,
-      ),
-      const _NavigationDestinationData(
-        label: 'Инструменты',
-        icon: Icons.build_outlined,
-        selectedIcon: Icons.build,
-      ),
-      _NavigationDestinationData(
-        label: l10n.settings,
-        icon: Icons.settings_outlined,
-        selectedIcon: Icons.settings,
-      ),
+      const _NavigationDestinationData(label: 'Обзор', icon: Icons.insights_outlined, selectedIcon: Icons.insights),
+      _NavigationDestinationData(label: l10n.catalog, icon: Icons.menu_book_outlined, selectedIcon: Icons.menu_book),
+      _NavigationDestinationData(label: l10n.favorites, icon: Icons.star_border_rounded, selectedIcon: Icons.star_rounded),
+      _NavigationDestinationData(label: l10n.myCollections, icon: Icons.collections_bookmark_outlined, selectedIcon: Icons.collections_bookmark),
+      const _NavigationDestinationData(label: 'Инструменты', icon: Icons.build_outlined, selectedIcon: Icons.build),
+      _NavigationDestinationData(label: l10n.settings, icon: Icons.settings_outlined, selectedIcon: Icons.settings),
     ];
 
     return Scaffold(
@@ -294,12 +230,10 @@ class _MainNavigationState extends State<MainNavigation> {
             themeMode: widget.themeMode,
             colorIndex: widget.colorIndex,
             fontScale: widget.fontScale,
-            uiScale: widget.uiScale,
             locale: widget.locale,
             onThemeChanged: widget.onThemeChanged,
             onColorChanged: widget.onColorChanged,
             onFontScaleChanged: widget.onFontScaleChanged,
-            onUiScaleChanged: widget.onUiScaleChanged,
             onLocaleChanged: widget.onLocaleChanged,
           ),
         ],
@@ -317,24 +251,14 @@ class _NavigationDestinationData {
   final String label;
   final IconData icon;
   final IconData selectedIcon;
-
-  const _NavigationDestinationData({
-    required this.label,
-    required this.icon,
-    required this.selectedIcon,
-  });
+  const _NavigationDestinationData({required this.label, required this.icon, required this.selectedIcon});
 }
 
 class _BottomNavigationBar extends StatelessWidget {
   final List<_NavigationDestinationData> destinations;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
-
-  const _BottomNavigationBar({
-    required this.destinations,
-    required this.selectedIndex,
-    required this.onSelected,
-  });
+  const _BottomNavigationBar({required this.destinations, required this.selectedIndex, required this.onSelected});
 
   @override
   Widget build(BuildContext context) {
@@ -368,12 +292,7 @@ class _BottomNavigationItem extends StatelessWidget {
   final _NavigationDestinationData data;
   final bool selected;
   final VoidCallback onTap;
-
-  const _BottomNavigationItem({
-    required this.data,
-    required this.selected,
-    required this.onTap,
-  });
+  const _BottomNavigationItem({required this.data, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -410,10 +329,7 @@ class _BottomNavigationItem extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                        color: selected ? colors.onSurface : colors.onSurfaceVariant,
-                      ),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: selected ? FontWeight.w700 : FontWeight.w500, color: selected ? colors.onSurface : colors.onSurfaceVariant),
                 ),
               ),
             ],
@@ -428,41 +344,24 @@ class _SettingsPage extends StatelessWidget {
   final ThemeMode themeMode;
   final int colorIndex;
   final double fontScale;
-  final double uiScale;
   final Locale? locale;
   final ValueChanged<ThemeMode> onThemeChanged;
   final ValueChanged<int> onColorChanged;
   final ValueChanged<double> onFontScaleChanged;
-  final ValueChanged<double> onUiScaleChanged;
   final ValueChanged<Locale?> onLocaleChanged;
 
   const _SettingsPage({
     required this.themeMode,
     required this.colorIndex,
     required this.fontScale,
-    required this.uiScale,
     required this.locale,
     required this.onThemeChanged,
     required this.onColorChanged,
     required this.onFontScaleChanged,
-    required this.onUiScaleChanged,
     required this.onLocaleChanged,
   });
 
-  String _text(
-    BuildContext context,
-    String ru,
-    String en,
-    String de,
-    String fr,
-    String es,
-    String it,
-    String pt,
-    String zh,
-    String ja,
-    String ko,
-    String ar,
-  ) {
+  String _text(BuildContext context, String ru, String en, String de, String fr, String es, String it, String pt, String zh, String ja, String ko, String ar) {
     switch (Localizations.localeOf(context).languageCode) {
       case 'ru': return ru;
       case 'de': return de;
@@ -479,29 +378,18 @@ class _SettingsPage extends StatelessWidget {
   }
 
   String _sizeName(BuildContext context, double value) {
-    if (value < 0.8125) {
-      return _text(context, 'Очень маленький', 'Very small', 'Sehr klein', 'Très petit', 'Muy pequeño', 'Molto piccolo', 'Muito pequeno', '极小', '極小', '매우 작게', 'صغير جدًا');
-    }
-    if (value < 0.9375) {
-      return _text(context, 'Маленький', 'Small', 'Klein', 'Petit', 'Pequeño', 'Piccolo', 'Pequeno', '小', '小', '작게', 'صغير');
-    }
-    if (value < 1.0625) {
-      return _text(context, 'Средний', 'Medium', 'Mittel', 'Moyen', 'Medio', 'Medio', 'Médio', '中', '中', '중간', 'متوسط');
-    }
-    if (value < 1.1875) {
-      return _text(context, 'Большой', 'Large', 'Groß', 'Grand', 'Grande', 'Grande', 'Grande', '大', '大', '크게', 'كبير');
-    }
+    if (value < 0.8125) return _text(context, 'Очень маленький', 'Very small', 'Sehr klein', 'Très petit', 'Muy pequeño', 'Molto piccolo', 'Muito pequeno', '极小', '極小', '매우 작게', 'صغير جدًا');
+    if (value < 0.9375) return _text(context, 'Маленький', 'Small', 'Klein', 'Petit', 'Pequeño', 'Piccolo', 'Pequeno', '小', '小', '작게', 'صغير');
+    if (value < 1.0625) return _text(context, 'Средний', 'Medium', 'Mittel', 'Moyen', 'Medio', 'Medio', 'Médio', '中', '中', '중간', 'متوسط');
+    if (value < 1.1875) return _text(context, 'Большой', 'Large', 'Groß', 'Grand', 'Grande', 'Grande', 'Grande', '大', '大', '크게', 'كبير');
     return _text(context, 'Очень большой', 'Very large', 'Sehr groß', 'Très grand', 'Muy grande', 'Molto grande', 'Muito grande', '极大', '極大', '매우 크게', 'كبير جدًا');
   }
 
   String _themeName(BuildContext context, ThemeMode mode) {
     switch (mode) {
-      case ThemeMode.system:
-        return _text(context, 'Системная', 'System', 'System', 'Système', 'Sistema', 'Sistema', 'Sistema', '系统', 'システム', '시스템', 'النظام');
-      case ThemeMode.light:
-        return _text(context, 'Светлая', 'Light', 'Hell', 'Clair', 'Claro', 'Chiaro', 'Claro', '浅色', 'ライト', '라이트', 'فاتح');
-      case ThemeMode.dark:
-        return _text(context, 'Тёмная', 'Dark', 'Dunkel', 'Sombre', 'Oscuro', 'Scuro', 'Escuro', '深色', 'ダーク', '다크', 'داكن');
+      case ThemeMode.system: return _text(context, 'Системная', 'System', 'System', 'Système', 'Sistema', 'Sistema', 'Sistema', '系统', 'システム', '시스템', 'النظام');
+      case ThemeMode.light: return _text(context, 'Светлая', 'Light', 'Hell', 'Clair', 'Claro', 'Chiaro', 'Claro', '浅色', 'ライト', '라이트', 'فاتح');
+      case ThemeMode.dark: return _text(context, 'Тёмная', 'Dark', 'Dunkel', 'Sombre', 'Oscuro', 'Scuro', 'Escuro', '深色', 'ダーク', '다크', 'داكن');
     }
   }
 
@@ -528,8 +416,7 @@ class _SettingsPage extends StatelessWidget {
     final downloadDescription = _text(context, 'Очередь загрузки каталогов', 'Catalog download queue', 'Katalog-Warteschlange', 'File de téléchargement', 'Cola de descargas', 'Coda download cataloghi', 'Fila de transferências', '目录下载队列', 'カタログのダウンロード待ち', '카탈로그 다운로드 대기열', 'قائمة تنزيل الفهارس');
     final theme = _text(context, 'Тема', 'Theme', 'Thema', 'Thème', 'Tema', 'Tema', 'Tema', '主题', 'テーマ', '테마', 'السمة');
     final colors = _text(context, 'Цветовая схема', 'Color scheme', 'Farbschema', 'Couleurs', 'Esquema de color', 'Schema colori', 'Esquema de cores', '配色', '配色', '색상', 'نظام الألوان');
-    final font = _text(context, 'Размер шрифта', 'Font size', 'Schriftgröße', 'Taille du texte', 'Tamaño de fuente', 'Dimensione carattere', 'Tamanho da fonte', '字体大小', 'フォントサイズ', '글자 크기', 'حجم الخط');
-    final ui = _text(context, 'Размер интерфейса', 'Interface size', 'Oberflächengröße', 'Taille de l’interface', 'Tamaño de interfaz', 'Dimensione interfaccia', 'Tamanho da interface', '界面大小', 'インターフェースサイズ', '인터페이스 크기', 'حجم الواجهة');
+    final font = _text(context, 'Размер текста', 'Text size', 'Textgröße', 'Taille du texte', 'Tamaño del texto', 'Dimensione del testo', 'Tamanho do texto', '文字大小', '文字サイズ', '글자 크기', 'حجم النص');
     final feedback = _text(context, 'Обратная связь', 'Feedback', 'Feedback', 'Commentaires', 'Comentarios', 'Feedback', 'Feedback', '反馈', 'フィードバック', '피드백', 'ملاحظات');
     final feedbackDescription = _text(context, 'Предложения по изменению каталогов', 'Suggest catalog changes', 'Katalogänderungen vorschlagen', 'Proposer des changements', 'Sugerir cambios', 'Proponi modifiche', 'Sugerir alterações', '建议修改目录', 'カタログ変更を提案', '카탈로그 변경 제안', 'اقتراح تغييرات الفهرس');
     final about = _text(context, 'О приложении', 'About', 'Über', 'À propos', 'Acerca de', 'Informazioni', 'Sobre', '关于', 'アプリについて', '정보', 'حول التطبيق');
@@ -537,7 +424,7 @@ class _SettingsPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settings)),
       body: ListView(
-        padding: EdgeInsets.all(16 * uiScale),
+        padding: const EdgeInsets.all(16),
         children: [
           _SettingsGroup(
             title: l10n.settings,
@@ -551,7 +438,7 @@ class _SettingsPage extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 12 * uiScale),
+          const SizedBox(height: 12),
           _SettingsGroup(
             title: l10n.catalog,
             children: [
@@ -564,17 +451,16 @@ class _SettingsPage extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 12 * uiScale),
+          const SizedBox(height: 12),
           _SettingsGroup(
             title: l10n.appearance,
             children: [
               ListTile(leading: const Icon(Icons.palette_outlined), title: Text(theme), subtitle: Text(_themeName(context, themeMode)), onTap: () => _showThemes(context)),
               ListTile(leading: const Icon(Icons.color_lens_outlined), title: Text(colors), subtitle: Text(_colorName(context, colorIndex)), onTap: () => _showColors(context)),
-              ListTile(leading: const Icon(Icons.text_fields_outlined), title: Text(font), subtitle: Text(_sizeName(context, fontScale)), onTap: () => _showScale(context, true)),
-              ListTile(leading: const Icon(Icons.view_agenda_outlined), title: Text(ui), subtitle: Text(_sizeName(context, uiScale)), onTap: () => _showScale(context, false)),
+              ListTile(leading: const Icon(Icons.text_fields_outlined), title: Text(font), subtitle: Text(_sizeName(context, fontScale)), onTap: () => _showScale(context)),
             ],
           ),
-          SizedBox(height: 12 * uiScale),
+          const SizedBox(height: 12),
           _SettingsGroup(
             title: l10n.settings,
             children: [
@@ -585,18 +471,45 @@ class _SettingsPage extends StatelessWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FeedbackPage())),
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _SettingsGroup(
+            title: about,
+            children: [
               ListTile(
-                leading: const Icon(Icons.help_outline),
+                leading: const Icon(Icons.info_outline),
                 title: Text(about),
                 subtitle: Text(l10n.catalogDescription),
-                onTap: () => showAboutDialog(
-                  context: context,
-                  applicationName: 'Collection Catalog',
-                  applicationVersion: '1.0.0',
-                ),
+                onTap: () => _showAbout(context),
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAbout(BuildContext context) async {
+    final versions = _text(context, 'Версии каталогов', 'Catalog versions', 'Katalogversionen', 'Versions des catalogues', 'Versiones de catálogos', 'Versioni dei cataloghi', 'Versões dos catálogos', '目录版本', 'カタログのバージョン', '카탈로그 버전', 'إصدارات الفهارس');
+    final title = _text(context, 'О приложении', 'About', 'Über', 'À propos', 'Acerca de', 'Informazioni', 'Sobre', '关于', 'アプリについて', '정보', 'حول التطبيق');
+    final description = _text(context, 'Collection Catalog — локальный каталог коллекций.', 'Collection Catalog — local collection catalog.', 'Collection Catalog — lokaler Sammlungskatalog.', 'Collection Catalog — catalogue local de collections.', 'Collection Catalog — catálogo local de colecciones.', 'Collection Catalog — catalogo locale delle collezioni.', 'Collection Catalog — catálogo local de coleções.', 'Collection Catalog — 本地收藏目录。', 'Collection Catalog — ローカルコレクションカタログ。', 'Collection Catalog — 로컬 컬렉션 카탈로그.', 'Collection Catalog — فهرس محلي للمجموعات.');
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(description),
+        actions: [
+          TextButton.icon(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VersionHistoryPage()));
+            },
+            icon: const Icon(Icons.history),
+            label: Text(versions),
+          ),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(MaterialLocalizations.of(context).closeButtonLabel)),
         ],
       ),
     );
@@ -635,15 +548,7 @@ class _SettingsPage extends StatelessWidget {
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: ThemeMode.values
-              .map(
-                (mode) => ListTile(
-                  title: Text(_themeName(context, mode)),
-                  selected: mode == themeMode,
-                  onTap: () => Navigator.pop(sheetContext, mode),
-                ),
-              )
-              .toList(),
+          children: ThemeMode.values.map((mode) => ListTile(title: Text(_themeName(context, mode)), selected: mode == themeMode, onTap: () => Navigator.pop(sheetContext, mode))).toList(),
         ),
       ),
     );
@@ -671,46 +576,29 @@ class _SettingsPage extends StatelessWidget {
     if (selected != null) onColorChanged(selected);
   }
 
-  Future<void> _showScale(BuildContext context, bool font) async {
-    final current = font ? fontScale : uiScale;
-    final values = font
-        ? const [0.75, 0.875, 1.0, 1.125, 1.25]
-        : const [0.70, 0.85, 1.0, 1.15, 1.30];
+  Future<void> _showScale(BuildContext context) async {
+    final values = const [0.75, 0.875, 1.0, 1.125, 1.25];
     final selected = await showModalBottomSheet<double>(
       context: context,
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: values
-              .map(
-                (value) => ListTile(
-                  leading: Icon(
-                    (value - current).abs() < 0.01
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_unchecked,
-                  ),
-                  title: Text(_sizeName(context, value)),
-                  subtitle: Text('${(value * 100).round()}%'),
-                  onTap: () => Navigator.pop(sheetContext, value),
-                ),
-              )
-              .toList(),
+          children: values.map((value) => ListTile(
+            leading: Icon((value - fontScale).abs() < 0.01 ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+            title: Text(_sizeName(context, value)),
+            subtitle: Text('${(value * 100).round()}%'),
+            onTap: () => Navigator.pop(sheetContext, value),
+          )).toList(),
         ),
       ),
     );
-    if (selected == null) return;
-    if (font) {
-      onFontScaleChanged(selected);
-    } else {
-      onUiScaleChanged(selected);
-    }
+    if (selected != null) onFontScaleChanged(selected);
   }
 }
 
 class _SettingsGroup extends StatelessWidget {
   final String title;
   final List<Widget> children;
-
   const _SettingsGroup({required this.title, required this.children});
 
   @override
@@ -724,13 +612,7 @@ class _SettingsGroup extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: Text(
-                title,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w800),
-              ),
+              child: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
             ),
             ...children,
           ],
