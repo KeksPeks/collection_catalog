@@ -49,14 +49,8 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
   Future<void> _load() async {
     await UiLayoutSettings.ensureLoaded();
     final favorites = await FavoritesStore.loadKeys();
-    final sectionIds = favorites
-        .where((id) => id.startsWith('section:'))
-        .map((id) => id.substring('section:'.length))
-        .toSet();
-    final itemIds = favorites
-        .where((id) => id.startsWith('item:'))
-        .map((id) => id.substring('item:'.length))
-        .toSet();
+    final sectionIds = favorites.where((id) => id.startsWith('section:')).map((id) => id.substring('section:'.length)).toSet();
+    final itemIds = favorites.where((id) => id.startsWith('item:')).map((id) => id.substring('item:'.length)).toSet();
 
     final labels = <String, String>{};
     if (sectionIds.isNotEmpty || itemIds.isNotEmpty) {
@@ -67,16 +61,12 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
       for (final collection in collections) {
         final sections = sectionIds.isEmpty ? const <dynamic>[] : await sectionService.getSections(collection.id);
         for (final section in sections) {
-          if (sectionIds.contains(section.id)) {
-            labels['section:${section.id}'] = '${collection.name} · ${section.name}';
-          }
+          if (sectionIds.contains(section.id)) labels['section:${section.id}'] = '${collection.name} · ${section.name}';
         }
 
         final items = itemIds.isEmpty ? const <dynamic>[] : await itemService.getItems(collection.id);
         for (final item in items) {
-          if (itemIds.contains(item.id)) {
-            labels['item:${item.id}'] = '${collection.name} · ${item.id}';
-          }
+          if (itemIds.contains(item.id)) labels['item:${item.id}'] = '${collection.name} · ${item.id}';
         }
       }
     }
@@ -84,20 +74,17 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
     if (!mounted) return;
     setState(() {
       _ids = favorites;
-      _labels
-        ..clear()
-        ..addAll(labels);
+      _labels..clear()..addAll(labels);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final catalogs = CatalogRegistry.all
-        .where((catalog) => _ids.contains(FavoritesStore.catalogKey(catalog.id)) || _ids.contains(catalog.id))
-        .toList(growable: false);
+    final catalogs = CatalogRegistry.all.where((catalog) => _ids.contains(FavoritesStore.catalogKey(catalog.id)) || _ids.contains(catalog.id)).toList(growable: false);
     final sections = _ids.where((id) => id.startsWith('section:')).toList(growable: false);
     final items = _ids.where((id) => id.startsWith('item:')).toList(growable: false);
+    final cardHeight = UiLayoutSettings.resolveCardHeight(width: MediaQuery.sizeOf(context).width - 32, columns: 1, textScale: MediaQuery.textScalerOf(context).scale(1.0));
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.favorites), actions: [IconButton(tooltip: 'Обновить', onPressed: _load, icon: const Icon(Icons.refresh_rounded))]),
@@ -124,7 +111,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                   _Heading('Коллекции', Icons.collections_bookmark_outlined),
                   for (final catalog in catalogs)
                     SizedBox(
-                      height: UiLayoutSettings.cardHeight,
+                      height: cardHeight,
                       child: _Tile(
                         CatalogUiLocalization.catalogName(context, catalog.id),
                         'Каталог',
@@ -138,7 +125,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                   _Heading('Разделы', Icons.folder_outlined),
                   for (final id in sections)
                     SizedBox(
-                      height: UiLayoutSettings.cardHeight,
+                      height: cardHeight,
                       child: _Tile(
                         _labels[id] ?? id.substring('section:'.length),
                         'Раздел каталога',
@@ -152,7 +139,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                   _Heading('Предметы', Icons.inventory_2_outlined),
                   for (final id in items)
                     SizedBox(
-                      height: UiLayoutSettings.cardHeight,
+                      height: cardHeight,
                       child: _Tile(
                         _labels[id] ?? id.substring('item:'.length),
                         'Предмет коллекции',
