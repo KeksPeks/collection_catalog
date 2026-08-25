@@ -47,12 +47,19 @@ class _CatalogCategoryPageState extends State<CatalogCategoryPage> {
       body: LayoutBuilder(builder: (context, constraints) {
         final columns = UiLayoutSettings.resolveColumns(constraints.maxWidth);
         final textScale = MediaQuery.textScalerOf(context).scale(1.0);
-        final cardHeight = UiLayoutSettings.resolveCardHeight(width: constraints.maxWidth, columns: columns, textScale: textScale);
+        final columnWidth = (constraints.maxWidth - (columns - 1) * 12) / columns;
+        final canShowTitles = columns == 1 || catalogs.every((catalog) {
+          final title = CatalogUiLocalization.catalogName(context, catalog.id);
+          final style = Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800);
+          final painter = TextPainter(text: TextSpan(text: title, style: style), maxLines: 2, textDirection: Directionality.of(context))..layout(maxWidth: columnWidth - 28);
+          return painter.didExceedMaxLines == false;
+        });
+        final cardHeight = canShowTitles ? (118 * textScale).clamp(104.0, 170.0) : 82.0;
         return GridView.builder(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           itemCount: catalogs.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: columns, crossAxisSpacing: 12, mainAxisSpacing: 12, mainAxisExtent: cardHeight),
-          itemBuilder: (context, index) => _CatalogTile(catalog: catalogs[index], columns: columns, onDownload: widget.onDownload),
+          itemBuilder: (context, index) => _CatalogTile(catalog: catalogs[index], columns: columns, showTitle: canShowTitles, onDownload: widget.onDownload),
         );
       }),
     );
@@ -62,37 +69,36 @@ class _CatalogCategoryPageState extends State<CatalogCategoryPage> {
 class _CatalogTile extends StatelessWidget {
   final CatalogDefinition catalog;
   final int columns;
+  final bool showTitle;
   final Future<void> Function(CatalogDefinition catalog)? onDownload;
 
-  const _CatalogTile({required this.catalog, required this.columns, this.onDownload});
+  const _CatalogTile({required this.catalog, required this.columns, required this.showTitle, this.onDownload});
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final title = CatalogUiLocalization.catalogName(context, catalog.id);
-    return LayoutBuilder(builder: (context, constraints) {
-      final compactGrid = columns > 1;
-      final titleStyle = Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800);
-      final painter = TextPainter(text: TextSpan(text: title, style: titleStyle), maxLines: 1, textDirection: Directionality.of(context))..layout(maxWidth: double.infinity);
-      final showText = !compactGrid || painter.width <= constraints.maxWidth - 24;
-      return Card(
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: catalog, onDownload: onDownload == null ? null : () => onDownload!(catalog)))),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: showText
-                  ? Column(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Container(width: 52, height: 52, decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(16)), child: Icon(Icons.inventory_2_outlined, color: colors.primary, size: 28)),
-                      const SizedBox(height: 8),
-                      Text(title, maxLines: compactGrid ? 2 : 3, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: titleStyle),
-                    ])
-                  : Container(width: 52, height: 52, decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(16)), child: Icon(Icons.inventory_2_outlined, color: colors.primary, size: 28)),
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: catalog, onDownload: onDownload == null ? null : () => onDownload!(catalog)))),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(width: 48, height: 48, decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(15)), child: Icon(Icons.inventory_2_outlined, color: colors.primary, size: 27)),
+                if (showTitle) ...[
+                  const SizedBox(height: 6),
+                  Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                ],
+              ],
             ),
           ),
         ),
-      );
-    });
+      ),
+    );
   }
 }
