@@ -67,11 +67,11 @@ class AppDatabase extends _$AppDatabase {
   Future<void> _ensureCurrentSchema() async {
     // Восстанавливаем отсутствующие таблицы в старых локальных базах.
     await customStatement('CREATE TABLE IF NOT EXISTS collection_table (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, template_id TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)');
-    await customStatement('CREATE TABLE IF NOT EXISTS field_table (id TEXT PRIMARY KEY NOT NULL, collection_id TEXT NOT NULL, label TEXT NOT NULL, type TEXT NOT NULL, sort_order INTEGER NOT NULL)');
-    await customStatement('CREATE TABLE IF NOT EXISTS collection_section_table (id TEXT PRIMARY KEY NOT NULL, collection_id TEXT NOT NULL, parent_id TEXT, name TEXT NOT NULL, sort_order INTEGER NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)');
-    await customStatement('CREATE TABLE IF NOT EXISTS item_table (id TEXT PRIMARY KEY NOT NULL, collection_id TEXT NOT NULL, section_id TEXT, sort_order INTEGER NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)');
+    await customStatement('CREATE TABLE IF NOT EXISTS field_table (id TEXT PRIMARY KEY NOT NULL, collection_id TEXT NOT NULL, label TEXT NOT NULL, type TEXT NOT NULL)');
+    await customStatement('CREATE TABLE IF NOT EXISTS collection_section_table (id TEXT PRIMARY KEY NOT NULL, collection_id TEXT NOT NULL, parent_id TEXT, name TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0)');
+    await customStatement('CREATE TABLE IF NOT EXISTS item_table (id TEXT PRIMARY KEY NOT NULL, collection_id TEXT NOT NULL, section_id TEXT, sort_order INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)');
     await customStatement('CREATE TABLE IF NOT EXISTS item_value_table (id TEXT PRIMARY KEY NOT NULL, item_id TEXT NOT NULL, field_id TEXT NOT NULL, value TEXT NOT NULL)');
-    await customStatement('CREATE TABLE IF NOT EXISTS item_attachment_table (id TEXT PRIMARY KEY NOT NULL, item_id TEXT NOT NULL, path TEXT NOT NULL, type TEXT NOT NULL, created_at INTEGER NOT NULL)');
+    await customStatement('CREATE TABLE IF NOT EXISTS item_attachment_table (id TEXT PRIMARY KEY NOT NULL, item_id TEXT NOT NULL, path TEXT NOT NULL, type TEXT NOT NULL)');
     await ensureCatalogItemTables();
     await ensureStorageTables();
   }
