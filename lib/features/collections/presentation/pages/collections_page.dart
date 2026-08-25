@@ -7,9 +7,6 @@ import '../providers/collection_provider.dart';
 import 'collection_detail_page.dart';
 
 /// Экран загруженных каталогов.
-///
-/// Каталоги и их структура поставляются приложением. Пользователь не может
-/// менять каталог, удалять его содержимое или добавлять новые записи.
 class CollectionsPage extends ConsumerStatefulWidget {
   const CollectionsPage({super.key});
 
@@ -49,14 +46,24 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
       ),
       body: collections.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('Ошибка: $error')),
+        error: (error, _) => _DatabaseErrorView(error: error, onRetry: () => ref.invalidate(collectionsProvider)),
         data: (items) {
           final downloaded = items.where((item) => item.templateId != null).toList(growable: false);
-          final filtered = downloaded.where((item) => item.name.toLowerCase().contains(_search.toLowerCase())).toList(growable: false);
+          final query = _search.trim().toLowerCase();
+          final filtered = query.isEmpty
+              ? downloaded
+              : downloaded.where((item) => item.name.toLowerCase().contains(query)).toList(growable: false);
 
           return LayoutBuilder(
             builder: (context, constraints) {
               final columns = UiLayoutSettings.resolveColumns(constraints.maxWidth);
+              final textScale = MediaQuery.textScalerOf(context).scale(1);
+              final cardHeight = UiLayoutSettings.resolveCardHeight(
+                width: constraints.maxWidth - 32,
+                columns: columns,
+                textScale: textScale,
+              );
+
               return RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(collectionsProvider);
@@ -99,7 +106,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
                             crossAxisCount: columns,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            mainAxisExtent: UiLayoutSettings.cardHeight,
+                            mainAxisExtent: cardHeight,
                           ),
                         ),
                       ),
@@ -132,7 +139,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
       return Card(
         margin: EdgeInsets.zero,
         child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           leading: const CircleAvatar(child: Icon(Icons.collections_bookmark)),
           title: Text(collection.name, maxLines: 2, overflow: TextOverflow.ellipsis),
           subtitle: const Text('Каталог сохранён на устройстве', maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -148,12 +155,12 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
       child: InkWell(
         onTap: () => _openCollection(collection),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const CircleAvatar(child: Icon(Icons.collections_bookmark)),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Flexible(
                 child: Text(
                   collection.name,
@@ -163,13 +170,8 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
-              const SizedBox(height: 4),
-              const Text(
-                'На устройстве',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-              ),
+              const SizedBox(height: 3),
+              const Text('На устройстве', maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
             ],
           ),
         ),
@@ -185,6 +187,34 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     );
     if (!mounted) return;
     ref.invalidate(collectionsProvider);
+  }
+}
+
+class _DatabaseErrorView extends StatelessWidget {
+  final Object error;
+  final VoidCallback onRetry;
+
+  const _DatabaseErrorView({required this.error, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.storage_rounded, size: 52),
+            const SizedBox(height: 12),
+            const Text('Не удалось открыть локальные коллекции', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Text('$error', textAlign: TextAlign.center, maxLines: 5, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 16),
+            FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Повторить')),
+          ],
+        ),
+      ),
+    );
   }
 }
 
