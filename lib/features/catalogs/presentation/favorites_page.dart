@@ -82,22 +82,20 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
 }
 
 class _Heading extends StatelessWidget {
-  final String title; final IconData icon;
+  final String title;
+  final IconData icon;
   const _Heading(this.title, this.icon);
   @override
   Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(top: 12, bottom: 8), child: Center(child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon), const SizedBox(width: 8), Flexible(child: Text(title, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)))])));
 }
 
 class _Tile extends StatelessWidget {
-  final String title, subtitle; final IconData icon; final VoidCallback onTap, onRemove;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+  final VoidCallback onRemove;
   const _Tile(this.title, this.subtitle, this.icon, this.onTap, this.onRemove);
   @override
-  Widget build(BuildContext context) {
-    return Card(margin: const EdgeInsets.only(bottom: 8), child: LayoutBuilder(builder: (context, constraints) {
-      final titleStyle = Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800);
-      final painter = TextPainter(text: TextSpan(text: title, style: titleStyle), maxLines: 1, textDirection: Directionality.of(context))..layout(maxWidth: double.infinity);
-      final compact = painter.width > constraints.maxWidth - 130;
-      return InkWell(onTap: onTap, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), child: Row(children: [CircleAvatar(child: Icon(icon)), const SizedBox(width: 10), Expanded(child: compact ? const SizedBox.shrink() : Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: titleStyle), const SizedBox(height: 2), Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis)])), IconButton(visualDensity: VisualDensity.compact, padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 40, minHeight: 40), tooltip: 'Убрать из избранного', onPressed: onRemove, icon: const Icon(Icons.star_rounded))])));
-    }));
-  }
+  Widget build(BuildContext context) => Card(margin: const EdgeInsets.only(bottom: 8), child: InkWell(onTap: onTap, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [CircleAvatar(child: Icon(icon)), const SizedBox(width: 10), Expanded(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)), const SizedBox(height: 2), Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis)])), IconButton(visualDensity: VisualDensity.compact, tooltip: 'Убрать из избранного', onPressed: onRemove, icon: const Icon(Icons.star_rounded))])));
 }
