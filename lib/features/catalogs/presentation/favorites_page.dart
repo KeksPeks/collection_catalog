@@ -49,33 +49,25 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
   Future<void> _load() async {
     await UiLayoutSettings.ensureLoaded();
     final favorites = await FavoritesStore.loadKeys();
-    final sectionIds = favorites
-        .where((id) => id.startsWith('section:'))
-        .map((id) => id.substring('section:'.length))
-        .toSet();
-    final itemIds = favorites
-        .where((id) => id.startsWith('item:'))
-        .map((id) => id.substring('item:'.length))
-        .toSet();
-
+    final sectionIds = favorites.where((id) => id.startsWith('section:')).map((id) => id.substring('section:'.length)).toSet();
+    final itemIds = favorites.where((id) => id.startsWith('item:')).map((id) => id.substring('item:'.length)).toSet();
     final labels = <String, String>{};
+
     if (sectionIds.isNotEmpty || itemIds.isNotEmpty) {
       final collections = ref.read(collectionsProvider).valueOrNull ?? const <dynamic>[];
       final itemService = ref.read(itemServiceProvider);
       final sectionService = await ref.read(collectionSectionServiceProvider.future);
-
       for (final collection in collections) {
-        final sections = sectionIds.isEmpty ? const <dynamic>[] : await sectionService.getSections(collection.id);
-        for (final section in sections) {
-          if (sectionIds.contains(section.id)) {
-            labels['section:${section.id}'] = '${collection.name} · ${section.name}';
+        if (sectionIds.isNotEmpty) {
+          final sections = await sectionService.getSections(collection.id);
+          for (final section in sections) {
+            if (sectionIds.contains(section.id)) labels['section:${section.id}'] = '${collection.name} · ${section.name}';
           }
         }
-
-        final items = itemIds.isEmpty ? const <dynamic>[] : await itemService.getItems(collection.id);
-        for (final item in items) {
-          if (itemIds.contains(item.id)) {
-            labels['item:${item.id}'] = '${collection.name} · ${item.id}';
+        if (itemIds.isNotEmpty) {
+          final items = await itemService.getItems(collection.id);
+          for (final item in items) {
+            if (itemIds.contains(item.id)) labels['item:${item.id}'] = '${collection.name} · ${item.id}';
           }
         }
       }
@@ -90,12 +82,15 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
     });
   }
 
+  double _rowHeight(BuildContext context) {
+    final scale = MediaQuery.textScalerOf(context).scale(1);
+    return (72 + ((scale - 1).clamp(-0.3, 0.8) * 24)).clamp(64, 92);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final catalogs = CatalogRegistry.all
-        .where((catalog) => _ids.contains(FavoritesStore.catalogKey(catalog.id)) || _ids.contains(catalog.id))
-        .toList(growable: false);
+    final catalogs = CatalogRegistry.all.where((catalog) => _ids.contains(FavoritesStore.catalogKey(catalog.id)) || _ids.contains(catalog.id)).toList(growable: false);
     final sections = _ids.where((id) => id.startsWith('section:')).toList(growable: false);
     final items = _ids.where((id) => id.startsWith('item:')).toList(growable: false);
 
@@ -123,43 +118,37 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                 if (catalogs.isNotEmpty) ...[
                   _Heading('Коллекции', Icons.collections_bookmark_outlined),
                   for (final catalog in catalogs)
-                    SizedBox(
-                      height: UiLayoutSettings.cardHeight,
-                      child: _Tile(
-                        CatalogUiLocalization.catalogName(context, catalog.id),
-                        'Каталог',
-                        Icons.inventory_2_outlined,
-                        () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: catalog))),
-                        () => FavoritesStore.remove(catalog.id),
-                      ),
+                    _Tile(
+                      height: _rowHeight(context),
+                      CatalogUiLocalization.catalogName(context, catalog.id),
+                      'Каталог',
+                      Icons.inventory_2_outlined,
+                      () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: catalog))),
+                      () => FavoritesStore.remove(catalog.id),
                     ),
                 ],
                 if (sections.isNotEmpty) ...[
                   _Heading('Разделы', Icons.folder_outlined),
                   for (final id in sections)
-                    SizedBox(
-                      height: UiLayoutSettings.cardHeight,
-                      child: _Tile(
-                        _labels[id] ?? id.substring('section:'.length),
-                        'Раздел каталога',
-                        Icons.folder_outlined,
-                        () {},
-                        () => FavoritesStore.removeKey(id),
-                      ),
+                    _Tile(
+                      height: _rowHeight(context),
+                      _labels[id] ?? id.substring('section:'.length),
+                      'Раздел каталога',
+                      Icons.folder_outlined,
+                      () {},
+                      () => FavoritesStore.removeKey(id),
                     ),
                 ],
                 if (items.isNotEmpty) ...[
                   _Heading('Предметы', Icons.inventory_2_outlined),
                   for (final id in items)
-                    SizedBox(
-                      height: UiLayoutSettings.cardHeight,
-                      child: _Tile(
-                        _labels[id] ?? id.substring('item:'.length),
-                        'Предмет коллекции',
-                        Icons.inventory_2_outlined,
-                        () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ItemDetailPage(itemId: id.substring('item:'.length)))),
-                        () => FavoritesStore.removeKey(id),
-                      ),
+                    _Tile(
+                      height: _rowHeight(context),
+                      _labels[id] ?? id.substring('item:'.length),
+                      'Предмет коллекции',
+                      Icons.inventory_2_outlined,
+                      () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ItemDetailPage(itemId: id.substring('item:'.length)))),
+                      () => FavoritesStore.removeKey(id),
                     ),
                 ],
               ],
@@ -180,7 +169,8 @@ class _Tile extends StatelessWidget {
   final String title, subtitle;
   final IconData icon;
   final VoidCallback onTap, onRemove;
-  const _Tile(this.title, this.subtitle, this.icon, this.onTap, this.onRemove);
+  final double height;
+  const _Tile(this.title, this.subtitle, this.icon, this.onTap, this.onRemove, {required this.height});
   @override
-  Widget build(BuildContext context) => Card(margin: const EdgeInsets.only(bottom: 8), child: ListTile(leading: CircleAvatar(child: Icon(icon)), title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis), subtitle: Text(subtitle), onTap: onTap, trailing: IconButton(tooltip: 'Убрать из избранного', onPressed: onRemove, icon: const Icon(Icons.star_rounded))));
+  Widget build(BuildContext context) => SizedBox(height: height, child: Card(margin: const EdgeInsets.only(bottom: 8), child: ListTile(leading: CircleAvatar(child: Icon(icon)), title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis), subtitle: Text(subtitle), onTap: onTap, trailing: IconButton(tooltip: 'Убрать из избранного', onPressed: onRemove, icon: const Icon(Icons.star_rounded)))));
 }
