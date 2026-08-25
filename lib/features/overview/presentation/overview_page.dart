@@ -93,7 +93,7 @@ class _OverviewBody extends ConsumerWidget {
   Future<_Stats> _loadStats(WidgetRef ref, List<dynamic> collections) async {
     var items = 0;
     var failed = 0;
-    ItemService? service;
+    dynamic service;
     try {
       service = ref.read(itemServiceProvider);
     } catch (_) {
@@ -102,7 +102,7 @@ class _OverviewBody extends ConsumerWidget {
     if (service != null) {
       for (final collection in collections) {
         try {
-          items += (await service.getItems(collection.id)).length;
+          items += (await service.getItems(collection.id)).length as int;
         } catch (_) {
           failed++;
         }
