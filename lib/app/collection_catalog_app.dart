@@ -239,18 +239,49 @@ class _SettingsPage extends StatelessWidget {
         const SizedBox(height: 12),
         _SettingsGroup(title: 'О приложении', children: [
           ListTile(leading: const Icon(Icons.info_outline), title: const Text('О приложении'), subtitle: const Text('Collection Catalog'), trailing: const Icon(Icons.chevron_right), onTap: () => _showAbout(context)),
-          ListTile(leading: const Icon(Icons.new_releases_outlined), title: const Text('Версии каталогов'), subtitle: const Text('Опубликованные и установленные версии'), trailing: const Icon(Icons.chevron_right), onTap: () => _showCatalogVersions(context)),
-          ListTile(leading: const Icon(Icons.history_rounded), title: const Text('История версий'), subtitle: const Text('Что изменялось в каждой версии приложения'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VersionHistoryPage()))),
         ]),
       ]),
     );
   }
 
   Future<void> _showAbout(BuildContext context) async {
-    await showAboutDialog(
+    await showModalBottomSheet<void>(
       context: context,
-      applicationName: 'Collection Catalog',
-      applicationLegalese: 'Universal collection engine application.',
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          children: [
+            const ListTile(
+              leading: Icon(Icons.collections_bookmark_outlined),
+              title: Text('Collection Catalog', style: TextStyle(fontWeight: FontWeight.w800)),
+              subtitle: Text('Универсальное приложение для ведения коллекций.'),
+            ),
+            const Divider(height: 20),
+            ListTile(
+              leading: const Icon(Icons.new_releases_outlined),
+              title: const Text('Версии каталогов'),
+              subtitle: const Text('Опубликованные и установленные версии каталогов'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                await _showCatalogVersions(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.history_rounded),
+              title: const Text('История версий'),
+              subtitle: const Text('Что изменялось в каждой версии приложения'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VersionHistoryPage()));
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
