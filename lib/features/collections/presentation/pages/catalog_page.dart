@@ -84,21 +84,13 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
       final ids = await FavoritesStore.toggle(catalogId);
       if (mounted) setState(() => _favorites = ids);
     } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Не удалось сохранить избранное: $error')),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Не удалось сохранить избранное: $error')));
     }
   }
 
   Future<void> _selectCurrency(String code) async {
     await CurrencySettings.setCode(code);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(CurrencySettings.label(context))),
-      );
-    }
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(CurrencySettings.label(context))));
   }
 
   Future<void> _setLayout(bool grid) async {
@@ -111,34 +103,14 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final categories = _filteredCategories(context);
-    final favorites = _catalogs
-        .where((catalog) =>
-            _favorites.contains(FavoritesStore.catalogKey(catalog.id)) ||
-            _favorites.contains(catalog.id))
-        .toList(growable: false);
+    final favorites = _catalogs.where((catalog) => _favorites.contains(FavoritesStore.catalogKey(catalog.id)) || _favorites.contains(catalog.id)).toList(growable: false);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.catalog, style: const TextStyle(fontWeight: FontWeight.w800)),
         actions: [
-          PopupMenuButton<String>(
-            tooltip: 'Валюта',
-            icon: const Icon(Icons.currency_exchange_rounded),
-            onSelected: _selectCurrency,
-            itemBuilder: (_) => [
-              for (final option in CurrencySettings.options)
-                CheckedPopupMenuItem<String>(
-                  value: option.code,
-                  checked: option.code == CurrencySettings.code,
-                  child: Text('${option.symbol} ${option.name(Localizations.localeOf(context))}'),
-                ),
-            ],
-          ),
-          IconButton(
-            tooltip: l10n.search,
-            icon: const Icon(Icons.search_rounded),
-            onPressed: () => _showSearch(context),
-          ),
+          PopupMenuButton<String>(tooltip: 'Валюта', icon: const Icon(Icons.currency_exchange_rounded), onSelected: _selectCurrency, itemBuilder: (_) => [for (final option in CurrencySettings.options) CheckedPopupMenuItem<String>(value: option.code, checked: option.code == CurrencySettings.code, child: Text('${option.symbol} ${option.name(Localizations.localeOf(context))}'))]),
+          IconButton(tooltip: l10n.search, icon: const Icon(Icons.search_rounded), onPressed: () => _showSearch(context)),
         ],
       ),
       body: RefreshIndicator(
@@ -153,117 +125,74 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
               _buildFavorites(context, favorites),
               const SizedBox(height: 24),
             ],
-            Row(
-              children: [
-                Expanded(child: _SectionTitle(title: l10n.categories, icon: Icons.category_outlined)),
-                SegmentedButton<bool>(
-                  segments: const [
-                    ButtonSegment(value: false, icon: Icon(Icons.view_list_rounded)),
-                    ButtonSegment(value: true, icon: Icon(Icons.grid_view_rounded)),
-                  ],
-                  selected: {_grid},
-                  showSelectedIcon: false,
-                  onSelectionChanged: (value) => _setLayout(value.first),
-                ),
-              ],
-            ),
+            Row(children: [Expanded(child: _SectionTitle(title: l10n.categories, icon: Icons.category_outlined)), SegmentedButton<bool>(segments: const [ButtonSegment(value: false, icon: Icon(Icons.view_list_rounded)), ButtonSegment(value: true, icon: Icon(Icons.grid_view_rounded))], selected: {_grid}, showSelectedIcon: false, onSelectionChanged: (value) => _setLayout(value.first))]),
             const SizedBox(height: 10),
-            categories.isEmpty ? _buildEmpty(context, l10n) : _buildCategories(context, categories, l10n),
+            categories.isEmpty ? _buildEmpty(context, l10n) : _buildCategories(context, categories),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCategories(BuildContext context, List<CatalogCategoryDefinition> categories, AppLocalizations l10n) {
+  Widget _buildCategories(BuildContext context, List<CatalogCategoryDefinition> categories) {
     if (!_grid) {
       return Column(
-        children: categories
-            .map(
-              (category) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _CategoryListTile(
-                  category: category,
-                  title: CatalogUiLocalization.categoryName(context, category.id),
-                  subtitle: '${category.catalogIds.length} ${l10n.chooseCatalog.toLowerCase()}',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => CatalogCategoryPage(categoryId: category.id, onDownload: _downloadCatalog),
-                    ),
-                  ),
-                ),
-              ),
-            )
-            .toList(growable: false),
+        children: categories.map((category) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: _CategoryListTile(
+            category: category,
+            title: CatalogUiLocalization.categoryName(context, category.id),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogCategoryPage(categoryId: category.id, onDownload: _downloadCatalog))),
+          ),
+        )).toList(growable: false),
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = UiLayoutSettings.resolveColumns(constraints.maxWidth);
-        final textScale = MediaQuery.textScalerOf(context).scale(1.0);
-        final height = UiLayoutSettings.resolveCardHeight(width: constraints.maxWidth, columns: columns, textScale: textScale);
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: categories.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            mainAxisExtent: height,
-          ),
-          itemBuilder: (context, index) {
-            final category = categories[index];
-            return _CategoryCard(
-              category: category,
-              title: CatalogUiLocalization.categoryName(context, category.id),
-              subtitle: '${category.catalogIds.length} ${l10n.chooseCatalog.toLowerCase()}',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => CatalogCategoryPage(categoryId: category.id, onDownload: _downloadCatalog)),
-              ),
-            );
-          },
-        );
-      },
-    );
+    return LayoutBuilder(builder: (context, constraints) {
+      final columns = UiLayoutSettings.resolveColumns(constraints.maxWidth);
+      final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+      final columnWidth = (constraints.maxWidth - (columns - 1) * 12) / columns;
+      final showText = columns == 1 || categories.every((category) {
+        final title = CatalogUiLocalization.categoryName(context, category.id);
+        final style = Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800);
+        final painter = TextPainter(text: TextSpan(text: title, style: style), maxLines: 2, textDirection: Directionality.of(context))..layout(maxWidth: columnWidth - 28);
+        return !painter.didExceedMaxLines;
+      });
+      final height = showText ? (118 * textScale).clamp(104.0, 170.0) : 82.0;
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: categories.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: columns, crossAxisSpacing: 12, mainAxisSpacing: 12, mainAxisExtent: height),
+        itemBuilder: (context, index) {
+          final category = categories[index];
+          return _CategoryCard(category: category, title: CatalogUiLocalization.categoryName(context, category.id), showText: showText, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogCategoryPage(categoryId: category.id, onDownload: _downloadCatalog))));
+        },
+      );
+    });
   }
 
   Widget _buildFavorites(BuildContext context, List<CatalogDefinition> catalogs) {
     final textScale = MediaQuery.textScalerOf(context).scale(1.0);
-    final height = UiLayoutSettings.resolveCardHeight(width: 280, columns: 1, textScale: textScale);
     return SizedBox(
-      height: height,
+      height: (96 * textScale).clamp(88.0, 126.0),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: catalogs.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
           final catalog = catalogs[index];
-          return SizedBox(
-            width: 280,
-            child: _FavoriteCard(
-              catalog: catalog,
-              title: CatalogUiLocalization.catalogName(context, catalog.id),
-              onTap: () => _openCatalog(catalog),
-              onToggle: () => _toggleFavorite(catalog.id),
-            ),
-          );
+          final title = CatalogUiLocalization.catalogName(context, catalog.id);
+          final style = Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800);
+          final painter = TextPainter(text: TextSpan(text: title, style: style), maxLines: 2, textDirection: Directionality.of(context))..layout(maxWidth: 220);
+          final width = (painter.width + 94).clamp(150.0, 260.0);
+          return SizedBox(width: width, child: _FavoriteCard(catalog: catalog, title: title, onTap: () => _openCatalog(catalog), onToggle: () => _toggleFavorite(catalog.id)));
         },
       ),
     );
   }
 
-  Widget _buildEmpty(BuildContext context, AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Center(child: Text(l10n.noResults, textAlign: TextAlign.center)),
-    );
-  }
+  Widget _buildEmpty(BuildContext context, AppLocalizations l10n) => Container(padding: const EdgeInsets.all(32), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(22)), child: Center(child: Text(l10n.noResults, textAlign: TextAlign.center)));
 
   List<CatalogCategoryDefinition> _filteredCategories(BuildContext context) {
     final query = _search.trim().toLowerCase();
@@ -276,84 +205,42 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
 
   Future<void> _showSearch(BuildContext context) async {
     final controller = TextEditingController(text: _search);
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(AppLocalizations.of(context).search),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(hintText: AppLocalizations.of(context).searchHint),
-          onChanged: (value) => setState(() => _search = value),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(AppLocalizations.of(context).back)),
-        ],
-      ),
-    );
+    await showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(title: Text(AppLocalizations.of(context).search), content: TextField(controller: controller, autofocus: true, decoration: InputDecoration(hintText: AppLocalizations.of(context).searchHint), onChanged: (value) => setState(() => _search = value)), actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(AppLocalizations.of(context).back))]));
     controller.dispose();
   }
 
-  Future<void> _openCatalog(CatalogDefinition catalog) async {
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: catalog, onDownload: () => _downloadCatalog(catalog))));
-  }
+  Future<void> _openCatalog(CatalogDefinition catalog) async => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: catalog, onDownload: () => _downloadCatalog(catalog))));
 
   Future<void> _downloadCatalog(CatalogDefinition catalog) async {
     final localCollections = ref.read(collectionsProvider).valueOrNull;
     final existing = localCollections?.where((collection) => collection.templateId == catalog.templateId).firstOrNull;
-    if (existing != null) {
-      await _openLocalCollection(existing);
-      return;
-    }
-
+    if (existing != null) { await _openLocalCollection(existing); return; }
     ref.read(downloadQueueProvider.notifier).add(catalog.id, catalog.name);
     try {
       final collectionId = 'catalog_${catalog.id}_${DateTime.now().microsecondsSinceEpoch}';
       final now = DateTime.now();
-      final fields = catalog.template.fields
-          .map((field) => field.copyWith(id: '${collectionId}_${field.id}', collectionId: collectionId))
-          .toList(growable: false);
-      final collection = Collection(
-        id: collectionId,
-        name: catalog.name,
-        templateId: catalog.templateId,
-        fields: fields,
-        createdAt: now,
-        updatedAt: now,
-      );
+      final fields = catalog.template.fields.map((field) => field.copyWith(id: '${collectionId}_${field.id}', collectionId: collectionId)).toList(growable: false);
+      final collection = Collection(id: collectionId, name: catalog.name, templateId: catalog.templateId, fields: fields, createdAt: now, updatedAt: now);
       await ref.read(collectionServiceProvider).createCollection(collection);
-
       final sectionService = await ref.read(collectionSectionServiceProvider.future);
       final sectionIds = <String, String>{};
       await _createSections(sectionService, catalog.sections, collectionId, null, const [], sectionIds);
-
       final itemService = ref.read(itemServiceProvider);
       for (var index = 0; index < catalog.entries.length; index++) {
         final entry = catalog.entries[index];
         final itemId = '${collectionId}_item_${entry.id}';
-        await itemService.saveItem(Item(
-          id: itemId,
-          collectionId: collectionId,
-          sectionId: _sectionIdForPath(entry.sectionPath, sectionIds),
-          sortOrder: index,
-          createdAt: now,
-          updatedAt: now,
-        ));
+        await itemService.saveItem(Item(id: itemId, collectionId: collectionId, sectionId: _sectionIdForPath(entry.sectionPath, sectionIds), sortOrder: index, createdAt: now, updatedAt: now));
         for (final field in fields) {
           final value = _entryValue(entry, field.id, field.label);
           if (value == null || value.isEmpty) continue;
           await itemService.saveValue(ItemValue(id: '${itemId}_${field.id}', itemId: itemId, fieldId: field.id, value: value));
         }
       }
-
       await CatalogVersionStore.markInstalled(catalog.id, catalog.version);
       ref.invalidate(collectionsProvider);
       if (mounted) await _openLocalCollection(collection);
     } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка загрузки «${catalog.name}»: $error')));
-      }
-      // Не пробрасываем исключение повторно: пользователь уже получил понятное сообщение.
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка загрузки «${catalog.name}»: $error')));
     } finally {
       ref.read(downloadQueueProvider.notifier).remove(catalog.id);
     }
@@ -374,15 +261,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
       final id = '${collectionId}_section_${currentPath.join('_')}';
       final now = DateTime.now();
       sectionIds[currentPath.join('/')] = id;
-      await service.createSection(CollectionSection(
-        id: id,
-        collectionId: collectionId,
-        parentId: parentId,
-        name: definition.name,
-        sortOrder: index,
-        createdAt: now,
-        updatedAt: now,
-      ));
+      await service.createSection(CollectionSection(id: id, collectionId: collectionId, parentId: parentId, name: definition.name, sortOrder: index, createdAt: now, updatedAt: now));
       await _createSections(service, definition.children, collectionId, id, currentPath, sectionIds);
     }
   }
@@ -396,130 +275,71 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
 class _SectionTitle extends StatelessWidget {
   final String title;
   final IconData icon;
-
   const _SectionTitle({required this.title, required this.icon});
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 21),
-          const SizedBox(width: 8),
-          Flexible(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800))),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Center(child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 21), const SizedBox(width: 8), Flexible(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)))]));
 }
 
 class _CategoryListTile extends StatelessWidget {
   final CatalogCategoryDefinition category;
   final String title;
-  final String subtitle;
   final VoidCallback onTap;
-
-  const _CategoryListTile({required this.category, required this.title, required this.subtitle, required this.onTap});
+  const _CategoryListTile({required this.category, required this.title, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          leading: Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(15)),
-            child: Icon(_icon(category.id), color: colors.primary),
-          ),
-          title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-          subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
-          trailing: const Icon(Icons.chevron_right_rounded),
-        ),
-      ),
-    );
+    return Card(clipBehavior: Clip.antiAlias, child: InkWell(onTap: onTap, child: ListTile(contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), leading: Container(width: 52, height: 52, decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(15)), child: Icon(_icon(category.id), color: colors.primary)), title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)), trailing: const Icon(Icons.chevron_right_rounded))));
   }
 
-  IconData _icon(String id) {
-    switch (id) {
-      case 'constructors': return Icons.extension_rounded;
-      case 'numismatics': return Icons.monetization_on_outlined;
-      case 'banknotes': return Icons.payments_outlined;
-      case 'cards': return Icons.style_outlined;
-      case 'video_games': return Icons.sports_esports_outlined;
-      case 'consoles': return Icons.gamepad_outlined;
-      case 'movies': return Icons.movie_outlined;
-      case 'figurines': return Icons.toys_outlined;
-      case 'books': return Icons.menu_book_outlined;
-      case 'music': return Icons.album_outlined;
-      case 'sports': return Icons.emoji_events_outlined;
-      case 'art': return Icons.palette_outlined;
-      case 'antiques': return Icons.history_edu_outlined;
-      default: return Icons.category_outlined;
-    }
-  }
+  IconData _icon(String id) => switch (id) {
+    'constructors' => Icons.extension_rounded,
+    'numismatics' => Icons.monetization_on_outlined,
+    'banknotes' => Icons.payments_outlined,
+    'cards' => Icons.style_outlined,
+    'video_games' => Icons.sports_esports_outlined,
+    'consoles' => Icons.gamepad_outlined,
+    'movies' => Icons.movie_outlined,
+    'figurines' => Icons.toys_outlined,
+    'books' => Icons.menu_book_outlined,
+    'music' => Icons.album_outlined,
+    'sports' => Icons.emoji_events_outlined,
+    'art' => Icons.palette_outlined,
+    'antiques' => Icons.history_edu_outlined,
+    _ => Icons.category_outlined,
+  };
 }
 
 class _CategoryCard extends StatelessWidget {
   final CatalogCategoryDefinition category;
   final String title;
-  final String subtitle;
+  final bool showText;
   final VoidCallback onTap;
-
-  const _CategoryCard({required this.category, required this.title, required this.subtitle, required this.onTap});
+  const _CategoryCard({required this.category, required this.title, required this.showText, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(14)),
-                child: Icon(_icon(category.id), color: colors.primary),
-              ),
-              const Spacer(),
-              Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-              const SizedBox(height: 3),
-              Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
-            ],
-          ),
-        ),
-      ),
-    );
+    return Card(clipBehavior: Clip.antiAlias, child: InkWell(onTap: onTap, child: Center(child: Padding(padding: const EdgeInsets.all(8), child: Column(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [Container(width: 48, height: 48, decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(15)), child: Icon(_icon(category.id), color: colors.primary)), if (showText) ...[const SizedBox(height: 6), Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800))]]))));
   }
 
-  IconData _icon(String id) {
-    switch (id) {
-      case 'constructors': return Icons.extension_rounded;
-      case 'numismatics': return Icons.monetization_on_outlined;
-      case 'banknotes': return Icons.payments_outlined;
-      case 'cards': return Icons.style_outlined;
-      case 'video_games': return Icons.sports_esports_outlined;
-      case 'consoles': return Icons.gamepad_outlined;
-      case 'movies': return Icons.movie_outlined;
-      case 'figurines': return Icons.toys_outlined;
-      case 'books': return Icons.menu_book_outlined;
-      case 'music': return Icons.album_outlined;
-      case 'sports': return Icons.emoji_events_outlined;
-      case 'art': return Icons.palette_outlined;
-      case 'antiques': return Icons.history_edu_outlined;
-      default: return Icons.category_outlined;
-    }
-  }
+  IconData _icon(String id) => switch (id) {
+    'constructors' => Icons.extension_rounded,
+    'numismatics' => Icons.monetization_on_outlined,
+    'banknotes' => Icons.payments_outlined,
+    'cards' => Icons.style_outlined,
+    'video_games' => Icons.sports_esports_outlined,
+    'consoles' => Icons.gamepad_outlined,
+    'movies' => Icons.movie_outlined,
+    'figurines' => Icons.toys_outlined,
+    'books' => Icons.menu_book_outlined,
+    'music' => Icons.album_outlined,
+    'sports' => Icons.emoji_events_outlined,
+    'art' => Icons.palette_outlined,
+    'antiques' => Icons.history_edu_outlined,
+    _ => Icons.category_outlined,
+  };
 }
 
 class _FavoriteCard extends StatelessWidget {
@@ -527,52 +347,21 @@ class _FavoriteCard extends StatelessWidget {
   final String title;
   final VoidCallback onTap;
   final Future<void> Function() onToggle;
-
   const _FavoriteCard({required this.catalog, required this.title, required this.onTap, required this.onToggle});
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              CircleAvatar(child: Icon(_icon(catalog.id))),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 4),
-                    Text('${catalog.entries.length} записей', maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ],
-                ),
-              ),
-              IconButton(onPressed: onToggle, icon: const Icon(Icons.star_rounded)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Card(clipBehavior: Clip.antiAlias, child: InkWell(onTap: onTap, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), child: Row(children: [CircleAvatar(radius: 20, child: Icon(_icon(catalog.id), size: 20)), const SizedBox(width: 8), Expanded(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800))), IconButton(onPressed: onToggle, padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), icon: const Icon(Icons.star_rounded))])));
 
-  IconData _icon(String id) {
-    switch (id) {
-      case 'lego': return Icons.extension_rounded;
-      case 'coins': return Icons.monetization_on_outlined;
-      case 'banknotes': return Icons.payments_outlined;
-      case 'pokemon_tcg': return Icons.style_outlined;
-      case 'games': return Icons.sports_esports_outlined;
-      case 'movies': return Icons.movie_outlined;
-      case 'figurines': return Icons.toys_outlined;
-      default: return Icons.inventory_2_outlined;
-    }
-  }
+  IconData _icon(String id) => switch (id) {
+    'lego' => Icons.extension_rounded,
+    'coins' => Icons.monetization_on_outlined,
+    'banknotes' => Icons.payments_outlined,
+    'pokemon_tcg' => Icons.style_outlined,
+    'games' => Icons.sports_esports_outlined,
+    'movies' => Icons.movie_outlined,
+    'figurines' => Icons.toys_outlined,
+    _ => Icons.inventory_2_outlined,
+  };
 }
 
 extension _FirstOrNull<T> on Iterable<T> {
