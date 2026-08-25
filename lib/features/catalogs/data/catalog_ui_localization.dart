@@ -14,9 +14,17 @@ class CatalogUiLocalization {
       catalogNameForLocale(Localizations.localeOf(context), id);
 
   static String catalogNameForLocale(Locale locale, String id) {
+    // Внутри конкретного каталога показываем его название, а не название
+    // более общего направления. Например, для LEGO должно быть «LEGO»,
+    // а не «Конструкторы».
+    const directNames = <String, String>{
+      'lego': 'LEGO',
+      'pokemon_tcg': 'Pokémon TCG',
+    };
+    final directName = directNames[id];
+    if (directName != null) return directName;
+
     const aliases = <String, String>{
-      'lego': 'constructors',
-      'pokemon_tcg': 'cards',
       'games': 'video_games',
       'discs': 'video_games',
       'movies': 'movies',
