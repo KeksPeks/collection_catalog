@@ -23,9 +23,8 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
-  /// Создаёт дополнительные таблицы каталожных позиций и мест хранения.
   Future<void> ensureStorageTables() async {
     await customStatement('''
       CREATE TABLE IF NOT EXISTS storage_location_table (
@@ -65,6 +64,18 @@ class AppDatabase extends _$AppDatabase {
     ''');
   }
 
+  Future<void> _ensureCurrentSchema() async {
+    // Восстанавливаем отсутствующие таблицы в старых локальных базах.
+    await customStatement('CREATE TABLE IF NOT EXISTS collection_table (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, template_id TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)');
+    await customStatement('CREATE TABLE IF NOT EXISTS field_table (id TEXT PRIMARY KEY NOT NULL, collection_id TEXT NOT NULL, label TEXT NOT NULL, type TEXT NOT NULL, sort_order INTEGER NOT NULL)');
+    await customStatement('CREATE TABLE IF NOT EXISTS collection_section_table (id TEXT PRIMARY KEY NOT NULL, collection_id TEXT NOT NULL, parent_id TEXT, name TEXT NOT NULL, sort_order INTEGER NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)');
+    await customStatement('CREATE TABLE IF NOT EXISTS item_table (id TEXT PRIMARY KEY NOT NULL, collection_id TEXT NOT NULL, section_id TEXT, sort_order INTEGER NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)');
+    await customStatement('CREATE TABLE IF NOT EXISTS item_value_table (id TEXT PRIMARY KEY NOT NULL, item_id TEXT NOT NULL, field_id TEXT NOT NULL, value TEXT NOT NULL)');
+    await customStatement('CREATE TABLE IF NOT EXISTS item_attachment_table (id TEXT PRIMARY KEY NOT NULL, item_id TEXT NOT NULL, path TEXT NOT NULL, type TEXT NOT NULL, created_at INTEGER NOT NULL)');
+    await ensureCatalogItemTables();
+    await ensureStorageTables();
+  }
+
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (Migrator m) async {
@@ -80,15 +91,15 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(itemValueTable);
             await m.createTable(itemAttachmentTable);
           }
-          if (from < 5) {
-            await m.addColumn(collectionSectionTable, collectionSectionTable.sortOrder);
-          }
+          if (from < 5) await m.addColumn(collectionSectionTable, collectionSectionTable.sortOrder);
           if (from < 6) {
-            // Важно: пользователи с уже существующей схемой 5 тоже должны
-            // получить таблицы каталожных позиций и мест хранения.
             await ensureCatalogItemTables();
             await ensureStorageTables();
           }
+          if (from < 7) await _ensureCurrentSchema();
+        },
+        beforeOpen: (details) async {
+          if (!details.wasCreated && !details.hadUpgrade) await _ensureCurrentSchema();
         },
       );
 }
