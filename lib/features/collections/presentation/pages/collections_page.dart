@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/settings/ui_layout_settings.dart';
+import '../../../catalogs/data/catalog_registry.dart';
 import '../../domain/entities/collection.dart';
 import '../providers/collection_provider.dart';
 import 'collection_detail_page.dart';
@@ -37,6 +38,18 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     super.dispose();
   }
 
+  String _displayName(Collection collection) {
+    // Старые локальные записи могли сохранить название направления
+    // (например, «Конструкторы») вместо конкретного каталога («LEGO»).
+    // Используем актуальное имя каталога, если его можно однозначно определить.
+    final templateId = collection.templateId;
+    if (templateId != null && templateId.isNotEmpty) {
+      final matches = CatalogRegistry.all.where((catalog) => catalog.templateId == templateId).toList(growable: false);
+      if (matches.length == 1) return matches.first.name;
+    }
+    return collection.name;
+  }
+
   @override
   Widget build(BuildContext context) {
     final collections = ref.watch(collectionsProvider);
@@ -57,7 +70,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
               .toList(growable: false);
           final query = _search.trim().toLowerCase();
           final filtered = downloaded
-              .where((item) => item.name.toLowerCase().contains(query))
+              .where((item) => _displayName(item).toLowerCase().contains(query))
               .toList(growable: false);
 
           return LayoutBuilder(
@@ -156,6 +169,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     Collection collection, {
     required bool compact,
   }) {
+    final displayName = _displayName(collection);
     if (!compact) {
       return Card(
         margin: EdgeInsets.zero,
@@ -168,7 +182,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
             child: Icon(Icons.collections_bookmark),
           ),
           title: Text(
-            collection.name,
+            displayName,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -178,7 +192,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
             overflow: TextOverflow.ellipsis,
           ),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () => _openCollection(collection),
+          onTap: () => _openCollection(collection, displayName),
         ),
       );
     }
@@ -190,7 +204,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
             .labelLarge
             ?.copyWith(fontWeight: FontWeight.w800);
         final painter = TextPainter(
-          text: TextSpan(text: collection.name, style: titleStyle),
+          text: TextSpan(text: displayName, style: titleStyle),
           maxLines: 1,
           textDirection: Directionality.of(context),
         )..layout(maxWidth: constraints.maxWidth - 20);
@@ -201,7 +215,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
           margin: EdgeInsets.zero,
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: () => _openCollection(collection),
+            onTap: () => _openCollection(collection, displayName),
             child: Center(
               child: showTitle
                   ? Column(
@@ -214,7 +228,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 6),
                           child: Text(
-                            collection.name,
+                            displayName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
@@ -233,12 +247,12 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     );
   }
 
-  Future<void> _openCollection(Collection collection) async {
+  Future<void> _openCollection(Collection collection, String displayName) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => CollectionDetailPage(
           collectionId: collection.id,
-          collectionName: collection.name,
+          collectionName: displayName,
         ),
       ),
     );
@@ -308,7 +322,7 @@ class _EmptyCollectionsCard extends StatelessWidget {
               'Откройте вкладку «Каталог», выберите нужный сборник и нажмите кнопку загрузки.',
               textAlign: TextAlign.center,
             ),
-          ],
+            ],
         ),
       ),
     );
