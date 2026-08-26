@@ -20,6 +20,10 @@ class UiLayoutSettings {
   static String navigation = 'auto';
   static bool _loaded = false;
 
+  /// Временная совместимость со старыми экранами.
+  /// Фактическая высота карточек больше не является настройкой пользователя.
+  static double get cardHeight => 150.0;
+
   static Future<void> load() async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.reload();
@@ -38,6 +42,7 @@ class UiLayoutSettings {
     int? columns,
     String? density,
     String? navigation,
+    double? cardHeight,
   }) async {
     final preferences = await SharedPreferences.getInstance();
     if (columns != null) {
@@ -52,6 +57,7 @@ class UiLayoutSettings {
       UiLayoutSettings.navigation = navigation;
       await preferences.setString(navigationKey, navigation);
     }
+    // cardHeight намеренно не сохраняется: высота карточек вычисляется адаптивно.
     _loaded = true;
     revision.value++;
   }
