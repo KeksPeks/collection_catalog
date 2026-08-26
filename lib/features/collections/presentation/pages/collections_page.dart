@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/settings/ui_layout_settings.dart';
 import '../../../catalogs/data/catalog_registry.dart';
+import '../../../catalogs/data/catalog_ui_localization.dart';
 import '../../domain/entities/collection.dart';
 import '../providers/collection_provider.dart';
 import '../../../items/presentation/pages/items_page.dart';
@@ -37,15 +38,20 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     super.dispose();
   }
 
-  /// Название коллекции всегда берём из централизованного реестра.
-  /// Благодаря этому «Нумизматика» не превращается после загрузки в «Монеты».
-  String _displayName(Collection collection) {
+  /// Название загруженной коллекции всегда берём из того же локализованного
+  /// реестра, который используется в разделе «Каталог».
+  ///
+  /// Поэтому название не расходится с каталогом после загрузки:
+  /// например, «Нумизматика» остаётся «Нумизматика», а LEGO остаётся «LEGO».
+  String _displayName(BuildContext context, Collection collection) {
     final templateId = collection.templateId;
     if (templateId != null && templateId.isNotEmpty) {
       final matches = CatalogRegistry.all
           .where((catalog) => catalog.templateId == templateId)
           .toList(growable: false);
-      if (matches.length == 1) return matches.first.name;
+      if (matches.length == 1) {
+        return CatalogUiLocalization.catalogName(context, matches.first.id);
+      }
     }
     return collection.name;
   }
@@ -67,7 +73,8 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
               .toList(growable: false);
           final query = _search.trim().toLowerCase();
           final filtered = downloaded
-              .where((item) => _displayName(item).toLowerCase().contains(query))
+              .where((item) =>
+                  _displayName(context, item).toLowerCase().contains(query))
               .toList(growable: false);
 
           return LayoutBuilder(
@@ -158,7 +165,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
   }
 
   Widget _buildCollectionTile(Collection collection, {required bool compact}) {
-    final displayName = _displayName(collection);
+    final displayName = _displayName(context, collection);
 
     if (!compact) {
       return Card(
