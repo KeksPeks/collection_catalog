@@ -125,6 +125,7 @@ class _CollectionShell extends StatefulWidget {
 }
 
 class _CollectionShellState extends State<_CollectionShell> {
+  // Обзор первым и открывается первым при каждом запуске приложения.
   int _index = 0;
   VoidCallback? _layoutListener;
   @override
@@ -147,17 +148,17 @@ class _CollectionShellState extends State<_CollectionShell> {
     final navigation = UiLayoutSettings.navigation;
     final useRail = navigation == 'side' || (navigation == 'auto' && info.useRail);
     final pages = <Widget>[
+      const OverviewPage(),
       const CatalogPage(),
       const FavoritesPage(),
       const CollectionsPage(),
-      const OverviewPage(),
       _SettingsPage(theme: widget.theme, colorIndex: widget.colorIndex, fontScale: widget.fontScale, locale: widget.locale, onThemeChanged: widget.onThemeChanged, onColorChanged: widget.onColorChanged, onFontChanged: widget.onFontChanged, onLocaleChanged: widget.onLocaleChanged),
     ];
     final destinations = <_Destination>[
+      _Destination(Icons.insights_outlined, Icons.insights_rounded, l10n.overview),
       _Destination(Icons.menu_book_outlined, Icons.menu_book, l10n.catalog),
       _Destination(Icons.star_border_rounded, Icons.star_rounded, l10n.favorites),
       _Destination(Icons.collections_bookmark_outlined, Icons.collections_bookmark, l10n.myCollections),
-      _Destination(Icons.insights_outlined, Icons.insights_rounded, l10n.overview),
       _Destination(Icons.settings_outlined, Icons.settings, l10n.settings),
     ];
     if (useRail) {
