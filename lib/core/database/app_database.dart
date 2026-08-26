@@ -23,11 +23,17 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   Future<bool> _hasColumn(String table, String column) async {
     final rows = await customSelect('PRAGMA table_info("$table")').get();
-    return rows.any((row) => row.data['name'] == column);
+    return rows.any((row) => row.data['name']?.toString() == column);
+  }
+
+  Future<void> _ensureColumn(String table, String column, String definition) async {
+    if (!await _hasColumn(table, column)) {
+      await customStatement('ALTER TABLE "$table" ADD COLUMN "$column" $definition');
+    }
   }
 
   Future<void> ensureStorageTables() async {
@@ -70,10 +76,10 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> _ensureCurrentSchema() async {
-    // Восстанавливаем отсутствующие таблицы в старых локальных базах.
     await customStatement('CREATE TABLE IF NOT EXISTS collection_table (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, template_id TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)');
     await customStatement('CREATE TABLE IF NOT EXISTS field_table (id TEXT PRIMARY KEY NOT NULL, collection_id TEXT NOT NULL, label TEXT NOT NULL, type TEXT NOT NULL)');
-    await customStatement('CREATE TABLE IF NOT EXISTS collection_section_table (id TEXT PRIMARY KEY NOT NULL, collection_id TEXT NOT NULL, parent_id TEXT, name TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0)');
+    await customStatement('CREATE TABLE IF NOT EXISTS collection_section_table (id TEXT PRIMARY KEY NOT NULL, collection_id TEXT NOT NULL, parent_id TEXT, name TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)');
+    await _ensureColumn('collection_section_table', 'sort_order', 'INTEGER NOT NULL DEFAULT 0');
     await customStatement('CREATE TABLE IF NOT EXISTS item_table (id TEXT PRIMARY KEY NOT NULL, collection_id TEXT NOT NULL, section_id TEXT, sort_order INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)');
     await customStatement('CREATE TABLE IF NOT EXISTS item_value_table (id TEXT PRIMARY KEY NOT NULL, item_id TEXT NOT NULL, field_id TEXT NOT NULL, value TEXT NOT NULL)');
     await customStatement('CREATE TABLE IF NOT EXISTS item_attachment_table (id TEXT PRIMARY KEY NOT NULL, item_id TEXT NOT NULL, path TEXT NOT NULL, type TEXT NOT NULL)');
@@ -96,22 +102,19 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(itemValueTable);
             await m.createTable(itemAttachmentTable);
           }
-          // Старые локальные базы могли уже содержать sort_order.
-          // Проверяем колонку перед ALTER TABLE, чтобы повторное обновление
-          // не завершалось ошибкой duplicate column name.
-          if (from < 5 && !await _hasColumn('collection_section_table', 'sort_order')) {
-            await m.addColumn(collectionSectionTable, collectionSectionTable.sortOrder);
-          }
+          // Не используем m.addColumn здесь: старые локальные базы могли
+          // уже содержать sort_order при старой версии схемы.
+          await _ensureColumn('collection_section_table', 'sort_order', 'INTEGER NOT NULL DEFAULT 0');
           if (from < 6) {
             await ensureCatalogItemTables();
             await ensureStorageTables();
           }
-          if (from < 7) await _ensureCurrentSchema();
+          await _ensureCurrentSchema();
         },
         beforeOpen: (details) async {
-          if (!details.wasCreated && !details.hadUpgrade) {
-            await _ensureCurrentSchema();
-          }
+          // Проверяем фактическую SQLite-схему при каждом открытии. Это
+          // исправляет базы, созданные промежуточными версиями приложения.
+          await _ensureCurrentSchema();
         },
       );
 }
