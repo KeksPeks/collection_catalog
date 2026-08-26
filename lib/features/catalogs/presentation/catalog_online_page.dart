@@ -12,7 +12,12 @@ class CatalogOnlinePage extends StatefulWidget {
   final Future<void> Function()? onDownload;
   final List<String> sectionPath;
 
-  const CatalogOnlinePage({super.key, required this.catalog, this.onDownload, this.sectionPath = const []});
+  const CatalogOnlinePage({
+    super.key,
+    required this.catalog,
+    this.onDownload,
+    this.sectionPath = const [],
+  });
 
   @override
   State<CatalogOnlinePage> createState() => _CatalogOnlinePageState();
@@ -26,7 +31,11 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
   Map<String, int> _sectionCounts = <String, int>{};
   VoidCallback? _layoutListener;
 
-  bool get _regularCoins => widget.catalog.id == 'coins' && widget.sectionPath.length == 3 && widget.sectionPath[0] == 'countries' && widget.sectionPath[1] == 'russia' && widget.sectionPath[2] == 'regular';
+  bool get _regularCoins =>
+      widget.catalog.id == 'coins' &&
+      widget.sectionPath.length == 2 &&
+      widget.sectionPath[0] == 'russia' &&
+      widget.sectionPath[1] == 'regular';
 
   CatalogSectionDefinition? get _currentSection {
     if (widget.sectionPath.isEmpty) return null;
@@ -40,7 +49,10 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
     return current;
   }
 
-  List<CatalogSectionDefinition> get _sections => widget.sectionPath.isEmpty ? widget.catalog.sections : _currentSection?.children ?? const <CatalogSectionDefinition>[];
+  List<CatalogSectionDefinition> get _sections =>
+      widget.sectionPath.isEmpty
+          ? widget.catalog.sections
+          : _currentSection?.children ?? const <CatalogSectionDefinition>[];
 
   List<CatalogEntryDefinition> get _entries {
     if (widget.sectionPath.isEmpty) return widget.catalog.entries;
@@ -75,7 +87,6 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
     UiLayoutSettings.ensureLoaded();
     _loadFavorites();
 
-    // Подсчёт статистики большого каталога не должен блокировать первый кадр.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final counts = _buildSectionCounts();
@@ -92,8 +103,12 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
 
   Future<void> _loadFavorites() async {
     final keys = await FavoritesStore.loadKeys();
-    final catalogFavorite = keys.contains(FavoritesStore.catalogKey(widget.catalog.id));
-    final sectionFavorites = keys.where((key) => key.startsWith('section:')).map((key) => key.substring('section:'.length)).toSet();
+    final catalogFavorite =
+        keys.contains(FavoritesStore.catalogKey(widget.catalog.id));
+    final sectionFavorites = keys
+        .where((key) => key.startsWith('section:'))
+        .map((key) => key.substring('section:'.length))
+        .toSet();
     if (!mounted) return;
     setState(() {
       _favorite = catalogFavorite;
@@ -103,13 +118,21 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
 
   Future<void> _toggleCatalogFavorite() async {
     final keys = await FavoritesStore.toggle(widget.catalog.id);
-    if (mounted) setState(() => _favorite = keys.contains(FavoritesStore.catalogKey(widget.catalog.id)));
+    if (mounted) {
+      setState(() =>
+          _favorite = keys.contains(FavoritesStore.catalogKey(widget.catalog.id)));
+    }
   }
 
   Future<void> _toggleSectionFavorite(String id) async {
     final keys = await FavoritesStore.toggleKey(FavoritesStore.sectionKey(id));
     if (!mounted) return;
-    setState(() => _favoriteSections = keys.where((key) => key.startsWith('section:')).map((key) => key.substring('section:'.length)).toSet());
+    setState(() {
+      _favoriteSections = keys
+          .where((key) => key.startsWith('section:'))
+          .map((key) => key.substring('section:'.length))
+          .toSet();
+    });
   }
 
   List<CatalogEntryDefinition> _sortedEntries() {
@@ -120,7 +143,9 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
       final bValue = b.attributes[_sortField!] ?? b.primaryValue;
       final aNumber = double.tryParse(aValue.replaceAll(',', '.'));
       final bNumber = double.tryParse(bValue.replaceAll(',', '.'));
-      final comparison = aNumber != null && bNumber != null ? aNumber.compareTo(bNumber) : aValue.toLowerCase().compareTo(bValue.toLowerCase());
+      final comparison = aNumber != null && bNumber != null
+          ? aNumber.compareTo(bNumber)
+          : aValue.toLowerCase().compareTo(bValue.toLowerCase());
       return _descending ? -comparison : comparison;
     });
     return result;
@@ -131,14 +156,21 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
     final l10n = AppLocalizations.of(context);
     final title = _currentSection?.name ?? l10n.catalogName(widget.catalog.id);
     final entries = _sortedEntries();
-    final showEntries = widget.sectionPath.isNotEmpty || widget.catalog.sections.isEmpty;
+    final showEntries =
+        widget.sectionPath.isNotEmpty || widget.catalog.sections.isEmpty;
     final totalItems = _sections.length + (showEntries ? entries.length : 0);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis),
         actions: [
-          IconButton(tooltip: l10n.favorites, onPressed: _toggleCatalogFavorite, icon: Icon(_favorite ? Icons.star_rounded : Icons.star_border_rounded)),
+          IconButton(
+            tooltip: l10n.favorites,
+            onPressed: _toggleCatalogFavorite,
+            icon: Icon(
+              _favorite ? Icons.star_rounded : Icons.star_border_rounded,
+            ),
+          ),
           if (_regularCoins)
             PopupMenuButton<String>(
               tooltip: 'Сортировка',
@@ -149,47 +181,98 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
                   setState(() => _sortField = value);
                 }
               },
-              itemBuilder: (context) => const [PopupMenuItem<String>(value: 'year', child: Text('По году')), PopupMenuItem<String>(value: 'series', child: Text('По серии')), PopupMenuItem<String>(value: 'rarity', child: Text('По редкости')), PopupMenuItem<String>(value: 'reverse', child: Text('Изменить порядок'))],
+              itemBuilder: (context) => const [
+                PopupMenuItem<String>(value: 'year', child: Text('По году')),
+                PopupMenuItem<String>(value: 'series', child: Text('По серии')),
+                PopupMenuItem<String>(
+                  value: 'rarity',
+                  child: Text('По редкости'),
+                ),
+                PopupMenuItem<String>(
+                  value: 'reverse',
+                  child: Text('Изменить порядок'),
+                ),
+              ],
             ),
         ],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: totalItems + (entries.isEmpty && showEntries ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index < _sections.length) {
-                final section = _sections[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    leading: const CircleAvatar(child: Icon(Icons.folder_outlined)),
-                    title: Text(section.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    subtitle: Text(section.children.isEmpty ? '${_count(section)} записей' : '${section.children.length} подразделов', maxLines: 1, overflow: TextOverflow.ellipsis),
-                    trailing: IconButton(onPressed: () => _toggleSectionFavorite(section.id), icon: Icon(_favoriteSections.contains(section.id) ? Icons.star_rounded : Icons.star_border_rounded)),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: widget.catalog, onDownload: widget.onDownload, sectionPath: [...widget.sectionPath, section.id]))),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: totalItems + (entries.isEmpty && showEntries ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index < _sections.length) {
+            final section = _sections[index];
+            return Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
+                leading: const CircleAvatar(
+                  child: Icon(Icons.folder_outlined),
+                ),
+                title: Text(
+                  section.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  section.children.isEmpty
+                      ? '${_count(section)} записей'
+                      : '${section.children.length} подразделов',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: IconButton(
+                  onPressed: () => _toggleSectionFavorite(section.id),
+                  icon: Icon(
+                    _favoriteSections.contains(section.id)
+                        ? Icons.star_rounded
+                        : Icons.star_border_rounded,
                   ),
-                );
-              }
-
-              final entryIndex = index - _sections.length;
-              if (entryIndex < entries.length) {
-                final entry = entries[entryIndex];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    leading: const Icon(Icons.inventory_2_outlined),
-                    title: Text(entry.title, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    subtitle: Text('${entry.primaryValue} · ${entry.subtitle}', maxLines: 2, overflow: TextOverflow.ellipsis),
+                ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => CatalogOnlinePage(
+                      catalog: widget.catalog,
+                      onDownload: widget.onDownload,
+                      sectionPath: [...widget.sectionPath, section.id],
+                    ),
                   ),
-                );
-              }
+                ),
+              ),
+            );
+          }
 
-              return const Padding(padding: EdgeInsets.all(24), child: Text('Записи не найдены', textAlign: TextAlign.center));
-            },
+          final entryIndex = index - _sections.length;
+          if (entryIndex < entries.length) {
+            final entry = entries[entryIndex];
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
+                leading: const Icon(Icons.inventory_2_outlined),
+                title: Text(
+                  entry.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  '${entry.primaryValue} · ${entry.subtitle}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            );
+          }
+
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Text('Записи не найдены', textAlign: TextAlign.center),
           );
         },
       ),
@@ -201,7 +284,10 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
                 child: FilledButton.icon(
                   onPressed: () async {
                     await widget.onDownload!.call();
-                    await CatalogVersionStore.markInstalled(widget.catalog.id, widget.catalog.version);
+                    await CatalogVersionStore.markInstalled(
+                      widget.catalog.id,
+                      widget.catalog.version,
+                    );
                     if (mounted) Navigator.of(context).pop();
                   },
                   icon: const Icon(Icons.download_rounded),
@@ -212,7 +298,8 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
     );
   }
 
-  int _count(CatalogSectionDefinition section) => _sectionCounts[[...widget.sectionPath, section.id].join('/')] ?? 0;
+  int _count(CatalogSectionDefinition section) =>
+      _sectionCounts[[...widget.sectionPath, section.id].join('/')] ?? 0;
 }
 
 extension _FirstOrNull<T> on Iterable<T> {
