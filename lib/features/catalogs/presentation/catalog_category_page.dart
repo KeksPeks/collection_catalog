@@ -6,6 +6,11 @@ import '../data/catalog_ui_localization.dart';
 import '../domain/entities/catalog_definition.dart';
 import 'catalog_online_page.dart';
 
+/// Экран направления каталога.
+///
+/// Если направление содержит один фактический каталог (что сейчас является
+/// нормальным случаем), промежуточная карточка каталога не показывается:
+/// пользователь сразу попадает в содержимое каталога.
 class CatalogCategoryPage extends StatelessWidget {
   final String categoryId;
   final Future<void> Function(CatalogDefinition catalog)? onDownload;
@@ -17,12 +22,30 @@ class CatalogCategoryPage extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final category = CatalogRegistry.categoryById(categoryId);
     final catalogs = CatalogRegistry.catalogsForCategory(categoryId);
+
     if (category == null) {
-      return Scaffold(appBar: AppBar(title: Text(l10n.catalog)), body: Center(child: Text(l10n.noResults)));
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.catalog)),
+        body: Center(child: Text(l10n.noResults)),
+      );
     }
 
+    // Для направления с одним каталогом сразу открываем его содержимое.
+    // Например: Нумизматика -> Монеты -> Страны -> Россия -> ...
+    if (catalogs.length == 1) {
+      final catalog = catalogs.first;
+      return CatalogOnlinePage(
+        catalog: catalog,
+        onDownload: onDownload == null ? null : () => onDownload!(catalog),
+      );
+    }
+
+    // Оставляем выбор только для направлений, где действительно несколько
+    // самостоятельных каталогов.
     return Scaffold(
-      appBar: AppBar(title: Text(CatalogUiLocalization.categoryName(context, category.id))),
+      appBar: AppBar(
+        title: Text(CatalogUiLocalization.categoryName(context, category.id)),
+      ),
       body: catalogs.isEmpty
           ? Center(child: Text(l10n.noResults))
           : ListView.separated(
@@ -59,6 +82,7 @@ class _CatalogRow extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final title = CatalogUiLocalization.catalogName(context, catalog.id);
     final count = catalog.totalItems ?? catalog.entries.length;
+
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
@@ -71,7 +95,10 @@ class _CatalogRow extends StatelessWidget {
               Container(
                 width: 54,
                 height: 54,
-                decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(16)),
+                decoration: BoxDecoration(
+                  color: colors.primaryContainer,
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Icon(Icons.inventory_2_outlined, color: colors.primary),
               ),
               const SizedBox(width: 14),
@@ -80,11 +107,27 @@ class _CatalogRow extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
                     const SizedBox(height: 3),
-                    Text(catalog.description, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text(
+                      catalog.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     const SizedBox(height: 3),
-                    Text('$count записей', maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelMedium),
+                    Text(
+                      '$count записей',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
                   ],
                 ),
               ),
