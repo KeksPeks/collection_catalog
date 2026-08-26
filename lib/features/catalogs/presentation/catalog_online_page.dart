@@ -18,6 +18,7 @@ class CatalogOnlinePage extends StatefulWidget {
 class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
   static const _dynamic = '__dynamic__';
   static const _config = '__config__';
+  static const _all = '__all__';
   bool _favorite = false;
   Set<String> _favoriteSections = <String>{};
   String? _sortField;
@@ -38,7 +39,8 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
   }
 
   List<String> get _groupingFields {
-    if (widget.sectionPath.length >= 2 && widget.sectionPath[0] == _dynamic && widget.sectionPath[1] == _config) {
+    if (widget.sectionPath.length >= 3 && widget.sectionPath[0] == _dynamic && widget.sectionPath[1] == _config) {
+      if (widget.sectionPath[2] == _all) return const [];
       var end = 2;
       while (end < widget.sectionPath.length && widget.sectionPath[end] != '__filters__') end++;
       return widget.sectionPath.sublist(2, end);
@@ -115,10 +117,9 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
 
   String _fieldName(String field) => const {'country':'Страна','year':'Год','denomination':'Номинал','series':'Серия','rarity':'Редкость','platform':'Платформа','title':'Название'}[field] ?? field;
   String _groupingName(List<String> fields) => fields.isEmpty ? 'Показать все' : fields.map(_fieldName).join(' → ');
-
   String get _title => _filters.isEmpty ? AppLocalizations.of(context).catalogName(widget.catalog.id) : _filters.last.$2;
 
-  List<String> _pathForGrouping(List<String> fields) => fields.isEmpty ? const [] : <String>[_dynamic, _config, ...fields, '__filters__'];
+  List<String> _pathForGrouping(List<String> fields) => fields.isEmpty ? <String>[_dynamic, _config, _all] : <String>[_dynamic, _config, ...fields, '__filters__'];
 
   void _selectGrouping(List<String> fields) {
     Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: widget.catalog, onDownload: widget.onDownload, sectionPath: _pathForGrouping(fields)));
@@ -171,11 +172,10 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
     final groups = _groups;
     final entries = _sortedEntries();
     final showGroups = _isDynamic && _filters.length < _groupingFields.length && groups.isNotEmpty;
-    final showEntries = !showGroups;
     return Scaffold(
       appBar: AppBar(title: Text(_title, maxLines: 2, overflow: TextOverflow.ellipsis), actions: [
         IconButton(tooltip: l10n.favorites, onPressed: _toggleCatalogFavorite, icon: Icon(_favorite ? Icons.star_rounded : Icons.star_border_rounded)),
-        if (_groupingPresets.length > 1) PopupMenuButton<int>(tooltip: 'Группировка', onSelected: (i) => _selectGrouping(_groupingPresets[i]), itemBuilder: (_) => [for (var i = 0; i < _groupingPresets.length; i++) PopupMenuItem(value: i, child: Text(_groupingName(_groupingPresets[i]))) ]),
+        if (_groupingPresets.length > 1) PopupMenuButton<int>(tooltip: 'Группировка', onSelected: (i) => _selectGrouping(_groupingPresets[i]), itemBuilder: (_) => [for (var i = 0; i < _groupingPresets.length; i++) PopupMenuItem(value: i, child: Text(_groupingName(_groupingPresets[i])))]),
         if (_sortFields.isNotEmpty) PopupMenuButton<String>(tooltip: 'Сортировка', onSelected: (value) => setState(() => value == '__reverse__' ? _descending = !_descending : _sortField = value), itemBuilder: (_) => [for (final field in _sortFields) PopupMenuItem(value: field, child: Text('По ${_fieldName(field).toLowerCase()}')), const PopupMenuDivider(), const PopupMenuItem(value: '__reverse__', child: Text('Изменить порядок'))]),
       ]),
       body: ListView.builder(
