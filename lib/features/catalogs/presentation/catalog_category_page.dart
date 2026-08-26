@@ -8,9 +8,9 @@ import 'catalog_online_page.dart';
 
 /// Экран направления каталога.
 ///
-/// Если направление содержит один фактический каталог (что сейчас является
-/// нормальным случаем), промежуточная карточка каталога не показывается:
-/// пользователь сразу попадает в содержимое каталога.
+/// Для направления с одним каталогом сразу открывается его содержимое.
+/// Само имя технического каталога (например, «Монеты») не показывается
+/// отдельным промежуточным экраном.
 class CatalogCategoryPage extends StatelessWidget {
   final String categoryId;
   final Future<void> Function(CatalogDefinition catalog)? onDownload;
@@ -30,18 +30,19 @@ class CatalogCategoryPage extends StatelessWidget {
       );
     }
 
-    // Для направления с одним каталогом сразу открываем его содержимое.
-    // Например: Нумизматика -> Монеты -> Страны -> Россия -> ...
+    // Если направление содержит один каталог, сразу показываем его верхний
+    // уровень: для Нумизматики это сразу список стран, без экрана «Монеты».
     if (catalogs.length == 1) {
       final catalog = catalogs.first;
       return CatalogOnlinePage(
         catalog: catalog,
+        titleOverride: CatalogUiLocalization.categoryName(context, category.id),
         onDownload: onDownload == null ? null : () => onDownload!(catalog),
       );
     }
 
-    // Оставляем выбор только для направлений, где действительно несколько
-    // самостоятельных каталогов.
+    // Выбор каталога нужен только там, где у направления действительно
+    // несколько самостоятельных каталогов.
     return Scaffold(
       appBar: AppBar(
         title: Text(CatalogUiLocalization.categoryName(context, category.id)),
@@ -111,23 +112,12 @@ class _CatalogRow extends StatelessWidget {
                       title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 3),
-                    Text(
-                      catalog.description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    Text(catalog.description, maxLines: 2, overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 3),
-                    Text(
-                      '$count записей',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelMedium,
-                    ),
+                    Text('$count записей', maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelMedium),
                   ],
                 ),
               ),
