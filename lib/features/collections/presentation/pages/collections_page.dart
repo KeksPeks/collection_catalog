@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/settings/ui_layout_settings.dart';
+import '../../../catalogs/data/catalog_direction_localization.dart';
 import '../../domain/entities/collection.dart';
 import '../providers/collection_provider.dart';
-import 'collection_detail_page.dart';
+import '../../../items/presentation/pages/items_page.dart';
 
 /// Экран загруженных каталогов.
+///
+/// Здесь пользователь сразу видит свои загруженные каталоги и при выборе
+/// переходит непосредственно к содержимому каталога, без промежуточной
+/// технической страницы.
 class CollectionsPage extends ConsumerStatefulWidget {
   const CollectionsPage({super.key});
 
@@ -57,16 +62,16 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
               .toList(growable: false);
           final query = _search.trim().toLowerCase();
           final filtered = downloaded
-              .where((item) => item.name.toLowerCase().contains(query))
+              .where((item) => _displayName(context, item)
+                  .toLowerCase()
+                  .contains(query))
               .toList(growable: false);
 
           return LayoutBuilder(
             builder: (context, constraints) {
-              final columns = UiLayoutSettings.resolveColumns(constraints.maxWidth);
-              final textScale = MediaQuery.textScalerOf(context).scale(1.0);
-              final cardHeight = columns == 1
-                  ? null
-                  : (88.0 * textScale).clamp(88.0, 124.0).toDouble();
+              final columns = UiLayoutSettings.resolveColumns(
+                constraints.maxWidth,
+              );
 
               return RefreshIndicator(
                 onRefresh: () async {
@@ -121,7 +126,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
                             crossAxisCount: columns,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            mainAxisExtent: cardHeight!,
+                            mainAxisExtent: 88,
                           ),
                         ),
                       ),
@@ -133,6 +138,30 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
         },
       ),
     );
+  }
+
+  String _displayName(BuildContext context, Collection collection) {
+    final templateId = collection.templateId;
+    if (templateId == null || templateId.isEmpty) return collection.name;
+
+    // Названия загруженных каталогов должны совпадать с названиями
+    // соответствующих направлений в разделе «Каталог».
+    const directionByTemplate = <String, String>{
+      'coins': 'numismatics',
+      'banknotes': 'banknotes',
+      'constructors': 'constructors',
+      'cards': 'cards',
+      'pokemon_cards': 'cards',
+      'figurines': 'figurines',
+      'models': 'models',
+      'video_games': 'video_games',
+      'games': 'video_games',
+      'movies': 'movies',
+    };
+
+    final directionId = directionByTemplate[templateId];
+    if (directionId == null) return collection.name;
+    return CatalogDirectionLocalization.name(context, directionId);
   }
 
   Widget _buildSearchField() {
@@ -156,6 +185,8 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     Collection collection, {
     required bool compact,
   }) {
+    final displayName = _displayName(context, collection);
+
     if (!compact) {
       return Card(
         margin: EdgeInsets.zero,
@@ -168,17 +199,12 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
             child: Icon(Icons.collections_bookmark),
           ),
           title: Text(
-            collection.name,
+            displayName,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          subtitle: const Text(
-            'Каталог сохранён на устройстве',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () => _openCollection(collection),
+          onTap: () => _openCollection(collection, displayName),
         ),
       );
     }
@@ -190,7 +216,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
             .labelLarge
             ?.copyWith(fontWeight: FontWeight.w800);
         final painter = TextPainter(
-          text: TextSpan(text: collection.name, style: titleStyle),
+          text: TextSpan(text: displayName, style: titleStyle),
           maxLines: 1,
           textDirection: Directionality.of(context),
         )..layout(maxWidth: constraints.maxWidth - 20);
@@ -201,7 +227,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
           margin: EdgeInsets.zero,
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: () => _openCollection(collection),
+            onTap: () => _openCollection(collection, displayName),
             child: Center(
               child: showTitle
                   ? Column(
@@ -214,7 +240,7 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 6),
                           child: Text(
-                            collection.name,
+                            displayName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
@@ -233,12 +259,14 @@ class _CollectionsPageState extends ConsumerState<CollectionsPage> {
     );
   }
 
-  Future<void> _openCollection(Collection collection) async {
+  Future<void> _openCollection(
+    Collection collection,
+    String displayName,
+  ) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => CollectionDetailPage(
-          collectionId: collection.id,
-          collectionName: collection.name,
+        builder: (_) => ItemsPage(
+          collection: collection.copyWith(name: displayName),
         ),
       ),
     );
