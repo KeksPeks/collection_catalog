@@ -4,13 +4,13 @@ import '../../../../core/localization/app_localizations.dart';
 import '../data/catalog_registry.dart';
 import '../data/catalog_ui_localization.dart';
 import '../domain/entities/catalog_definition.dart';
+import 'catalog_category_contents_page.dart';
 import 'catalog_online_page.dart';
 
 /// Экран направления каталога.
 ///
-/// Для направления с одним каталогом сразу открывается его содержимое.
-/// Само имя технического каталога (например, «Монеты») не показывается
-/// отдельным промежуточным экраном.
+/// Для направления с одним каталогом сразу открывается его верхний уровень,
+/// без промежуточного экрана с техническим названием каталога.
 class CatalogCategoryPage extends StatelessWidget {
   final String categoryId;
   final Future<void> Function(CatalogDefinition catalog)? onDownload;
@@ -30,23 +30,19 @@ class CatalogCategoryPage extends StatelessWidget {
       );
     }
 
-    // Если направление содержит один каталог, сразу показываем его верхний
-    // уровень: для Нумизматики это сразу список стран, без экрана «Монеты».
+    // Для Нумизматики: Нумизматика -> страны, затем страна -> тип -> годы/серии.
     if (catalogs.length == 1) {
       final catalog = catalogs.first;
-      return CatalogOnlinePage(
+      return CatalogCategoryContentsPage(
+        categoryId: category.id,
         catalog: catalog,
-        titleOverride: CatalogUiLocalization.categoryName(context, category.id),
         onDownload: onDownload == null ? null : () => onDownload!(catalog),
       );
     }
 
-    // Выбор каталога нужен только там, где у направления действительно
-    // несколько самостоятельных каталогов.
+    // Выбор каталога нужен только для направлений с несколькими каталогами.
     return Scaffold(
-      appBar: AppBar(
-        title: Text(CatalogUiLocalization.categoryName(context, category.id)),
-      ),
+      appBar: AppBar(title: Text(CatalogUiLocalization.categoryName(context, category.id))),
       body: catalogs.isEmpty
           ? Center(child: Text(l10n.noResults))
           : ListView.separated(
@@ -96,10 +92,7 @@ class _CatalogRow extends StatelessWidget {
               Container(
                 width: 54,
                 height: 54,
-                decoration: BoxDecoration(
-                  color: colors.primaryContainer,
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(16)),
                 child: Icon(Icons.inventory_2_outlined, color: colors.primary),
               ),
               const SizedBox(width: 14),
@@ -108,12 +101,7 @@ class _CatalogRow extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                    ),
+                    Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 3),
                     Text(catalog.description, maxLines: 2, overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 3),
