@@ -25,6 +25,11 @@ class AppDatabase extends _$AppDatabase {
   @override
   int get schemaVersion => 7;
 
+  Future<bool> _hasColumn(String table, String column) async {
+    final rows = await customSelect('PRAGMA table_info("$table")').get();
+    return rows.any((row) => row.data['name'] == column);
+  }
+
   Future<void> ensureStorageTables() async {
     await customStatement('''
       CREATE TABLE IF NOT EXISTS storage_location_table (
@@ -91,7 +96,12 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(itemValueTable);
             await m.createTable(itemAttachmentTable);
           }
-          if (from < 5) await m.addColumn(collectionSectionTable, collectionSectionTable.sortOrder);
+          // Старые локальные базы могли уже содержать sort_order.
+          // Проверяем колонку перед ALTER TABLE, чтобы повторное обновление
+          // не завершалось ошибкой duplicate column name.
+          if (from < 5 && !await _hasColumn('collection_section_table', 'sort_order')) {
+            await m.addColumn(collectionSectionTable, collectionSectionTable.sortOrder);
+          }
           if (from < 6) {
             await ensureCatalogItemTables();
             await ensureStorageTables();
@@ -99,7 +109,9 @@ class AppDatabase extends _$AppDatabase {
           if (from < 7) await _ensureCurrentSchema();
         },
         beforeOpen: (details) async {
-          if (!details.wasCreated && !details.hadUpgrade) await _ensureCurrentSchema();
+          if (!details.wasCreated && !details.hadUpgrade) {
+            await _ensureCurrentSchema();
+          }
         },
       );
 }
