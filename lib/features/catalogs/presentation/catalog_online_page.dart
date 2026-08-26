@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/settings/ui_layout_settings.dart';
 import '../data/favorites_store.dart';
@@ -7,23 +6,18 @@ import '../domain/entities/catalog_definition.dart';
 import '../domain/entities/catalog_entry_definition.dart';
 import 'catalog_entry_detail_page.dart';
 
-/// Страница каталога с локальной многоуровневой навигацией.
-///
-/// Группировка строится непосредственно из данных каталога, поэтому один и
-/// тот же механизм работает для монет, LEGO, карточек, игр и других наборов.
 class CatalogOnlinePage extends StatefulWidget {
   final CatalogDefinition catalog;
   final Future<void> Function()? onDownload;
   final List<String> sectionPath;
-
   const CatalogOnlinePage({super.key, required this.catalog, this.onDownload, this.sectionPath = const []});
-
   @override
   State<CatalogOnlinePage> createState() => _CatalogOnlinePageState();
 }
 
 class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
-  static const _dynamicPrefix = '__dynamic__';
+  static const _dynamic = '__dynamic__';
+  static const _config = '__config__';
   bool _favorite = false;
   Set<String> _favoriteSections = <String>{};
   String? _sortField;
@@ -31,24 +25,9 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
   VoidCallback? _layoutListener;
 
   List<List<String>> get _groupingPresets {
-    final id = widget.catalog.id;
-    if (id == 'coins') {
-      return const [
-        ['country', 'year'],
-        ['country'],
-        ['denomination'],
-        [],
-      ];
-    }
-    if (id == 'lego') {
-      return const [
-        ['series', 'year'],
-        ['year'],
-        ['series'],
-        [],
-      ];
-    }
-    final hasYear = widget.catalog.entries.any((entry) => _value(entry, 'year').isNotEmpty);
+    if (widget.catalog.id == 'coins') return const [['country', 'year'], ['country'], ['denomination'], []];
+    if (widget.catalog.id == 'lego') return const [['series', 'year'], ['year'], ['series'], []];
+    final hasYear = widget.catalog.entries.any((e) => _value(e, 'year').isNotEmpty);
     final primary = widget.catalog.primaryField;
     final result = <List<String>>[];
     if (primary.isNotEmpty && hasYear) result.add([primary, 'year']);
@@ -59,104 +38,97 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
   }
 
   List<String> get _groupingFields {
-    if (widget.sectionPath.isEmpty || widget.sectionPath.first != _dynamicPrefix) return _groupingPresets.first;
-    final values = widget.sectionPath.skip(1).toList();
-    final depth = values.length ~/ 2;
-    return depth >= _groupingPresets.first.length ? const [] : _groupingPresets.first;
+    if (widget.sectionPath.length >= 2 && widget.sectionPath[0] == _dynamic && widget.sectionPath[1] == _config) {
+      var end = 2;
+      while (end < widget.sectionPath.length && widget.sectionPath[end] != '__filters__') end++;
+      return widget.sectionPath.sublist(2, end);
+    }
+    return _groupingPresets.first;
   }
 
-  bool get _isDynamic => _groupingFields.isNotEmpty;
-
-  List<(String, String)> get _selectedFilters {
-    if (!_isDynamic || widget.sectionPath.length < 3) return const [];
+  List<(String, String)> get _filters {
+    if (widget.sectionPath.length < 3 || widget.sectionPath[0] != _dynamic) return const [];
+    final marker = widget.sectionPath.indexOf('__filters__');
+    if (marker < 0) return const [];
+    final raw = widget.sectionPath.sublist(marker + 1);
     final result = <(String, String)>[];
-    final values = widget.sectionPath.skip(1).toList();
-    for (var i = 0; i + 1 < values.length; i += 2) {
-      result.add((values[i], values[i + 1]));
-    }
+    for (var i = 0; i + 1 < raw.length; i += 2) result.add((raw[i], raw[i + 1]));
     return result;
   }
 
-  String get _title {
-    if (_isDynamic && _selectedFilters.isNotEmpty) return _selectedFilters.last.$2;
-    return AppLocalizations.of(context).catalogName(widget.catalog.id);
-  }
+  bool get _isDynamic => widget.catalog.entries.isNotEmpty && _groupingFields.isNotEmpty;
 
   String _value(CatalogEntryDefinition entry, String field) {
     const aliases = <String, List<String>>{
-      'country': ['Страна', 'country', 'Country'],
-      'year': ['Год', 'year', 'Year'],
-      'denomination': ['Номинал', 'denomination', 'Denomination'],
-      'series': ['Серия', 'series', 'Series'],
-      'rarity': ['Редкость', 'rarity', 'Rarity'],
-      'platform': ['Платформа', 'platform', 'Platform'],
+      'country': ['Страна', 'country', 'Country'], 'year': ['Год', 'year', 'Year'],
+      'denomination': ['Номинал', 'denomination', 'Denomination'], 'series': ['Серия', 'series', 'Series'],
+      'rarity': ['Редкость', 'rarity', 'Rarity'], 'platform': ['Платформа', 'platform', 'Platform'],
       'title': ['Название', 'title', 'Title'],
     };
-    final keys = aliases[field] ?? [field];
-    for (final key in keys) {
+    for (final key in aliases[field] ?? [field]) {
       final value = entry.attributes[key];
       if (value != null && value.trim().isNotEmpty) return value.trim();
     }
-    if (field == widget.catalog.primaryField) return entry.primaryValue;
-    return '';
+    return field == widget.catalog.primaryField ? entry.primaryValue : '';
   }
 
   List<CatalogEntryDefinition> get _entries {
     if (!_isDynamic) return widget.catalog.entries;
-    return widget.catalog.entries.where((entry) {
-      for (final filter in _selectedFilters) {
-        if (_value(entry, filter.$1) != filter.$2) return false;
-      }
-      return true;
-    }).toList(growable: false);
+    return widget.catalog.entries.where((entry) => _filters.every((filter) => _value(entry, filter.$1) == filter.$2)).toList(growable: false);
   }
 
   List<_EntryGroup> get _groups {
     if (!_isDynamic) return const [];
-    final depth = _selectedFilters.length;
+    final depth = _filters.length;
     if (depth >= _groupingFields.length) return const [];
     final field = _groupingFields[depth];
-    final groups = <String, List<CatalogEntryDefinition>>{};
+    final map = <String, List<CatalogEntryDefinition>>{};
     for (final entry in _entries) {
       final value = _value(entry, field);
-      if (value.isEmpty) continue;
-      groups.putIfAbsent(value, () => <CatalogEntryDefinition>[]).add(entry);
+      if (value.isNotEmpty) map.putIfAbsent(value, () => <CatalogEntryDefinition>[]).add(entry);
     }
-    final result = groups.entries.map((item) => _EntryGroup(name: item.key, entries: item.value, field: field)).toList(growable: false);
-    result.sort((a, b) => _compareValues(a.name, b.name, field));
-    return result;
+    final groups = map.entries.map((e) => _EntryGroup(name: e.key, entries: e.value, field: field)).toList(growable: false);
+    groups.sort((a, b) => _compare(a.name, b.name));
+    return groups;
   }
 
   List<CatalogEntryDefinition> _sortedEntries() {
-    final result = <CatalogEntryDefinition>[..._entries];
+    final result = [..._entries];
     if (_sortField == null) return result;
     result.sort((a, b) {
-      final comparison = _compareValues(_value(a, _sortField!), _value(b, _sortField!), _sortField!);
-      return _descending ? -comparison : comparison;
+      final value = _compare(_value(a, _sortField!), _value(b, _sortField!));
+      return _descending ? -value : value;
     });
     return result;
   }
 
-  int _compareValues(String a, String b, String field) {
-    final aNumber = double.tryParse(a.replaceAll(',', '.').replaceAll(RegExp(r'[^0-9.\-]'), ''));
-    final bNumber = double.tryParse(b.replaceAll(',', '.').replaceAll(RegExp(r'[^0-9.\-]'), ''));
-    if (aNumber != null && bNumber != null) return aNumber.compareTo(bNumber);
-    return a.toLowerCase().compareTo(b.toLowerCase());
+  int _compare(String a, String b) {
+    final aa = double.tryParse(a.replaceAll(',', '.').replaceAll(RegExp(r'[^0-9.\-]'), ''));
+    final bb = double.tryParse(b.replaceAll(',', '.').replaceAll(RegExp(r'[^0-9.\-]'), ''));
+    return aa != null && bb != null ? aa.compareTo(bb) : a.toLowerCase().compareTo(b.toLowerCase());
   }
 
   List<String> get _sortFields {
-    const preferred = ['year', 'denomination', 'series', 'rarity', 'platform', 'title'];
-    return preferred.where((field) => widget.catalog.entries.any((entry) => _value(entry, field).isNotEmpty)).toList(growable: false);
+    const fields = ['year', 'denomination', 'series', 'rarity', 'platform', 'title'];
+    return fields.where((field) => widget.catalog.entries.any((e) => _value(e, field).isNotEmpty)).toList(growable: false);
   }
 
-  String _fieldName(String field) {
-    const names = <String, String>{'country': 'Страна', 'year': 'Год', 'denomination': 'Номинал', 'series': 'Серия', 'rarity': 'Редкость', 'platform': 'Платформа', 'title': 'Название'};
-    return names[field] ?? field;
+  String _fieldName(String field) => const {'country':'Страна','year':'Год','denomination':'Номинал','series':'Серия','rarity':'Редкость','platform':'Платформа','title':'Название'}[field] ?? field;
+  String _groupingName(List<String> fields) => fields.isEmpty ? 'Показать все' : fields.map(_fieldName).join(' → ');
+
+  String get _title => _filters.isEmpty ? AppLocalizations.of(context).catalogName(widget.catalog.id) : _filters.last.$2;
+
+  List<String> _pathForGrouping(List<String> fields) => fields.isEmpty ? const [] : <String>[_dynamic, _config, ...fields, '__filters__'];
+
+  void _selectGrouping(List<String> fields) {
+    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: widget.catalog, onDownload: widget.onDownload, sectionPath: _pathForGrouping(fields)));
   }
 
-  String _groupingName(List<String> fields) {
-    if (fields.isEmpty) return 'Показать все';
-    return fields.map(_fieldName).join(' → ');
+  void _pushGroup(_EntryGroup group) {
+    final path = <String>[_dynamic, _config, ..._groupingFields, '__filters__'];
+    for (final filter in _filters) { path..add(filter.$1)..add(filter.$2); }
+    path..add(group.field)..add(group.name);
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: widget.catalog, onDownload: widget.onDownload, sectionPath: path)));
   }
 
   @override
@@ -170,8 +142,7 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
 
   @override
   void dispose() {
-    final listener = _layoutListener;
-    if (listener != null) UiLayoutSettings.revision.removeListener(listener);
+    if (_layoutListener != null) UiLayoutSettings.revision.removeListener(_layoutListener!);
     super.dispose();
   }
 
@@ -180,7 +151,7 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
     if (!mounted) return;
     setState(() {
       _favorite = keys.contains(FavoritesStore.catalogKey(widget.catalog.id));
-      _favoriteSections = keys.where((key) => key.startsWith('section:')).map((key) => key.substring('section:'.length)).toSet();
+      _favoriteSections = keys.where((k) => k.startsWith('section:')).map((k) => k.substring('section:'.length)).toSet();
     });
   }
 
@@ -191,75 +162,27 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
 
   Future<void> _toggleSectionFavorite(String id) async {
     final keys = await FavoritesStore.toggleKey(FavoritesStore.sectionKey(id));
-    if (mounted) setState(() => _favoriteSections = keys.where((key) => key.startsWith('section:')).map((key) => key.substring('section:'.length)).toSet());
-  }
-
-  void _selectGrouping(List<String> fields) {
-    final target = fields.isEmpty ? const <String>[] : fields;
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: widget.catalog, onDownload: widget.onDownload, sectionPath: target.isEmpty ? const [] : [_dynamicPrefix, ...target.map((field) => '__field__$field')])));
-  }
-
-  void _pushGroup(_EntryGroup group) {
-    final path = <String>[_dynamicPrefix];
-    for (final filter in _selectedFilters) {
-      path..add(filter.$1)..add(filter.$2);
-    }
-    path..add(group.field)..add(group.name);
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: widget.catalog, onDownload: widget.onDownload, sectionPath: path)));
-  }
-
-  List<(String, String)> _filtersFromPath() {
-    if (widget.sectionPath.isEmpty || widget.sectionPath.first != _dynamicPrefix) return const [];
-    final raw = widget.sectionPath.skip(1).toList();
-    final fields = _groupingPresets.first;
-    final filters = <(String, String)>[];
-    for (var i = 0; i + 1 < raw.length; i += 2) {
-      if (raw[i].startsWith('__field__')) continue;
-      if (fields.contains(raw[i])) filters.add((raw[i], raw[i + 1]));
-    }
-    return filters;
+    if (mounted) setState(() => _favoriteSections = keys.where((k) => k.startsWith('section:')).map((k) => k.substring('section:'.length)).toSet());
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final filters = _filtersFromPath();
-    final activeFields = widget.sectionPath.isNotEmpty && widget.sectionPath.first == _dynamicPrefix ? _groupingFields : const <String>[];
-    final depth = filters.length;
     final groups = _groups;
     final entries = _sortedEntries();
-    final showEntries = activeFields.isEmpty || depth >= activeFields.length || groups.isEmpty;
-
+    final showGroups = _isDynamic && _filters.length < _groupingFields.length && groups.isNotEmpty;
+    final showEntries = !showGroups;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_title, maxLines: 2, overflow: TextOverflow.ellipsis),
-        actions: [
-          IconButton(tooltip: l10n.favorites, onPressed: _toggleCatalogFavorite, icon: Icon(_favorite ? Icons.star_rounded : Icons.star_border_rounded)),
-          if (_groupingPresets.length > 1)
-            PopupMenuButton<int>(
-              tooltip: 'Группировка',
-              onSelected: (index) => _selectGrouping(_groupingPresets[index]),
-              itemBuilder: (_) => [
-                for (var i = 0; i < _groupingPresets.length; i++) PopupMenuItem<int>(value: i, child: Text(_groupingName(_groupingPresets[i]))),
-              ],
-            ),
-          if (_sortFields.isNotEmpty)
-            PopupMenuButton<String>(
-              tooltip: 'Сортировка',
-              onSelected: (value) => setState(() => value == '__reverse__' ? _descending = !_descending : _sortField = value),
-              itemBuilder: (_) => [
-                for (final field in _sortFields) PopupMenuItem<String>(value: field, child: Text('По ${_fieldName(field).toLowerCase()}')),
-                const PopupMenuDivider(),
-                const PopupMenuItem<String>(value: '__reverse__', child: Text('Изменить порядок')),
-              ],
-            ),
-        ],
-      ),
+      appBar: AppBar(title: Text(_title, maxLines: 2, overflow: TextOverflow.ellipsis), actions: [
+        IconButton(tooltip: l10n.favorites, onPressed: _toggleCatalogFavorite, icon: Icon(_favorite ? Icons.star_rounded : Icons.star_border_rounded)),
+        if (_groupingPresets.length > 1) PopupMenuButton<int>(tooltip: 'Группировка', onSelected: (i) => _selectGrouping(_groupingPresets[i]), itemBuilder: (_) => [for (var i = 0; i < _groupingPresets.length; i++) PopupMenuItem(value: i, child: Text(_groupingName(_groupingPresets[i]))) ]),
+        if (_sortFields.isNotEmpty) PopupMenuButton<String>(tooltip: 'Сортировка', onSelected: (value) => setState(() => value == '__reverse__' ? _descending = !_descending : _sortField = value), itemBuilder: (_) => [for (final field in _sortFields) PopupMenuItem(value: field, child: Text('По ${_fieldName(field).toLowerCase()}')), const PopupMenuDivider(), const PopupMenuItem(value: '__reverse__', child: Text('Изменить порядок'))]),
+      ]),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: (showEntries ? entries.length : groups.length) + (showEntries && entries.isEmpty ? 1 : 0),
+        itemCount: showGroups ? groups.length : (entries.isEmpty ? 1 : entries.length),
         itemBuilder: (context, index) {
-          if (!showEntries) {
+          if (showGroups) {
             final group = groups[index];
             final key = 'dynamic:${widget.catalog.id}:${group.field}:${group.name}';
             return _GroupCard(group: group, favorite: _favoriteSections.contains(key), onFavorite: () => _toggleSectionFavorite(key), onTap: () => _pushGroup(group));
@@ -323,8 +246,7 @@ class _NoImage extends StatelessWidget {
 String? countryCodeToFlag(String? code) {
   if (code == null || code.trim().length != 2) return null;
   final normalized = code.trim().toUpperCase();
-  final first = normalized.codeUnitAt(0);
-  final second = normalized.codeUnitAt(1);
+  final first = normalized.codeUnitAt(0), second = normalized.codeUnitAt(1);
   if (first < 65 || first > 90 || second < 65 || second > 90) return null;
   return String.fromCharCodes([0x1F1E6 + first - 65, 0x1F1E6 + second - 65]);
 }
