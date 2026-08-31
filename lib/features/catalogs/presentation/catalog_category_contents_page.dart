@@ -4,7 +4,6 @@ import '../../../../core/localization/app_localizations.dart';
 import '../data/catalog_ui_localization.dart';
 import '../domain/entities/catalog_definition.dart';
 import '../domain/entities/catalog_entry_definition.dart';
-import '../domain/entities/catalog_section_definition.dart';
 import 'catalog_online_page.dart';
 
 /// Верхний уровень выбранного каталога без лишнего промежуточного раздела.
