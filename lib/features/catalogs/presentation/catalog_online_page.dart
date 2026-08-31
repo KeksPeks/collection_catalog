@@ -23,14 +23,16 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
   Set<String> _favoriteSections = <String>{};
   String? _sortField;
   bool _descending = false;
+  String _coinGroupField = 'denomination';
   VoidCallback? _layoutListener;
   late final Map<String, int> _sectionCounts = _buildSectionCounts();
 
   bool get _isSyntheticGroup => widget.sectionPath.isNotEmpty && widget.sectionPath.first == '__group__';
+  bool get _isCoinGroup => widget.sectionPath.isNotEmpty && widget.sectionPath.first == '__coin_group__';
   bool get _regularCoins => widget.catalog.id == 'coins' && widget.sectionPath.join('/') == 'countries/russia/regular';
 
   CatalogSectionDefinition? get _currentSection {
-    if (widget.sectionPath.isEmpty || _isSyntheticGroup) return null;
+    if (widget.sectionPath.isEmpty || _isSyntheticGroup || _isCoinGroup) return null;
     Iterable<CatalogSectionDefinition> sections = widget.catalog.sections;
     CatalogSectionDefinition? current;
     for (final id in widget.sectionPath) {
@@ -42,19 +44,34 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
   }
 
   List<CatalogSectionDefinition> get _sections {
-    if (_isSyntheticGroup) return const [];
-    return widget.sectionPath.isEmpty ? widget.catalog.sections : _currentSection?.children ?? const <CatalogSectionDefinition>[];
+    if (_isSyntheticGroup || _isCoinGroup) return const [];
+    final source = widget.sectionPath.isEmpty ? widget.catalog.sections : (_currentSection?.children ?? const <CatalogSectionDefinition>[]);
+    // Для нумизматики техническая папка «Страны» не является уровнем каталога.
+    // На первом экране сразу показываем её содержимое.
+    if (widget.catalog.id == 'coins' && widget.sectionPath.isEmpty) {
+      final countries = source.where((section) => _isCountriesSection(section)).firstOrNull;
+      if (countries != null) return countries.children;
+    }
+    return source;
+  }
+
+  bool _isCountriesSection(CatalogSectionDefinition section) {
+    final id = section.id.toLowerCase();
+    final name = section.name.trim().toLowerCase();
+    return id == 'countries' || id == 'country' || name == 'страны' || name == 'countries';
   }
 
   List<_EntryGroup> get _groups {
-    if (widget.catalog.entries.isEmpty || widget.catalog.sections.isNotEmpty || widget.sectionPath.isNotEmpty) return const [];
-    final field = widget.catalog.primaryField;
+    if (!_regularCoins) return const [];
+    final field = _coinGroupField;
     final groups = <String, List<CatalogEntryDefinition>>{};
-    for (final entry in widget.catalog.entries) {
-      final key = entry.attributes[field] ?? entry.primaryValue;
+    for (final entry in _entries) {
+      final key = _coinAttribute(entry, field);
       groups.putIfAbsent(key.isEmpty ? 'Без категории' : key, () => <CatalogEntryDefinition>[]).add(entry);
     }
-    return groups.entries.map((item) => _EntryGroup(name: item.key, entries: item.value)).toList(growable: false);
+    final result = groups.entries.map((item) => _EntryGroup(name: item.key, entries: item.value)).toList();
+    result.sort((a, b) => _naturalCompare(a.name, b.name));
+    return result;
   }
 
   List<CatalogEntryDefinition> get _entries {
@@ -64,13 +81,42 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
       final field = widget.catalog.primaryField;
       return widget.catalog.entries.where((entry) => (entry.attributes[field] ?? entry.primaryValue) == group).toList(growable: false);
     }
-    return widget.catalog.entries.where((entry) {
-      if (entry.sectionPath.length < widget.sectionPath.length) return false;
-      for (var index = 0; index < widget.sectionPath.length; index++) {
-        if (entry.sectionPath[index] != widget.sectionPath[index]) return false;
-      }
-      return true;
-    }).toList(growable: false);
+    if (_isCoinGroup) {
+      final field = widget.sectionPath.length > 1 ? widget.sectionPath[1] : 'denomination';
+      final group = widget.sectionPath.length > 2 ? widget.sectionPath[2] : '';
+      return widget.catalog.entries.where((entry) => _coinAttribute(entry, field) == group && _matchesPath(entry, const ['countries', 'russia', 'regular'])).toList(growable: false);
+    }
+    return widget.catalog.entries.where((entry) => _matchesPath(entry, widget.sectionPath)).toList(growable: false);
+  }
+
+  bool _matchesPath(CatalogEntryDefinition entry, List<String> path) {
+    if (entry.sectionPath.length < path.length) return false;
+    for (var index = 0; index < path.length; index++) {
+      if (entry.sectionPath[index] != path[index]) return false;
+    }
+    return true;
+  }
+
+  String _coinAttribute(CatalogEntryDefinition entry, String field) {
+    final candidates = switch (field) {
+      'denomination' => const ['Номинал', 'Номинал монеты', 'denomination', 'value'],
+      'year' => const ['Год', 'Год выпуска', 'year', 'date'],
+      'series' => const ['Серия', 'series', 'Серия монет'],
+      _ => const [],
+    };
+    for (final candidate in candidates) {
+      final value = entry.attributes.entries.where((item) => item.key.trim().toLowerCase() == candidate.toLowerCase()).map((item) => item.value).firstOrNull;
+      if (value != null && value.trim().isNotEmpty) return value.trim();
+    }
+    if (field == 'denomination') return entry.primaryValue.trim();
+    return entry.subtitle.trim();
+  }
+
+  int _naturalCompare(String a, String b) {
+    final an = double.tryParse(a.replaceAll(',', '.').replaceAll(RegExp(r'[^0-9.-]'), ''));
+    final bn = double.tryParse(b.replaceAll(',', '.').replaceAll(RegExp(r'[^0-9.-]'), ''));
+    if (an != null && bn != null) return an.compareTo(bn);
+    return a.toLowerCase().compareTo(b.toLowerCase());
   }
 
   Map<String, int> _buildSectionCounts() {
@@ -87,7 +133,6 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
   @override
   void initState() {
     super.initState();
-    if (_regularCoins) _sortField = 'year';
     _layoutListener = () { if (mounted) setState(() {}); };
     UiLayoutSettings.revision.addListener(_layoutListener!);
     UiLayoutSettings.ensureLoaded();
@@ -124,25 +169,24 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
     final result = <CatalogEntryDefinition>[..._entries];
     if (!_regularCoins || _sortField == null) return result;
     result.sort((a, b) {
-      final aValue = a.attributes[_sortField!] ?? a.primaryValue;
-      final bValue = b.attributes[_sortField!] ?? b.primaryValue;
-      final aNumber = double.tryParse(aValue.replaceAll(',', '.'));
-      final bNumber = double.tryParse(bValue.replaceAll(',', '.'));
-      final comparison = aNumber != null && bNumber != null ? aNumber.compareTo(bNumber) : aValue.toLowerCase().compareTo(bValue.toLowerCase());
+      final comparison = _naturalCompare(_coinAttribute(a, _sortField!), _coinAttribute(b, _sortField!));
       return _descending ? -comparison : comparison;
     });
     return result;
   }
 
+  void _selectCoinGroup(String field) => setState(() => _coinGroupField = field);
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final title = _isSyntheticGroup ? widget.sectionPath[1] : _currentSection?.name ?? l10n.catalogName(widget.catalog.id);
+    final title = _isSyntheticGroup || _isCoinGroup ? widget.sectionPath.last : _currentSection?.name ?? l10n.catalogName(widget.catalog.id);
     final entries = _sortedEntries();
     final sections = _sections;
     final groups = _groups;
-    final showEntries = widget.sectionPath.isNotEmpty && sections.isEmpty || (widget.sectionPath.isEmpty && widget.catalog.sections.isEmpty && groups.isEmpty);
-    final empty = sections.isEmpty && groups.isEmpty && !showEntries;
+    final grouping = _regularCoins && !_isCoinGroup;
+    final showEntries = !grouping && ((widget.sectionPath.isNotEmpty && sections.isEmpty) || (widget.sectionPath.isEmpty && widget.catalog.sections.isEmpty && groups.isEmpty));
+    final empty = sections.isEmpty && groups.isEmpty && !showEntries && !grouping;
 
     return Scaffold(
       appBar: AppBar(
@@ -151,13 +195,12 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
           IconButton(tooltip: l10n.favorites, onPressed: _toggleCatalogFavorite, icon: Icon(_favorite ? Icons.star_rounded : Icons.star_border_rounded)),
           if (_regularCoins)
             PopupMenuButton<String>(
-              tooltip: 'Сортировка',
-              onSelected: (value) => setState(() => value == 'reverse' ? _descending = !_descending : _sortField = value),
+              tooltip: 'Группировка',
+              onSelected: _selectCoinGroup,
               itemBuilder: (context) => const [
-                PopupMenuItem<String>(value: 'year', child: Text('По году')),
+                PopupMenuItem<String>(value: 'denomination', child: Text('По номиналу')),
+                PopupMenuItem<String>(value: 'year', child: Text('По году выпуска')),
                 PopupMenuItem<String>(value: 'series', child: Text('По серии')),
-                PopupMenuItem<String>(value: 'rarity', child: Text('По редкости')),
-                PopupMenuItem<String>(value: 'reverse', child: Text('Изменить порядок')),
               ],
             ),
         ],
@@ -173,7 +216,7 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
           final groupIndex = index - sections.length;
           if (groupIndex < groups.length) {
             final group = groups[groupIndex];
-            return _GroupCard(group: group, onTap: () => _pushPath(['__group__', group.name]));
+            return _GroupCard(group: group, onTap: () => _pushCoinGroup(_coinGroupField, group.name));
           }
           final entryIndex = index - sections.length - groups.length;
           if (showEntries && entryIndex < entries.length) {
@@ -188,6 +231,7 @@ class _CatalogOnlinePageState extends State<CatalogOnlinePage> {
   }
 
   void _pushPath(List<String> path) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: widget.catalog, onDownload: widget.onDownload, sectionPath: path)));
+  void _pushCoinGroup(String field, String value) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: widget.catalog, onDownload: widget.onDownload, sectionPath: ['__coin_group__', field, value])));
   int _count(CatalogSectionDefinition section) => _sectionCounts[[...widget.sectionPath, section.id].join('/')] ?? 0;
 }
 
