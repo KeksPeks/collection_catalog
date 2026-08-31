@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/database/database_provider.dart';
 import '../../../../core/notifications/notification_service.dart';
+import '../../../../core/settings/currency_settings.dart';
 import '../../../catalogs/presentation/barcode_scanner_page.dart';
 import '../../../catalogs/presentation/global_search_page.dart';
 import '../../../gamification/presentation/gamification_page.dart';
@@ -23,21 +25,34 @@ class _CollectionToolsPageState extends ConsumerState<CollectionToolsPage> {
   String? _error;
   List<_Summary> _summaries = const [];
   List<CollectionHistoryEntry> _history = const [];
+  VoidCallback? _currencyListener;
 
   @override
   void initState() {
     super.initState();
+    _currencyListener = () { if (mounted) setState(() {}); };
+    CurrencySettings.revision.addListener(_currencyListener!);
     _load();
+  }
+
+  @override
+  void dispose() {
+    final listener = _currencyListener;
+    if (listener != null) CurrencySettings.revision.removeListener(listener);
+    super.dispose();
   }
 
   Future<void> _load() async {
     if (mounted) setState(() { _loading = true; _error = null; });
     try {
-      final collections = ref.read(collectionsProvider).valueOrNull ?? const <Collection>[];
+      // Обзор может быть первым экраном приложения. Ждём готовности Drift,
+      // а затем заново получаем коллекции, чтобы не читать провайдер в loading.
+      await ref.read(databaseProvider.future);
+      ref.invalidate(collectionsProvider);
+      final collections = await ref.read(collectionsProvider.future);
       final service = ref.read(itemServiceProvider);
       final states = await ItemStateStore.loadAll();
 
-      // Коллекции читаются параллельно: обзор больше не ждёт завершения каждого каталога по очереди.
       final summaries = await Future.wait(
         collections.map((collection) async {
           final items = await service.getItems(collection.id);
@@ -116,6 +131,7 @@ class _CollectionToolsPageState extends ConsumerState<CollectionToolsPage> {
     final ordered = _summaries.fold(0, (sum, item) => sum + item.ordered);
     final cost = _summaries.fold(0.0, (sum, item) => sum + item.cost);
     final progress = total == 0 ? 0.0 : owned / total;
+    final currency = CurrencySettings.selected.symbol;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Инструменты коллекционера'), actions: [IconButton(onPressed: _load, icon: const Icon(Icons.refresh))]),
@@ -142,7 +158,7 @@ class _CollectionToolsPageState extends ConsumerState<CollectionToolsPage> {
             const SizedBox(height: 10),
             Row(children: [Expanded(child: _Metric('Всего', '$total', Icons.inventory_2_outlined)), const SizedBox(width: 8), Expanded(child: _Metric('Есть', '$owned', Icons.check_circle_outline)), const SizedBox(width: 8), Expanded(child: _Metric('Не хватает', '${total - owned}', Icons.remove_circle_outline))]),
             const SizedBox(height: 8),
-            Row(children: [Expanded(child: _Metric('Хочу', '$wanted', Icons.shopping_cart_outlined)), const SizedBox(width: 8), Expanded(child: _Metric('Заказано', '$ordered', Icons.local_shipping_outlined)), const SizedBox(width: 8), Expanded(child: _Metric('Расходы', '€${cost.toStringAsFixed(2)}', Icons.euro_outlined))]),
+            Row(children: [Expanded(child: _Metric('Хочу', '$wanted', Icons.shopping_cart_outlined)), const SizedBox(width: 8), Expanded(child: _Metric('Заказано', '$ordered', Icons.local_shipping_outlined)), const SizedBox(width: 8), Expanded(child: _Metric('Расходы', '$currency${cost.toStringAsFixed(2)}', Icons.currency_exchange_rounded))]),
             const SizedBox(height: 12),
             _Tool('Достижения', 'XP, уровни и прогресс коллекционера', Icons.emoji_events_outlined, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GamificationPage()))),
             _Tool('Глобальный поиск', 'По каталогам, сериям и предметам', Icons.search, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GlobalSearchPage()))),
