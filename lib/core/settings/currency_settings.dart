@@ -22,6 +22,7 @@ class CurrencySettings {
   ];
 
   static String code = 'EUR';
+  static final ValueNotifier<String> revision = ValueNotifier<String>(code);
 
   static CurrencyOption get selected => options.firstWhere((item) => item.code == code);
 
@@ -30,12 +31,14 @@ class CurrencySettings {
     final saved = preferences.getString(key);
     if (options.any((item) => item.code == saved)) {
       code = saved!;
+      revision.value = code;
     }
   }
 
   static Future<void> setCode(String value) async {
     if (!options.any((item) => item.code == value)) return;
     code = value;
+    revision.value = value;
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString(key, value);
   }
