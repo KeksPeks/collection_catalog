@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from app.catalog import (
     get_categories,
@@ -18,14 +18,22 @@ from app.storage import check_file, resolve_download_path, resolve_image_path
 app = FastAPI(title="Collection Catalog Server", version="1.0.0")
 
 
+# Все JSON-ответы явно отправляем с UTF-8.
+def json_response(content: dict) -> JSONResponse:
+    return JSONResponse(
+        content=content,
+        media_type="application/json; charset=utf-8",
+    )
+
+
 @app.get("/")
 def root():
-    return {"status": "ok", "service": "Collection Catalog Server", "version": "1.0.0"}
+    return json_response({"status": "ok", "service": "Collection Catalog Server", "version": "1.0.0"})
 
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return json_response({"status": "ok"})
 
 
 @app.get("/api/health/db")
@@ -35,34 +43,34 @@ def database_health():
             with connection.cursor() as cursor:
                 cursor.execute("SELECT current_database(), current_user, version()")
                 database, user, version = cursor.fetchone()
-        return {
+        return json_response({
             "status": "ok",
             "database": database,
             "user": user,
             "postgresql": version,
-        }
+        })
     except Exception as error:
         raise HTTPException(status_code=503, detail="Database unavailable") from error
 
 
 @app.get("/api/collection-types")
 def collection_types():
-    return {"status": "ok", "items": get_collection_types()}
+    return json_response({"status": "ok", "items": get_collection_types()})
 
 
 @app.get("/api/categories")
 def categories():
-    return {"status": "ok", "items": get_categories()}
+    return json_response({"status": "ok", "items": get_categories()})
 
 
 @app.get("/api/collections")
 def collections():
-    return {"status": "ok", "items": get_collections()}
+    return json_response({"status": "ok", "items": get_collections()})
 
 
 @app.get("/api/items")
 def items(collection_id: int | None = None):
-    return {"status": "ok", "items": get_items(collection_id)}
+    return json_response({"status": "ok", "items": get_items(collection_id)})
 
 
 @app.get("/api/items/{item_id}/images")
@@ -70,7 +78,7 @@ def item_images(item_id: int):
     rows = get_item_images(item_id)
     for row in rows:
         row["url"] = f"/api/images/{row['id']}"
-    return {"status": "ok", "items": rows}
+    return json_response({"status": "ok", "items": rows})
 
 
 @app.get("/api/images/{image_id}")
@@ -90,7 +98,7 @@ def item_files(item_id: int):
     rows = get_item_files(item_id)
     for row in rows:
         row["url"] = f"/api/files/{row['id']}"
-    return {"status": "ok", "items": rows}
+    return json_response({"status": "ok", "items": rows})
 
 
 @app.get("/api/files/{file_id}")
