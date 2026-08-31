@@ -32,7 +32,15 @@ class _CollectionToolsPageState extends ConsumerState<CollectionToolsPage> {
     super.initState();
     _currencyListener = () { if (mounted) setState(() {}); };
     CurrencySettings.revision.addListener(_currencyListener!);
-    _load();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    try {
+      await CurrencySettings.load();
+    } finally {
+      if (mounted) await _load();
+    }
   }
 
   @override
@@ -140,21 +148,7 @@ class _CollectionToolsPageState extends ConsumerState<CollectionToolsPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Прогресс коллекции', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 12),
-                    LinearProgressIndicator(value: progress, minHeight: 10),
-                    const SizedBox(height: 8),
-                    Text('${(progress * 100).round()}% собрано · $owned из $total'),
-                  ],
-                ),
-              ),
-            ),
+            Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Прогресс коллекции', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)), const SizedBox(height: 12), LinearProgressIndicator(value: progress, minHeight: 10), const SizedBox(height: 8), Text('${(progress * 100).round()}% собрано · $owned из $total')]))) ,
             const SizedBox(height: 10),
             Row(children: [Expanded(child: _Metric('Всего', '$total', Icons.inventory_2_outlined)), const SizedBox(width: 8), Expanded(child: _Metric('Есть', '$owned', Icons.check_circle_outline)), const SizedBox(width: 8), Expanded(child: _Metric('Не хватает', '${total - owned}', Icons.remove_circle_outline))]),
             const SizedBox(height: 8),
@@ -164,20 +158,8 @@ class _CollectionToolsPageState extends ConsumerState<CollectionToolsPage> {
             _Tool('Глобальный поиск', 'По каталогам, сериям и предметам', Icons.search, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GlobalSearchPage()))),
             _Tool('QR / штрихкод', 'Сканировать код предмета', Icons.qr_code_scanner, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BarcodeScannerPage()))),
             _Tool('Уведомления', 'Новости каталогов и прогресса', Icons.notifications_active_outlined, _notify),
-            Card(
-              child: ExpansionTile(
-                title: const Text('История изменений'),
-                leading: const Icon(Icons.history),
-                children: _history.isEmpty ? [const ListTile(title: Text('История пока пуста'))] : _history.take(30).map((entry) => ListTile(title: Text(entry.title), subtitle: Text('${entry.details}\n${entry.timestamp}'))).toList(),
-              ),
-            ),
-            Card(
-              child: ExpansionTile(
-                title: const Text('Осталось собрать'),
-                leading: const Icon(Icons.playlist_add_check),
-                children: _summaries.map((summary) => ListTile(title: Text(summary.collection.name), subtitle: Text('Не хватает ${summary.total - summary.owned} из ${summary.total}'), trailing: Text('${summary.percent.round()}%'))).toList(),
-              ),
-            ),
+            Card(child: ExpansionTile(title: const Text('История изменений'), leading: const Icon(Icons.history), children: _history.isEmpty ? [const ListTile(title: Text('История пока пуста'))] : _history.take(30).map((entry) => ListTile(title: Text(entry.title), subtitle: Text('${entry.details}\n${entry.timestamp}'))).toList())),
+            Card(child: ExpansionTile(title: const Text('Осталось собрать'), leading: const Icon(Icons.playlist_add_check), children: _summaries.map((summary) => ListTile(title: Text(summary.collection.name), subtitle: Text('Не хватает ${summary.total - summary.owned} из ${summary.total}'), trailing: Text('${summary.percent.round()}%'))).toList())),
           ],
         ),
       ),
@@ -193,9 +175,7 @@ class _Summary {
   final int ordered;
   final int quantity;
   final double cost;
-
   const _Summary(this.collection, this.total, this.owned, this.wanted, this.ordered, this.quantity, this.cost);
-
   double get percent => total == 0 ? 0 : owned * 100 / total;
 }
 
@@ -203,13 +183,9 @@ class _Metric extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
-
   const _Metric(this.label, this.value, this.icon);
-
   @override
-  Widget build(BuildContext context) {
-    return Card(child: Padding(padding: const EdgeInsets.all(10), child: Column(children: [Icon(icon), Text(value, style: const TextStyle(fontWeight: FontWeight.w900)), Text(label, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall)])));
-  }
+  Widget build(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(10), child: Column(children: [Icon(icon), Text(value, style: const TextStyle(fontWeight: FontWeight.w900)), Text(label, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall)])));
 }
 
 class _Tool extends StatelessWidget {
@@ -217,11 +193,7 @@ class _Tool extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final VoidCallback onTap;
-
   const _Tool(this.title, this.subtitle, this.icon, this.onTap);
-
   @override
-  Widget build(BuildContext context) {
-    return Card(child: ListTile(leading: CircleAvatar(child: Icon(icon)), title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text(subtitle), trailing: const Icon(Icons.chevron_right), onTap: onTap));
-  }
+  Widget build(BuildContext context) => Card(child: ListTile(leading: CircleAvatar(child: Icon(icon)), title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text(subtitle), trailing: const Icon(Icons.chevron_right), onTap: onTap));
 }
