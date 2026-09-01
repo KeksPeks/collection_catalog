@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/settings/ui_layout_settings.dart';
 import '../data/catalog_registry.dart';
+import '../data/catalog_structure_defaults.dart';
 import '../data/catalog_ui_localization.dart';
 import '../data/favorites_store.dart';
 import 'catalog_online_page.dart';
@@ -46,21 +47,16 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
   Future<void> _load() async {
     await UiLayoutSettings.ensureLoaded();
     final stored = await FavoritesStore.loadKeys();
-
-    // Старые версии сохраняли некоторые разделы как простые строки
-    // («countries», «Russia»). Они не являются избранными объектами и
-    // больше не должны попадать в пользовательский интерфейс.
     final valid = <String>{};
-    final legacyCatalogs = <String>{};
     for (final key in stored) {
       if (key.startsWith('catalog:') || key.startsWith('section:') || key.startsWith('item:')) {
         valid.add(key);
       } else if (CatalogRegistry.byId(key) != null) {
-        legacyCatalogs.add(key);
         valid.add(FavoritesStore.catalogKey(key));
       }
     }
-    if (valid.length != stored.length || legacyCatalogs.isNotEmpty) {
+    // Удаляем устаревшие ключи вроде «countries» и «Russia».
+    if (valid.length != stored.length || valid.any((id) => id.startsWith('catalog:'))) {
       await FavoritesStore.replaceAll(valid);
     }
 
@@ -74,9 +70,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
       for (final collection in collections) {
         final sections = sectionIds.isEmpty ? const <dynamic>[] : await sectionService.getSections(collection.id);
         for (final section in sections) {
-          if (sectionIds.contains(section.id)) {
-            labels['section:${section.id}'] = '${collection.name} · ${section.name}';
-          }
+          if (sectionIds.contains(section.id)) labels['section:${section.id}'] = '${collection.name} · ${section.name}';
         }
         final items = itemIds.isEmpty ? const <dynamic>[] : await itemService.getItems(collection.id);
         for (final item in items) {
@@ -97,7 +91,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.favorites), actions: [IconButton(tooltip: 'Обновить', onPressed: _load, icon: const Icon(Icons.refresh_rounded))]),
       body: _ids.isEmpty ? Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.star_border_rounded, size: 64, color: Theme.of(context).colorScheme.primary), const SizedBox(height: 16), Text(l10n.noFavorites, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)), const SizedBox(height: 8), Text(l10n.noFavoritesDescription, textAlign: TextAlign.center)]))) : ListView(padding: const EdgeInsets.all(16), children: [
-        if (catalogs.isNotEmpty) ...[_Heading('Коллекции', Icons.collections_bookmark_outlined), for (final catalog in catalogs) _Tile(CatalogUiLocalization.catalogName(context, catalog.id), 'Каталог', Icons.inventory_2_outlined, () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: catalog))), () => FavoritesStore.remove(catalog.id))],
+        if (catalogs.isNotEmpty) ...[_Heading('Коллекции', Icons.collections_bookmark_outlined), for (final catalog in catalogs) _Tile(CatalogUiLocalization.catalogName(context, catalog.id), 'Каталог', Icons.inventory_2_outlined, () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: CatalogStructureDefaults.apply(catalog)))), () => FavoritesStore.remove(catalog.id))],
         if (sections.isNotEmpty) ...[_Heading('Разделы', Icons.folder_outlined), for (final id in sections) _Tile(_labels[id]!, 'Раздел каталога', Icons.folder_outlined, () {}, () => FavoritesStore.removeKey(id))],
         if (items.isNotEmpty) ...[_Heading('Предметы', Icons.inventory_2_outlined), for (final id in items) _Tile(_labels[id]!, 'Предмет коллекции', Icons.inventory_2_outlined, () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ItemDetailPage(itemId: id.substring(5)))), () => FavoritesStore.removeKey(id))],
         if (catalogs.isEmpty && sections.isEmpty && items.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Center(child: Text('В избранном пока нет доступных объектов.', textAlign: TextAlign.center))),
