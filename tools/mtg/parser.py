@@ -7,6 +7,8 @@ import json
 import logging
 import os
 import random
+import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -16,20 +18,7 @@ from typing import Any
 
 import requests
 
-
-# ============================================================================
-# MTG / SCRYFALL PARSER
-# ============================================================================
-#
-# Версия: 1.3.0
-# Локальный исходный код: D:\FlutterProjects\collection_catalog_tools\mtg\
-# Серверное хранилище: G:\CollectionServer\collections\mtg\
-#
-# --images-only только читает существующий cards.jsonl и скачивает изображения.
-# Bulk-файл и cards.jsonl в этом режиме не изменяются.
-# ============================================================================
-
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 BULK_INDEX_URL = "https://api.scryfall.com/bulk-data"
 DEFAULT_ROOT = Path("G:/CollectionServer/collections/mtg")
 USER_AGENT = f"CollectionCatalog-MTG-Parser/{VERSION} (local catalog importer)"
@@ -39,7 +28,7 @@ IMAGE_READ_TIMEOUT = 35
 IMAGE_RETRIES = 3
 IMAGE_CHUNK_SIZE = 256 * 1024
 DOWNLOAD_CHUNK_SIZE = 1024 * 1024
-DEFAULT_IMAGE_WORKERS = 4
+DEFAULT_IMAGE_WORKERS = 2
 
 
 def configure_console() -> None:
@@ -57,10 +46,7 @@ def setup_logging(log_path: Path) -> logging.Logger:
     logger = logging.getLogger("mtg_parser")
     logger.setLevel(logging.INFO)
     logger.handlers.clear()
-    formatter = logging.Formatter(
-        "[%(asctime)s] %(levelname)s: %(message)s",
-        "%Y-%m-%d %H:%M:%S",
-    )
+    formatter = logging.Formatter("[%(asctime)s] %(levelname)s: %(message)s", "%Y-%m-%d %H:%M:%S")
     console = logging.StreamHandler(sys.stdout)
     console.setFormatter(formatter)
     logger.addHandler(console)
@@ -72,18 +58,12 @@ def setup_logging(log_path: Path) -> logging.Logger:
 
 def create_session() -> requests.Session:
     session = requests.Session()
-    session.headers.update(
-        {
-            "User-Agent": USER_AGENT,
-            "Accept": "application/json;q=0.9,*/*;q=0.8",
-            "Connection": "keep-alive",
-        }
-    )
-    adapter = requests.adapters.HTTPAdapter(
-        pool_connections=16,
-        pool_maxsize=16,
-        max_retries=0,
-    )
+    session.headers.update({
+        "User-Agent": USER_AGENT,
+        "Accept": "application/json;q=0.9,*/*;q=0.8",
+        "Connection": "keep-alive",
+    })
+    adapter = requests.adapters.HTTPAdapter(pool_connections=16, pool_maxsize=16, max_retries=0)
     session.mount("https://", adapter)
     session.mount("http://", adapter)
     return session
@@ -119,9 +99,7 @@ def sha256_file(path: Path) -> str:
 
 def write_json_atomic(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd, temporary_name = tempfile.mkstemp(
-        prefix=path.name + ".", suffix=".tmp", dir=path.parent
-    )
+    fd, temporary_name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as file:
             json.dump(data, file, ensure_ascii=False, indent=2)
@@ -135,12 +113,7 @@ def write_json_atomic(path: Path, data: Any) -> None:
                 pass
 
 
-def download_bulk_file(
-    session: requests.Session,
-    url: str,
-    destination: Path,
-    logger: logging.Logger,
-) -> None:
+def download_bulk_file(session: requests.Session, url: str, destination: Path, logger: logging.Logger) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = destination.with_name(destination.name + ".part")
     temporary_path.unlink(missing_ok=True)
@@ -163,11 +136,7 @@ def download_bulk_file(
         raise
 
 
-def process_cards_bulk(
-    source_path: Path,
-    destination_path: Path,
-    logger: logging.Logger,
-) -> tuple[int, int, dict[str, Any]]:
+def process_cards_bulk(source_path: Path, destination_path: Path, logger: logging.Logger) -> tuple[int, int, dict[str, Any]]:
     destination_path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = destination_path.with_name(destination_path.name + ".part")
     card_count = 0
@@ -198,15 +167,7 @@ def process_cards_bulk(
                         if field not in card:
                             error_count += 1
                             logger.warning("Карточка в строке %d не содержит поле: %s", line_number, field)
-                    if card.get("image_uris", {}).get("normal") if isinstance(card.get("image_uris"), dict) else False:
-                        cards_with_images += 1
-                    elif any(
-                        isinstance(face, dict)
-                        and isinstance(face.get("image_uris"), dict)
-                        and face["image_uris"].get("normal")
-                        for face in card.get("card_faces", [])
-                        if isinstance(card.get("card_faces"), list)
-                    ):
+                    if get_card_image_urls(card):
                         cards_with_images += 1
                     else:
                         cards_without_images += 1
@@ -242,10 +203,10 @@ def get_card_image_urls(card: dict[str, Any]) -> list[dict[str, str]]:
     if not card_id:
         return []
     card_id = str(card_id)
-    result: list[dict[str, str]] = []
     image_uris = card.get("image_uris")
     if isinstance(image_uris, dict) and image_uris.get("normal"):
         return [{"face": "single", "url": str(image_uris["normal"]), "filename": f"{card_id}.jpg"}]
+    result: list[dict[str, str]] = []
     faces = card.get("card_faces")
     if isinstance(faces, list):
         for index, face in enumerate(faces):
@@ -271,42 +232,95 @@ def is_valid_image_file(path: Path) -> bool:
         return False
 
 
-def download_image(session: requests.Session, url: str, destination: Path, logger: logging.Logger) -> bool:
+def curl_available() -> str | None:
+    return shutil.which("curl.exe") or shutil.which("curl")
+
+
+def download_image_with_curl(url: str, destination: Path, logger: logging.Logger) -> bool:
+    curl = curl_available()
+    if not curl:
+        return False
+    temporary_path = destination.with_name(destination.name + ".curl.part")
+    temporary_path.unlink(missing_ok=True)
+    command = [
+        curl,
+        "--ipv4",
+        "--fail",
+        "--location",
+        "--silent",
+        "--show-error",
+        "--connect-timeout", str(IMAGE_CONNECT_TIMEOUT),
+        "--max-time", str(IMAGE_READ_TIMEOUT),
+        "--user-agent", USER_AGENT,
+        "--output", str(temporary_path),
+        url,
+    ]
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=IMAGE_READ_TIMEOUT + IMAGE_CONNECT_TIMEOUT + 5)
+        if completed.returncode != 0:
+            error = completed.stderr.strip() or f"curl завершился с кодом {completed.returncode}"
+            logger.warning("curl не смог скачать %s: %s", destination.name, error)
+            return False
+        if not is_valid_image_file(temporary_path):
+            logger.warning("curl получил некорректный JPEG: %s", destination.name)
+            return False
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        os.replace(temporary_path, destination)
+        return True
+    except Exception as exc:
+        logger.warning("Ошибка curl для %s: %s", destination.name, exc)
+        return False
+    finally:
+        temporary_path.unlink(missing_ok=True)
+
+
+def download_image_with_requests(session: requests.Session, url: str, destination: Path) -> tuple[bool, str | None]:
+    temporary_path = destination.with_name(destination.name + ".requests.part")
+    temporary_path.unlink(missing_ok=True)
+    try:
+        with session.get(url, stream=True, timeout=(IMAGE_CONNECT_TIMEOUT, IMAGE_READ_TIMEOUT)) as response:
+            response.raise_for_status()
+            content_type = response.headers.get("Content-Type", "").lower()
+            if content_type and not content_type.startswith("image/"):
+                raise RuntimeError(f"Scryfall вернул не изображение: {content_type}")
+            with temporary_path.open("wb") as output:
+                for chunk in response.iter_content(chunk_size=IMAGE_CHUNK_SIZE):
+                    if chunk:
+                        output.write(chunk)
+        if not is_valid_image_file(temporary_path):
+            raise RuntimeError("Скачанный файл не является корректным JPEG.")
+        os.replace(temporary_path, destination)
+        return True, None
+    except Exception as exc:
+        temporary_path.unlink(missing_ok=True)
+        return False, str(exc)
+
+
+def download_image(session: requests.Session, url: str, destination: Path, logger: logging.Logger, transport: str) -> bool:
     destination.parent.mkdir(parents=True, exist_ok=True)
     if is_valid_image_file(destination):
         return True
-    temporary_path = destination.with_name(destination.name + ".part")
-    temporary_path.unlink(missing_ok=True)
-    last_error: Exception | None = None
-    timeout = (IMAGE_CONNECT_TIMEOUT, IMAGE_READ_TIMEOUT)
+    last_error: str | None = None
     for attempt in range(1, IMAGE_RETRIES + 1):
-        try:
-            with session.get(url, stream=True, timeout=timeout) as response:
-                response.raise_for_status()
-                content_type = response.headers.get("Content-Type", "").lower()
-                if content_type and not content_type.startswith("image/"):
-                    raise RuntimeError(f"Scryfall вернул не изображение: {content_type}")
-                with temporary_path.open("wb") as output:
-                    for chunk in response.iter_content(chunk_size=IMAGE_CHUNK_SIZE):
-                        if chunk:
-                            output.write(chunk)
-            if not is_valid_image_file(temporary_path):
-                raise RuntimeError("Скачанный файл не является корректным JPEG.")
-            os.replace(temporary_path, destination)
-            return True
-        except Exception as exc:
-            last_error = exc
-            logger.warning("Ошибка изображения %s, попытка %d/%d: %s", destination.name, attempt, IMAGE_RETRIES, exc)
-            temporary_path.unlink(missing_ok=True)
-            if attempt < IMAGE_RETRIES:
-                time.sleep(0.5 * attempt + random.uniform(0.2, 0.7))
+        if transport in ("auto", "curl") and curl_available():
+            logger.info("Попытка %d/%d через curl IPv4: %s", attempt, IMAGE_RETRIES, destination.name)
+            if download_image_with_curl(url, destination, logger):
+                return True
+        if transport in ("auto", "requests"):
+            ok, error = download_image_with_requests(session, url, destination)
+            if ok:
+                return True
+            last_error = error
+            logger.warning("requests: ошибка изображения %s, попытка %d/%d: %s", destination.name, attempt, IMAGE_RETRIES, error)
+        if attempt < IMAGE_RETRIES:
+            time.sleep(0.5 * attempt + random.uniform(0.2, 0.7))
     logger.error("Не удалось скачать изображение: %s", destination)
     if last_error:
         logger.error("Последняя ошибка: %s", last_error)
     return False
 
 
-def download_single_image_task(image_info: dict[str, str], images_dir: Path, logger: logging.Logger) -> dict[str, Any]:
+def download_single_image_task(image_info: dict[str, str], images_dir: Path, logger: logging.Logger, transport: str) -> dict[str, Any]:
     filename = image_info["filename"]
     destination = images_dir / filename
     session = create_session()
@@ -314,27 +328,20 @@ def download_single_image_task(image_info: dict[str, str], images_dir: Path, log
         if is_valid_image_file(destination):
             return {"filename": filename, "face": image_info["face"], "success": True, "skipped": True, "downloaded": False}
         logger.info("Загрузка изображения: %s", filename)
-        success = download_image(session, image_info["url"], destination, logger)
+        success = download_image(session, image_info["url"], destination, logger, transport)
         return {"filename": filename, "face": image_info["face"], "success": success, "skipped": False, "downloaded": success}
     finally:
         session.close()
 
 
-def download_images_only(
-    cards_path: Path,
-    images_dir: Path,
-    image_index_path: Path,
-    logger: logging.Logger,
-    image_limit: int | None,
-    image_workers: int,
-) -> dict[str, int]:
+def download_images_only(cards_path: Path, images_dir: Path, image_index_path: Path, logger: logging.Logger, image_limit: int | None, image_workers: int, transport: str) -> dict[str, int]:
     if not cards_path.exists():
         raise RuntimeError(f"cards.jsonl не найден: {cards_path}")
     images_dir.mkdir(parents=True, exist_ok=True)
     image_index_path.parent.mkdir(parents=True, exist_ok=True)
     image_workers = max(1, min(image_workers, 16))
     selected: list[dict[str, str]] = []
-    cards_processed = cards_with_images = cards_without_images = images_found = 0
+    cards_processed = cards_with_images = cards_without_images = 0
     with cards_path.open("r", encoding="utf-8") as source:
         for line_number, line in enumerate(source, start=1):
             if not line.strip():
@@ -354,7 +361,6 @@ def download_images_only(
             cards_with_images += 1
             for info in urls:
                 selected.append(info)
-                images_found += 1
                 if image_limit is not None and len(selected) >= image_limit:
                     break
             if image_limit is not None and len(selected) >= image_limit:
@@ -362,7 +368,7 @@ def download_images_only(
     selected = selected[:image_limit] if image_limit is not None else selected
     results: list[dict[str, Any]] = []
     with ThreadPoolExecutor(max_workers=image_workers, thread_name_prefix="mtg-image") as executor:
-        future_map = {executor.submit(download_single_image_task, info, images_dir, logger): info for info in selected}
+        future_map = {executor.submit(download_single_image_task, info, images_dir, logger, transport): info for info in selected}
         for completed, future in enumerate(as_completed(future_map), start=1):
             info = future_map[future]
             try:
@@ -393,15 +399,7 @@ def download_images_only(
     except Exception:
         temporary_index.unlink(missing_ok=True)
         raise
-    return {
-        "cards_processed": cards_processed,
-        "cards_with_images": cards_with_images,
-        "images_found": len(selected),
-        "images_downloaded": downloaded,
-        "images_skipped": skipped,
-        "images_failed": failed,
-        "cards_without_images": cards_without_images,
-    }
+    return {"cards_processed": cards_processed, "cards_with_images": cards_with_images, "images_found": len(selected), "images_downloaded": downloaded, "images_skipped": skipped, "images_failed": failed, "cards_without_images": cards_without_images}
 
 
 def load_existing_state(state_file: Path) -> dict[str, Any]:
@@ -424,27 +422,7 @@ def update_state_images(state_file: Path, statistics: dict[str, int], logger: lo
 
 
 def build_state(cards_bulk: dict[str, Any], source_path: Path, output_path: Path, card_count: int, error_count: int, statistics: dict[str, Any], image_statistics: dict[str, int]) -> dict[str, Any]:
-    return {
-        "parser_version": VERSION,
-        "source": "Scryfall",
-        "last_run_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "cards": {
-            "bulk_type": cards_bulk.get("type"),
-            "bulk_id": cards_bulk.get("id"),
-            "name": cards_bulk.get("name"),
-            "description": cards_bulk.get("description"),
-            "updated_at": cards_bulk.get("updated_at"),
-            "jsonl_download_uri": cards_bulk.get("jsonl_download_uri"),
-            "compressed_size": cards_bulk.get("compressed_size"),
-            "source_local_size": source_path.stat().st_size,
-            "source_sha256": sha256_file(source_path),
-            "output_local_size": output_path.stat().st_size,
-            "count": card_count,
-            "errors": error_count,
-        },
-        "statistics": statistics,
-        "images": image_statistics,
-    }
+    return {"parser_version": VERSION, "source": "Scryfall", "last_run_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "cards": {"bulk_type": cards_bulk.get("type"), "bulk_id": cards_bulk.get("id"), "name": cards_bulk.get("name"), "description": cards_bulk.get("description"), "updated_at": cards_bulk.get("updated_at"), "jsonl_download_uri": cards_bulk.get("jsonl_download_uri"), "compressed_size": cards_bulk.get("compressed_size"), "source_local_size": source_path.stat().st_size, "source_sha256": sha256_file(source_path), "output_local_size": output_path.stat().st_size, "count": card_count, "errors": error_count}, "statistics": statistics, "images": image_statistics}
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -455,6 +433,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--images-only", action="store_true", help="Только изображения; Bulk и cards.jsonl не изменяются.")
     parser.add_argument("--image-limit", type=int, default=None, help="Количество изображений для теста.")
     parser.add_argument("--image-workers", type=int, default=DEFAULT_IMAGE_WORKERS, help="Количество параллельных загрузчиков изображений.")
+    parser.add_argument("--image-transport", choices=("auto", "curl", "requests"), default="auto", help="Транспорт изображений. auto сначала использует curl IPv4, затем requests.")
     return parser.parse_args()
 
 
@@ -486,6 +465,11 @@ def run_images_only(args: argparse.Namespace, logger: logging.Logger) -> int:
     logger.info("Параллельных загрузчиков: %d", args.image_workers)
     if args.image_limit is not None:
         logger.info("Ограничение: %d изображений", args.image_limit)
+    logger.info("Транспорт изображений: %s", args.image_transport)
+    if curl_available():
+        logger.info("curl.exe найден: будет доступен резервный/основной IPv4-канал.")
+    else:
+        logger.warning("curl.exe не найден. Будет использован requests.")
     if not cards_file.exists():
         logger.error("cards.jsonl не найден.")
         return 1
@@ -497,7 +481,7 @@ def run_images_only(args: argparse.Namespace, logger: logging.Logger) -> int:
     logger.info("Таймаут чтения: %d сек.", IMAGE_READ_TIMEOUT)
     logger.info("Количество попыток: %d", IMAGE_RETRIES)
     try:
-        statistics = download_images_only(cards_file, images_dir, image_index_file, logger, args.image_limit, args.image_workers)
+        statistics = download_images_only(cards_file, images_dir, image_index_file, logger, args.image_limit, args.image_workers, args.image_transport)
         logger.info("СКАЧИВАНИЕ ИЗОБРАЖЕНИЙ ЗАВЕРШЕНО")
         logger.info("Карточек обработано: %d", statistics["cards_processed"])
         logger.info("Карточек с изображениями: %d", statistics["cards_with_images"])
@@ -536,7 +520,7 @@ def run_full_import(args: argparse.Namespace, logger: logging.Logger) -> int:
         card_count, error_count, statistics = process_cards_bulk(raw_file, cards_file, logger)
         image_statistics = {"cards_processed": 0, "cards_with_images": 0, "images_found": 0, "images_downloaded": 0, "images_skipped": 0, "images_failed": 0, "cards_without_images": 0}
         if not args.no_images:
-            image_statistics = download_images_only(cards_file, images_dir, image_index_file, logger, None, args.image_workers)
+            image_statistics = download_images_only(cards_file, images_dir, image_index_file, logger, None, args.image_workers, args.image_transport)
         state = build_state(cards_bulk, raw_file, cards_file, card_count, error_count, statistics, image_statistics)
         write_json_atomic(state_file, state)
         if not args.keep_raw:
