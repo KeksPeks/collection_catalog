@@ -2,11 +2,15 @@ import '../domain/entities/catalog_definition.dart';
 import '../domain/entities/catalog_entry_definition.dart';
 import 'catalog_sample_entries.dart';
 import 'catalog_section_defaults.dart';
+import 'catalog_second_level_defaults.dart';
 
 /// Нормализует каталог перед показом и загрузкой на устройство.
 class CatalogStructureDefaults {
   static CatalogDefinition apply(CatalogDefinition catalog) {
-    final sections = catalog.sections.isNotEmpty ? catalog.sections : CatalogSectionDefaults.forCatalog(catalog.id);
+    final baseSections = catalog.sections.isNotEmpty
+        ? catalog.sections
+        : CatalogSectionDefaults.forCatalog(catalog.id);
+    final sections = CatalogSecondLevelDefaults.apply(catalog.id, baseSections);
     final entries = switch (catalog.id) {
       'lego' => _constructorEntries,
       'pokemon_tcg' => catalog.entries.isNotEmpty ? catalog.entries : _pokemonEntries,
