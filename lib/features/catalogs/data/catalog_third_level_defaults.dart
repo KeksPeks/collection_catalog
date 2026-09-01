@@ -1,9 +1,10 @@
 import '../domain/entities/catalog_definition.dart';
 
-/// Третий уровень структуры каталогов.
+/// Третий и четвёртый уровни структуры каталогов.
 ///
-/// Каждый элемент второго уровня получает набор уточняющих подкатегорий.
-/// Четвёртый уровень оставляется для конкретных предметов коллекции.
+/// Третий уровень уточняет тип/серию, а четвёртый содержит несколько
+/// вариантов конкретной единицы коллекции. Реальные предметы позже могут
+/// быть заменены или дополнены данными парсеров.
 class CatalogThirdLevelDefaults {
   static List<CatalogSectionDefinition> apply(
     String catalogId,
@@ -19,16 +20,46 @@ class CatalogThirdLevelDefaults {
         name: section.name,
         children: section.children.map((child) {
           if (child.children.isNotEmpty) return child;
+
           return CatalogSectionDefinition(
             id: child.id,
             name: child.name,
             children: names
-                .map((name) => CatalogSectionDefinition(id: '${child.id}-${_id(name)}', name: name))
+                .map((name) => CatalogSectionDefinition(
+                      id: '${child.id}-${_id(name)}',
+                      name: name,
+                      children: _fourthLevelVariants(catalogId, child.name, name),
+                    ))
                 .toList(growable: false),
           );
         }).toList(growable: false),
       );
     }).toList(growable: false);
+  }
+
+  /// Несколько вариантов четвёртого уровня для каждого элемента третьего.
+  ///
+  /// На этом этапе это универсальные варианты единицы коллекции. После
+  /// подключения каталогов/парсеров они могут быть заменены конкретными
+  /// предметами: номером набора, карты, выпуска, модели, издания и т. д.
+  static List<CatalogSectionDefinition> _fourthLevelVariants(
+    String catalogId,
+    String thirdLevelName,
+    String fourthLevelType,
+  ) {
+    const variants = <String>[
+      'Стандартный вариант',
+      'Специальный выпуск',
+      'Лимитированный выпуск',
+      'Коллекционное издание',
+    ];
+
+    return variants
+        .map((variant) => CatalogSectionDefinition(
+              id: '${_id(catalogId)}-${_id(thirdLevelName)}-${_id(fourthLevelType)}-${_id(variant)}',
+              name: variant,
+            ))
+        .toList(growable: false);
   }
 
   static String _id(String value) => value
