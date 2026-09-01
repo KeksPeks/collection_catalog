@@ -3,6 +3,7 @@ import '../domain/entities/catalog_entry_definition.dart';
 import 'catalog_sample_entries.dart';
 import 'catalog_section_defaults.dart';
 import 'catalog_second_level_defaults.dart';
+import 'catalog_third_level_defaults.dart';
 
 /// Нормализует каталог перед показом и загрузкой на устройство.
 class CatalogStructureDefaults {
@@ -10,7 +11,8 @@ class CatalogStructureDefaults {
     final baseSections = catalog.sections.isNotEmpty
         ? catalog.sections
         : CatalogSectionDefaults.forCatalog(catalog.id);
-    final sections = CatalogSecondLevelDefaults.apply(catalog.id, baseSections);
+    final secondLevelSections = CatalogSecondLevelDefaults.apply(catalog.id, baseSections);
+    final sections = CatalogThirdLevelDefaults.apply(catalog.id, secondLevelSections);
     final entries = switch (catalog.id) {
       'lego' => _constructorEntries,
       'pokemon_tcg' => catalog.entries.isNotEmpty ? catalog.entries : _pokemonEntries,
@@ -39,7 +41,7 @@ class CatalogStructureDefaults {
     CatalogEntryDefinition(id: 'constructor-001', title: 'LEGO City Пожарная станция', primaryValue: 'LEGO', subtitle: 'City • 60414 • 2025', attributes: {'Производитель': 'LEGO', 'Серия': 'City', 'Категория': 'Здания', 'Модель': '60414', 'Год': '2025'}, sectionPath: ['manufacturers', 'lego', 'city', 'buildings']),
     CatalogEntryDefinition(id: 'constructor-002', title: 'LEGO Technic Ferrari SF-24', primaryValue: 'LEGO', subtitle: 'Technic • 42207 • 2025', attributes: {'Производитель': 'LEGO', 'Серия': 'Technic', 'Категория': 'Техника', 'Модель': '42207', 'Год': '2025'}, sectionPath: ['manufacturers', 'lego', 'technic', 'vehicles']),
     CatalogEntryDefinition(id: 'constructor-003', title: 'LEGO Icons Букет цветов', primaryValue: 'LEGO', subtitle: 'Icons • 10280 • 2021', attributes: {'Производитель': 'LEGO', 'Серия': 'Icons', 'Категория': 'Декор', 'Модель': '10280', 'Год': '2021'}, sectionPath: ['manufacturers', 'lego', 'icons', 'decor']),
-    CatalogEntryDefinition(id: 'constructor-004', title: 'LEGO Star Wars Millennium Falcon', primaryValue: 'LEGO', subtitle: 'Star Wars • 75375 • 2024', attributes: {'Производитель': 'LEGO', 'Серия': 'Star Wars', 'Категория': 'Транспорт', 'Модель': '75375', 'Год': '2024'}, sectionPath: ['manufacturers', 'lego', 'city', 'vehicles']),
+    CatalogEntryDefinition(id: 'constructor-004', title: 'LEGO Star Wars Millennium Falcon', primaryValue: 'LEGO', subtitle: 'Star Wars • 75375 • 2024', attributes: {'Производитель': 'LEGO', 'Серия': 'Star Wars', 'Категория': 'Транспорт', 'Модель': '75375', 'Год': '2024'}, sectionPath: ['manufacturers', 'lego', 'star-wars', 'vehicles']),
     CatalogEntryDefinition(id: 'constructor-005', title: 'COBI Tiger 131', primaryValue: 'COBI', subtitle: 'Historical Collection • 131 • 2024', attributes: {'Производитель': 'COBI', 'Серия': 'Historical Collection', 'Категория': 'Военная техника', 'Модель': '131', 'Год': '2024'}, sectionPath: ['manufacturers', 'cobi', 'military']),
     CatalogEntryDefinition(id: 'constructor-006', title: 'COBI Ford Mustang', primaryValue: 'COBI', subtitle: 'Youngtimer Collection • 24334 • 2023', attributes: {'Производитель': 'COBI', 'Серия': 'Youngtimer Collection', 'Категория': 'Транспорт', 'Модель': '24334', 'Год': '2023'}, sectionPath: ['manufacturers', 'cobi', 'vehicles']),
     CatalogEntryDefinition(id: 'constructor-007', title: 'CaDA Ferrari Daytona SP3', primaryValue: 'CaDA', subtitle: 'Master • C61042W • 2024', attributes: {'Производитель': 'CaDA', 'Серия': 'Master', 'Категория': 'Автомобили', 'Модель': 'C61042W', 'Год': '2024'}, sectionPath: ['manufacturers', 'cada', 'cars']),
