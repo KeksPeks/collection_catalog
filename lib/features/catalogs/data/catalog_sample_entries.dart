@@ -5,6 +5,7 @@ import '../domain/entities/catalog_entry_definition.dart';
 class CatalogSampleEntries {
   static List<CatalogEntryDefinition> forCatalog(String id) {
     final names = _names[id] ?? const <String>[];
+    final sectionPath = _firstLevelPath[id] ?? const ['main'];
     return [
       for (var i = 0; i < names.length; i++)
         CatalogEntryDefinition(
@@ -13,9 +14,19 @@ class CatalogSampleEntries {
           primaryValue: names[i],
           subtitle: 'Демонстрационный образец • уровень 1',
           attributes: const {},
+          sectionPath: sectionPath,
         ),
     ];
   }
+
+  static const Map<String, List<String>> _firstLevelPath = {
+    'banknotes': ['countries'],
+    'pokemon_tcg': ['series'],
+    'games': ['platforms'],
+    'movies': ['genres'],
+    'figurines': ['series'],
+    'discs': ['platforms'],
+  };
 
   static const Map<String, List<String>> _names = {
     'banknotes': [
