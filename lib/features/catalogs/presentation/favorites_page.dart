@@ -7,7 +7,6 @@ import '../data/catalog_registry.dart';
 import '../data/catalog_structure_defaults.dart';
 import '../data/catalog_ui_localization.dart';
 import '../data/favorites_store.dart';
-import '../domain/entities/catalog_definition.dart';
 import 'catalog_online_page.dart';
 import '../../collections/presentation/providers/collection_provider.dart';
 import '../../collections/presentation/providers/collection_section_service_provider.dart';
@@ -116,6 +115,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
               if (regularCatalogs.isNotEmpty) ...[_Heading('Коллекции', Icons.collections_bookmark_outlined), for (final catalog in regularCatalogs) _Tile(CatalogUiLocalization.catalogName(context, catalog.id), 'Каталог', Icons.inventory_2_outlined, () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogOnlinePage(catalog: CatalogStructureDefaults.apply(catalog)))), () => FavoritesStore.remove(catalog.id))],
               if (sections.isNotEmpty) ...[_Heading('Разделы', Icons.folder_outlined), for (final id in sections) _Tile(_labels[id]!, 'Раздел каталога', Icons.folder_outlined, () {}, () => FavoritesStore.removeKey(id))],
               if (items.isNotEmpty) ...[_Heading('Предметы', Icons.inventory_2_outlined), for (final id in items) _Tile(_labels[id]!, 'Предмет коллекции', Icons.inventory_2_outlined, () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ItemDetailPage(itemId: id.substring(5)))), () => FavoritesStore.removeKey(id))],
+              if (countryTiles.isEmpty && regularCatalogs.isEmpty && sections.isEmpty && items.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Center(child: Text('В избранном пока нет доступных объектов.', textAlign: TextAlign.center))),
             ]),
     );
   }
