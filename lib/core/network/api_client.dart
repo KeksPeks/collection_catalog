@@ -2,10 +2,12 @@ import 'package:dio/dio.dart';
 
 /// Базовый HTTP-клиент Collection Catalog API.
 ///
+/// Для локальной разработки сервер работает на компьютере в локальной сети.
 /// Адрес можно переопределить при запуске приложения:
-/// --dart-define=COLLECTION_API_BASE_URL=http://192.168.0.100:8000
+/// --dart-define=COLLECTION_API_BASE_URL=http://<адрес-сервера>:8000
 class CollectionApiClient {
-  static const _defaultBaseUrl = 'http://127.0.0.1:8000';
+  // Сервер Collection Catalog на текущем компьютере разработчика.
+  static const _defaultBaseUrl = 'http://192.168.0.7:8000';
 
   final Dio dio;
 
