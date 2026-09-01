@@ -3,11 +3,11 @@ import '../../domain/entities/collection.dart';
 import '../../domain/repositories/collection_repository.dart';
 import 'collection_repository_drift.dart';
 
-/// Репозиторий каталога: чтение каталога идёт с сервера,
-/// локальные операции записи пока сохраняются через Drift.
+/// Репозиторий каталога: сервер даёт централизованные данные,
+/// а Drift хранит пользовательские загруженные коллекции.
 ///
-/// Это позволяет подключить существующий API без потери уже
-/// реализованного локального редактирования коллекций.
+/// Оба источника объединяются, чтобы скачанные каталоги всегда
+/// отображались в разделе «Мои коллекции».
 class CollectionRepositoryApi implements CollectionRepository {
   final CollectionApiClient api;
   final CollectionRepositoryDrift local;
@@ -16,17 +16,33 @@ class CollectionRepositoryApi implements CollectionRepository {
 
   @override
   Future<List<Collection>> getCollections() async {
-    final data = await api.getCollections();
-    final rawItems = data['items'];
+    final localCollections = await local.getCollections();
 
-    if (rawItems is! List) {
-      throw const FormatException('API /api/collections не содержит items');
+    try {
+      final data = await api.getCollections();
+      final rawItems = data['items'];
+      if (rawItems is! List) {
+        return localCollections;
+      }
+
+      final serverCollections = rawItems
+          .whereType<Map>()
+          .map((json) => _fromJson(Map<String, dynamic>.from(json)))
+          .toList(growable: false);
+
+      final result = <String, Collection>{
+        for (final collection in serverCollections) collection.id: collection,
+      };
+      // Локальные записи имеют приоритет: именно они содержат templateId,
+      // поля, разделы и пользовательские данные скачанного каталога.
+      for (final collection in localCollections) {
+        result[collection.id] = collection;
+      }
+      return result.values.toList(growable: false);
+    } catch (_) {
+      // Каталог пользователя должен оставаться доступным даже без API.
+      return localCollections;
     }
-
-    return rawItems
-        .whereType<Map>()
-        .map((json) => _fromJson(Map<String, dynamic>.from(json)))
-        .toList(growable: false);
   }
 
   @override
