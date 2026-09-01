@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/database/database_provider.dart';
 import '../../collections/presentation/providers/collection_provider.dart';
-import '../../items/data/item_state_store.dart';
 import '../../items/presentation/providers/item_service_provider.dart';
 import '../data/wishlist_store.dart';
 
@@ -42,13 +42,11 @@ class _WishlistPageState extends ConsumerState<WishlistPage> {
         final items = await service.getItems(collection.id);
         for (final item in items) {
           if (ids.contains(item.id)) {
-            result.add(
-              _WantedEntry(
-                item.id,
-                item.catalogItemId ?? item.id,
-                collection.name,
-              ),
-            );
+            result.add(_WantedEntry(
+              item.id,
+              item.catalogItemId ?? item.id,
+              collection.name,
+            ));
           }
         }
       }
@@ -84,10 +82,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage> {
       appBar: AppBar(
         title: const Text('Wishlist'),
         actions: [
-          IconButton(
-            onPressed: _load,
-            icon: const Icon(Icons.refresh),
-          ),
+          IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
         ],
       ),
       body: _error != null
