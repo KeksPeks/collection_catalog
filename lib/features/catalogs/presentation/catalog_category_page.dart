@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../data/catalog_registry.dart';
+import '../data/catalog_structure_defaults.dart';
 import '../data/catalog_ui_localization.dart';
 import '../domain/entities/catalog_definition.dart';
 import 'catalog_category_contents_page.dart';
@@ -21,7 +22,9 @@ class CatalogCategoryPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final category = CatalogRegistry.categoryById(categoryId);
-    final catalogs = CatalogRegistry.catalogsForCategory(categoryId);
+    final catalogs = CatalogRegistry.catalogsForCategory(categoryId)
+        .map(CatalogStructureDefaults.apply)
+        .toList(growable: false);
 
     if (category == null) {
       return Scaffold(
@@ -30,7 +33,6 @@ class CatalogCategoryPage extends StatelessWidget {
       );
     }
 
-    // Для Нумизматики: Нумизматика -> страны, затем страна -> тип -> годы/серии.
     if (catalogs.length == 1) {
       final catalog = catalogs.first;
       return CatalogCategoryContentsPage(
@@ -40,7 +42,6 @@ class CatalogCategoryPage extends StatelessWidget {
       );
     }
 
-    // Выбор каталога нужен только для направлений с несколькими каталогами.
     return Scaffold(
       appBar: AppBar(title: Text(CatalogUiLocalization.categoryName(context, category.id))),
       body: catalogs.isEmpty
