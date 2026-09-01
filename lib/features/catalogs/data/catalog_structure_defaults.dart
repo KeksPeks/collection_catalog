@@ -1,10 +1,11 @@
 import '../domain/entities/catalog_definition.dart';
 import '../domain/entities/catalog_entry_definition.dart';
+import 'catalog_sample_entries.dart';
 import 'catalog_section_defaults.dart';
 
 /// Нормализует каталог перед показом и загрузкой на устройство.
-/// Пустые демонстрационные направления получают разделы, а Pokémon TCG —
-/// базовый набор карточек, чтобы загрузка действительно создавала предметы.
+/// Пустые демонстрационные направления получают разделы и шесть образцов
+/// первого уровня, а Pokémon TCG — базовый набор карточек.
 class CatalogStructureDefaults {
   static CatalogDefinition apply(CatalogDefinition catalog) {
     final sections = catalog.sections.isNotEmpty
@@ -12,19 +13,26 @@ class CatalogStructureDefaults {
         : CatalogSectionDefaults.forCatalog(catalog.id);
 
     if (catalog.id != 'pokemon_tcg') {
+      final entries = catalog.entries.isNotEmpty
+          ? catalog.entries
+          : CatalogSampleEntries.forCatalog(catalog.id);
       return CatalogDefinition(
         id: catalog.id,
         name: catalog.name,
         description: catalog.description,
         templateId: catalog.templateId,
         template: catalog.template,
-        totalItems: catalog.totalItems ?? catalog.entries.length,
+        totalItems: catalog.entries.isNotEmpty
+            ? (catalog.totalItems ?? catalog.entries.length)
+            : entries.length,
         sections: sections,
         primaryField: catalog.primaryField,
-        entries: catalog.entries,
+        entries: entries,
         version: catalog.version,
         publishedAt: catalog.publishedAt,
-        changes: catalog.changes,
+        changes: catalog.entries.isNotEmpty
+            ? catalog.changes
+            : [...catalog.changes, 'Добавлены шесть демонстрационных записей первого уровня.'],
       );
     }
 
