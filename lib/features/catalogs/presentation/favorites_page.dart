@@ -56,9 +56,10 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
       }
     }
     // Удаляем устаревшие ключи вроде «countries» и «Russia».
-    if (valid.length != stored.length || valid.any((id) => id.startsWith('catalog:'))) {
-      await FavoritesStore.replaceAll(valid);
-    }
+    final changed = valid.length != stored.length ||
+        !valid.containsAll(stored) ||
+        !stored.containsAll(valid);
+    if (changed) await FavoritesStore.replaceAll(valid);
 
     final sectionIds = valid.where((id) => id.startsWith('section:')).map((id) => id.substring(8)).toSet();
     final itemIds = valid.where((id) => id.startsWith('item:')).map((id) => id.substring(5)).toSet();
